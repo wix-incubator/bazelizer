@@ -15,16 +15,15 @@ And here *mavenizer* takes the stage. This tool represents overall maven project
 This allows you to extract all maven related stuff into some isolated unit and integrated it within all Bazel environment.
 Use bazel deps, depends on bazel target and event doing it efficiently.
 
-
-## Usage
-
 ![Alt text](assets/ci.png?raw=true "Title")
 
 
-This tool contains from two parts.
+## Usage
+
+TBD
 
 
-##### create_mvn_buildpack
+#### create_mvn_buildpack
   
 Usage
 ```
@@ -44,7 +43,7 @@ create_mvn_buildpack(
 **Important to know**: this rule execute dry run of a build by empty project directory + given pom. This is done to eagerly fetch all plugin's and there dependencies. 
 
 
-##### run_mvn_buildpack
+#### run_mvn_buildpack
 
   
 Usage
