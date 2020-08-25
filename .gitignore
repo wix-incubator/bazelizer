@@ -49,5 +49,3 @@ tools/2nd_party_resolved_dependencies/*
 # Eclipse IDE
 .project
 
-# Bazel local conf
-my.bazelrc
