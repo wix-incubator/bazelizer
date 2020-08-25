@@ -1,4 +1,4 @@
-package projectB;
+package tests.projectB;
 
 
 public class B {

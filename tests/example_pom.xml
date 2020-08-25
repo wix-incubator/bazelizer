@@ -11,6 +11,16 @@
         <maven-compiler-plugin.version>3.1</maven-compiler-plugin.version>
     </properties>
 
+    <dependencies>
+        {{#deps}}
+        <dependency>
+            <groupId>{{groupId}}</groupId>
+            <artifactId>{{artifactId}}</artifactId>
+            <version>{{version}}</version>
+        </dependency>
+        {{/deps}}
+    </dependencies>
+
     <build>
         <pluginManagement>
             <plugins>
