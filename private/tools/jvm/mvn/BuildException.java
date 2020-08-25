@@ -7,4 +7,8 @@ public class BuildException extends RuntimeException {
     public BuildException(String cause) {
         super(cause);
     }
+
+    public BuildException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

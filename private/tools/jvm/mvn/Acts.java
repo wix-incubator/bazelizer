@@ -11,6 +11,7 @@ import com.google.common.io.CharSink;
 import com.google.common.io.CharSource;
 import com.google.common.io.Closer;
 import lombok.AllArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.ArchiveEntry;
@@ -20,12 +21,11 @@ import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.*;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @UtilityClass
@@ -94,13 +94,26 @@ public class Acts {
         @Override
         public Project accept(Project project) {
             final Path workDir = project.workDir();
-            final Path target = workDir.resolve("target");
+            final Path target = workDir.resolve("target").toAbsolutePath();
             project.getOutputs().forEach(name -> {
                 Path src = target.resolve(name.src());
                 Path dest = Paths.get(name.dest());
-                copyTo(src, dest);
+                try {
+                    Files.copy(src, dest);
+                } catch (java.nio.file.NoSuchFileException e) {
+                    throw new BuildException("no such file: " + src + ", within: [" + exists(target) + " ...]", e);
+                } catch (IOException e) {
+                    throw new BuildException(e);
+                }
+
             });
             return project;
+        }
+
+        @SneakyThrows
+        private String exists(Path target)  {
+            return Files.walk(target, 2)
+                    .limit(10).map(Path::toString).collect(Collectors.joining(", "));
         }
     }
 

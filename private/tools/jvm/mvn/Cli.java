@@ -9,6 +9,7 @@ import picocli.CommandLine;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -57,6 +58,7 @@ public class Cli {
 
 
 
+    @SuppressWarnings("UnstableApiUsage")
     @CommandLine.Command(name = "build")
     public static class Build implements Runnable, Project {
         @CommandLine.Option(names = { "-pt", "--pom" }, paramLabel = "POM", description = "the pom xml template file")
@@ -105,16 +107,24 @@ public class Cli {
 
         @Override
         public Path workDir() {
-            final PathsCollection manifest = PathsCollection.fromManifest(srcs);
-            return manifest.commonPrefix()
-                    .orElseThrow(() -> new NoCommonPrefixForSrcsException("srcs " + manifest));
+            final Path path = PathsCollection.fromManifest(srcs).commonPrefix();
+            final Path src = Paths.get("src");
+            for (int i = 0; i < path.getNameCount(); i++) {
+                if (path.getName(i).equals(src))
+                    return path.subpath(0, i);
+            }
+            throw new IllegalArgumentException("non maven layout: " + path);
         }
 
         @Override
         public Iterable<Output> getOutputs() {
             return outputs.entrySet()
                     .stream()
-                    .map(entry -> new Project.OutputPaths(entry.getKey(), entry.getValue()))
+                    .map(entry -> {
+                        final String declared = entry.getKey();
+                        final String buildFile = entry.getValue();
+                        return new Project.OutputPaths(buildFile, declared);
+                    })
                     .collect(Collectors.toList());
         }
 

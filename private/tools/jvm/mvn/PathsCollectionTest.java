@@ -1,10 +1,7 @@
 package tools.jvm.mvn;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.ByteSource;
 import com.google.common.io.CharSource;
-import com.google.common.io.Files;
-import com.google.common.io.Resources;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -14,7 +11,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.Optional;
 
 @RunWith(BlockJUnit4ClassRunner.class)
 public class PathsCollectionTest {
@@ -27,8 +23,8 @@ public class PathsCollectionTest {
                 )
         );
 
-        final Optional<Path> path = col.commonPrefix();
-        Assert.assertEquals(Optional.of(Paths.get("foo/bar/baz")), path);
+        final Path path = col.commonPrefix();
+        Assert.assertEquals(Paths.get("foo/bar/baz"), path);
     }
 
     @Test
@@ -40,8 +36,8 @@ public class PathsCollectionTest {
                 Paths.get("/foo/bar/jaz/tmp/tmp$1.txt"),
                 Paths.get("/foo/bar/BUILD")
         ));
-        final Optional<Path> path = col.commonPrefix();
-        Assert.assertEquals(Optional.of(Paths.get("foo/bar")), path);
+        final Path path = col.commonPrefix();
+        Assert.assertEquals(Paths.get("foo/bar"), path);
     }
 
 
@@ -52,8 +48,8 @@ public class PathsCollectionTest {
                 "'/foo/bar/baz/B.java'\n" +
                 "'/foo/bar/jazz/C.java'\n" +
                 "'/foo/bar/roo/X.java'"));
-        final Optional<Path> path = col.commonPrefix();
-        Assert.assertEquals("col="+col, Optional.of(Paths.get("foo/bar")), path);
+        final Path path = col.commonPrefix();
+        Assert.assertEquals("col="+col,Paths.get("foo/bar"), path);
     }
 
     private static PathsCollection getPaths(Collection<Path> of) {

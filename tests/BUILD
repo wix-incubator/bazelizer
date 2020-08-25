@@ -55,7 +55,7 @@ run_mvn_buildpack(
     ], # test lib
     srcs = ["//tests/projectA:sources"],
     buildpack = ":MavenImage",
-    outputs = ["projectA.jar"]
+    outputs = ["artifact_a-1.0.0-SNAPSHOT.jar"]
 )
 
 
@@ -67,8 +67,8 @@ sh_library(
 
 sh_test(
     name = "MavenRunTest",
-    srcs = ["test_files_exist.sh"],
-    args = ["tests/MavenRun.tar"],
+    srcs = ["test_jar.sh"],
+    args = ["tests/artifact_a-1.0.0-SNAPSHOT.jar", "bar/A.class"],
     data = [":MavenRun"],
     deps = [":MavenRunDummy"]
 )

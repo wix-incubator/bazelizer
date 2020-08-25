@@ -15,7 +15,9 @@ contains() {
   ls $@
 }
 
-for word in "${@}"
-do
-     assert contains "${word}"
-done
+verify_jar() {
+  zipinfo -1 "$1" | grep "${2}"
+}
+
+assert ls "${1}"
+assert zipinfo -1 "$1" | grep "${2}"

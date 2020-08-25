@@ -5,6 +5,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Streams;
 import com.google.common.io.CharSource;
 import com.google.common.io.Files;
+import lombok.AllArgsConstructor;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -43,10 +44,10 @@ public interface PathsCollection extends Iterable<Path> {
      * Try to find common prefix for all paths.
      * @return common prefix path
      */
-    default Optional<Path> commonPrefix() {
+    default Path commonPrefix() {
         final Path first = Iterables.getFirst(this, null);
         if (first == null) {
-            return Optional.empty();
+            throw new IllegalStateException("empty");
         }
 
         BiPredicate<Path, Integer> matches = (path, i) -> {
@@ -59,14 +60,15 @@ public interface PathsCollection extends Iterable<Path> {
             return path0.startsWith(path1);
         };
 
-        int x = 1;
-        for(;;) {
-            final int i = x;
-            if (!stream().allMatch(p -> matches.test(p, i))) {
-                return Optional.of(first.subpath(0, i-1));
+        return this.stream().map(Path::getNameCount).max(Comparator.naturalOrder()).flatMap(max -> {
+            for (int x = 1; x <= max; x++) {
+                final int i = x;
+                if (!stream().allMatch(p -> matches.test(p, i))) {
+                    return Optional.of(first.subpath(0, i-1));
+                }
             }
-            x++;
-        }
+            return Optional.empty();
+        }).orElseThrow(() -> new IllegalStateException("no common path prefix within " + this));
     }
 
     /**
