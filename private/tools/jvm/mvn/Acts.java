@@ -298,6 +298,21 @@ public class Acts {
     }
 
 
+    static class Version implements Act {
+
+        @Override
+        public Project accept(Project project) {
+            new BuildMvn().run(new Project.Wrap(project) {
+                @Override
+                public Args args() {
+                    return new Args().append("--version");
+                }
+            });
+            return project;
+        }
+    }
+
+
 
     @lombok.SneakyThrows
     private static void writeTo(Path pomFile, String pom) {

@@ -124,4 +124,55 @@ public interface Project {
         });
     }
 
+
+    @AllArgsConstructor
+    class Wrap implements Project {
+        private final Project project;
+
+        @Override
+        public String artifactId() {
+            return project.artifactId();
+        }
+
+        @Override
+        public String groupId() {
+            return project.groupId();
+        }
+
+        @Override
+        public Iterable<Dep> deps() {
+            return project.deps();
+        }
+
+        @Override
+        public Path workDir() {
+            return project.workDir();
+        }
+
+        @Override
+        @SneakyThrows
+        public Path m2Home() {
+            return project.m2Home();
+        }
+
+        @Override
+        public Iterable<Output> getOutputs() {
+            return project.getOutputs();
+        }
+
+        @Override
+        public Path repoImage() {
+            return project.repoImage();
+        }
+
+        @Override
+        public ByteSource pomXmlTpl() {
+            return project.pomXmlTpl();
+        }
+
+        @Override
+        public Args args() {
+            return project.args();
+        }
+    }
 }

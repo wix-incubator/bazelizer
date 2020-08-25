@@ -45,14 +45,13 @@ public class Cli {
 
         @Override
         public void run() {
-            final Project constant = Project.memento(this);
             new Act.Iterative(
                     new Acts.PomMustache(),
                     new Acts.SettingsXml(),
                     new Acts.MvnBuild(false),
                     new Acts.MkRepoSnapshot(),
                     new Acts.Outputs()
-            ).accept(constant);
+            ).accept(this);
         }
     }
 
@@ -141,15 +140,15 @@ public class Cli {
         @Override
         @lombok.SneakyThrows
         public void run() {
-            final Project constant = Project.memento(this);
             new Act.Iterative(
                     new Acts.DefRepository(),
+                    new Acts.Version(),
                     new Acts.Deps(),
                     new Acts.PomMustache(),
                     new Acts.SettingsXml(),
                     new Acts.MvnBuild(true),
                     new Acts.Outputs()
-            ).accept(constant);
+            ).accept(this);
         }
     }
 

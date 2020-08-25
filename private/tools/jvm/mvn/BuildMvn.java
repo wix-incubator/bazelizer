@@ -52,9 +52,11 @@ public class BuildMvn  {
                 ByteSource.wrap(bosStderr.toByteArray()).copyTo(System.err);
                 if (bosStdout.size() > 0) {
                     System.out.println();
+                    System.out.flush();
                 }
                 if (bosStderr.size() > 0) {
                     System.err.println();
+                    System.err.flush();
                 }
             }
         }
