@@ -1,0 +1,85 @@
+load("//private/ruls:tests.bzl", "run_tests")
+
+_deps = [
+    "@maven//:com_jcabi_incubator_xembly",
+    "@maven//:org_projectlombok_lombok",
+    "@maven//:com_google_guava_guava",
+    "@maven//:com_jcabi_jcabi_xml",
+    "@maven//:org_cactoos_cactoos",
+    "@maven//:com_github_spullara_mustache_java_compiler",
+
+    "@maven//:org_apache_commons_commons_compress",
+    "@maven//:org_apache_maven_maven_compat",
+    "@maven//:org_apache_maven_maven_embedder",
+    "@maven//:org_apache_maven_wagon_wagon_http",
+    "@maven//:org_apache_maven_wagon_wagon_http_lightweight",
+    "@maven//:org_apache_maven_wagon_wagon_provider_api",
+    "@maven//:org_eclipse_aether_aether_connector_basic",
+    "@maven//:org_eclipse_aether_aether_transport_wagon",
+
+    "@maven//:org_slf4j_slf4j_api",
+    "@maven//:org_slf4j_slf4j_simple",
+#        "@maven//:ch_qos_logback_logback_classic",
+    "@maven//:info_picocli_picocli",
+]
+
+java_library(
+    name = "mvn_lib",
+    srcs = glob(["*.java"], exclude = ["*Test.java"]),
+    javacopts = [
+        "-source",
+        "8",
+        "-target",
+        "8",
+    ],
+    deps = _deps,
+    exports = _deps,
+    plugins = [
+        ":lombok_plugin",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+java_binary(
+    name = "mvn",
+    srcs = glob(["*.java"], exclude = ["*Test.java"]),
+    javacopts = [
+        "-source",
+        "8",
+        "-target",
+        "8",
+    ],
+    main_class = "tools.jvm.mvn.Cli",
+    deps = [
+        ":mvn_lib",
+    ],
+    plugins = [
+        ":lombok_plugin",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+
+run_tests(
+    name = "mvn_test",
+    package = "tools.jvm.mvn",
+    srcs = glob(["*Test.java"]),
+    data = glob(["**"],exclude = ["*.java"]),
+    deps = [
+        ":mvn_lib",
+        "@maven//:junit_junit",
+        "@maven//:com_jcabi_jcabi_xml",
+        "@maven//:org_hamcrest_hamcrest_library",
+        "@maven//:com_github_spullara_mustache_java_compiler",
+    ],
+)
+
+
+java_plugin(
+    name = "lombok_plugin",
+    processor_class = "lombok.launch.AnnotationProcessorHider$AnnotationProcessor",
+    deps = [
+        "@maven//:org_projectlombok_lombok",
+    ],
+    generates_api = 1,
+)

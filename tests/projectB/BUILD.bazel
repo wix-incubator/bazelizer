@@ -1,0 +1,8 @@
+
+
+
+java_library(
+    name = "projectB",
+    srcs = glob(["*.java"]),
+    visibility = ["//visibility:public"],
+)
