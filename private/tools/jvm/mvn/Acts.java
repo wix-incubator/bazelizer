@@ -21,9 +21,11 @@ import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -318,7 +320,6 @@ public class Acts {
     private static void writeTo(Path pomFile, String pom) {
         java.nio.file.Files.write(pomFile, pom.getBytes(StandardCharsets.UTF_8));
     }
-
 
     @lombok.SneakyThrows
     private static void copyTo(Path src, Path jarFile) {
