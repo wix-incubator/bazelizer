@@ -68,7 +68,15 @@ public interface PathsCollection extends Iterable<Path> {
                 }
             }
             return Optional.empty();
-        }).orElseThrow(() -> new IllegalStateException("no common path prefix within " + this));
+        }).map(path -> {
+            final Path src = Paths.get("src");
+            for (int i = 0;  i < path.getNameCount(); i++) {
+                if (path.getName(i).equals(src)) {
+                    return path.subpath(0, i);
+                }
+            }
+            return path;
+        }).orElseThrow(() -> new IllegalStateException("no maven layout within paths: " + this));
     }
 
     /**

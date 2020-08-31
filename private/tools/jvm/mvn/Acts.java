@@ -7,7 +7,6 @@ import com.github.mustachejava.MustacheFactory;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterables;
 import com.google.common.io.ByteSource;
-import com.google.common.io.CharSink;
 import com.google.common.io.CharSource;
 import com.google.common.io.Closer;
 import lombok.AllArgsConstructor;
@@ -18,6 +17,10 @@ import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.cactoos.Output;
+import org.cactoos.io.OutputTo;
+import org.cactoos.io.TeeOutput;
+import org.cactoos.io.WriterTo;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -37,6 +40,7 @@ public class Acts {
     /**
      * Install deps into M2_HOME
      */
+    @Slf4j
     static class Deps implements Act {
 
         @Override
@@ -56,6 +60,7 @@ public class Acts {
                         "<version>" + dep.version() + "</version>\n" +
                         "</project>";
                 Path pomFile = depFolder.resolve(pref + ".pom");
+                log.info("Install: {}", dep);
                 writeTo(pomFile, pom);
             });
             return project;
@@ -103,9 +108,9 @@ public class Acts {
                 try {
                     Files.copy(src, dest);
                 } catch (java.nio.file.NoSuchFileException e) {
-                    throw new BuildException("no such file: " + src + ", within: [" + exists(target) + " ...]", e);
+                    throw new MvnException("no such file: " + src + ", within: [" + exists(target) + " ...]", e);
                 } catch (IOException e) {
-                    throw new BuildException(e);
+                    throw new MvnException(e);
                 }
 
             });
@@ -120,6 +125,7 @@ public class Acts {
     }
 
     @SuppressWarnings("UnstableApiUsage")
+    @Slf4j
     static class PomMustache implements Act {
 
         @Override
@@ -127,17 +133,22 @@ public class Acts {
         public Project accept(Project project) {
             final ByteSource pomFileTpl = project.pomXmlTpl();
             final CharSource tplSource = pomFileTpl.asCharSource(StandardCharsets.UTF_8);
-            final File genPomFile = newPomXML(project.workDir().toFile());
-            final CharSink newPomFile = com.google.common.io.Files.asCharSink(genPomFile,
-                    StandardCharsets.UTF_8);
+            final File syntheticPom = newPomXML(project.workDir().toFile());
             MustacheFactory mf = new DefaultMustacheFactory();
             try (Reader tpl = tplSource.openStream()) {
-                try (Writer dest = new PrintWriter(newPomFile.openStream())) {
+                final StringWriter str = new StringWriter();
+                final Output output = new TeeOutput(
+                        new OutputTo(new WriterTo(syntheticPom)),
+                        str
+                );
+                try (Writer dest = new PrintWriter(output.stream())) {
                     Mustache mustache = mf.compile(tpl, "template.mustache");
                     mustache.execute(dest, project);
                 }
+
+                log.info("{}", str);
             }
-            project.args().append("-f", genPomFile.getAbsolutePath());
+            project.args().append("-f", syntheticPom.getAbsolutePath());
             return project;
         }
 
@@ -163,6 +174,7 @@ public class Acts {
     /**
      * Prepare settings xml.
      */
+    @Slf4j
     static class SettingsXml implements Act {
 
         @Override
@@ -175,6 +187,7 @@ public class Acts {
                             "<localRepository>" + repository + "</localRepository>\n" +
                             "</settings>";
             save(settingsXml, xml);
+            log.info("{}", xml);
             project.args().append("-s", settingsXml.toString());
             return project;
         }

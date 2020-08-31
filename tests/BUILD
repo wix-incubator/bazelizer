@@ -1,42 +1,37 @@
-load("//private/ruls:buildpack.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
-
-
-
-filegroup(
-    name = "pom",
-    srcs = ["example_pom.xml"],
-    visibility = ["//visibility:public"]
-)
+load("//:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
 
 
 #
 # preparing
 #
 
-create_mvn_buildpack(
-    name = "MavenImage",
-    pom_file_init_src = "example_pom.xml"
-)
+#create_mvn_buildpack(
+#    name = "MavenImage",
+#    pom_file_init_src = "example_pom.xml"
+#)
+#
+
+_buildpack = "//tests/integration/mvn-build-lib:app=._buildpack"
 
 sh_library(
     name = "MavenImageDummy",
     srcs = ["dummy.sh"],
-    data = [":MavenImage"],
+    data = [_buildpack],
 )
 
 sh_test(
     name = "MavenImageTest",
     srcs = ["test_files_exist.sh"],
-    args = ["tests/MavenImage.tar", "tests/example_pom.xml"],
-    data = [":MavenImage"],
+    args = ["tests/integration/mvn-build-lib/app=._buildpack.tar", "tests/integration/mvn-build-lib/pom.xml"],
+    data = [_buildpack],
     deps = [":MavenImageDummy"]
 )
 
 sh_test(
     name = "MavenImageTarTest",
     srcs = ["test_tar_repo.sh"],
-    args = ["tests/MavenImage.tar"],
-    data = [":MavenImage"],
+    args = ["tests/integration/mvn-build-lib/app=._buildpack.tar"],
+    data = [_buildpack],
     deps = [":MavenImageDummy"]
 )
 
@@ -45,30 +40,18 @@ sh_test(
 # running
 #
 
-
-
-run_mvn_buildpack(
-    name = "MavenRun",
-    deps = [
-        "@maven//:info_picocli_picocli",
-        "//tests/projectB"
-    ], # test lib
-    srcs = ["//tests/projectA:sources"],
-    buildpack = ":MavenImage",
-    outputs = ["artifact_a-1.0.0-SNAPSHOT.jar"]
-)
-
+_run = "//tests/integration/mvn-build-lib:jaxb2api"
 
 sh_library(
     name = "MavenRunDummy",
     srcs = ["dummy.sh"],
-    data = [":MavenRun"],
+    data = [_run],
 )
 
 sh_test(
     name = "MavenRunTest",
     srcs = ["test_jar.sh"],
-    args = ["tests/artifact_a-1.0.0-SNAPSHOT.jar", "bar/A.class"],
-    data = [":MavenRun"],
+    args = ["tests/integration/mvn-build-lib/myapi-1.0.0-SNAPSHOT.jar", "com/mavenizer/examples/jaxbapi/API.class"],
+    data = [_run],
     deps = [":MavenRunDummy"]
 )

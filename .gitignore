@@ -28,6 +28,8 @@ hs_err_pid*
 target/
 logs/
 .DS_Store
+target
+
 
 node_modules
 dist

@@ -6,6 +6,7 @@ def dependencies():
         artifacts = [
             "com.jcabi.incubator:xembly:0.24.0",
             "com.jcabi:jcabi-xml:0.22.2",
+            "org.cactoos:cactoos:0.46",
 
             "com.google.guava:guava:29.0-jre",
             "org.projectlombok:lombok:1.18.12",
@@ -33,4 +34,5 @@ def dependencies():
             "https://maven.google.com",
             "https://repo1.maven.org/maven2",
         ],
+        fetch_sources = True,
     )

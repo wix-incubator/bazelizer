@@ -111,13 +111,12 @@ def _execute_build_impl(ctx):
     args.add_all(output_args)
 
     ctx.actions.run(
-        inputs = depset([srcs_manifest, deps_manifest], transitive =
-                                                            [depset([buildpack_info.pom, buildpack_info.tarball]), depset(deps)] + [f.files for f in ctx.attr.srcs]),
+        inputs = depset([srcs_manifest, deps_manifest],
+                        transitive = [depset([buildpack_info.pom, buildpack_info.tarball]), depset(deps)] + [f.files for f in ctx.attr.srcs]),
         outputs = outputs,
         arguments = [args],
         executable = ctx.executable._tool,
         use_default_shell_env = True,
-        mnemonic = "AugmentedMavenWrapper",
         progress_message = "Running maven build...",
     )
 

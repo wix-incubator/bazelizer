@@ -22,7 +22,7 @@ public class BuildMvn  {
         int status = cli.doMain(args.toArray(), basedir, out.stdout, out.stderr);
         if (status != 0) {
             out.log();
-            throw new BuildException("\"mvn\" -- non zero exit code " + status);
+            throw new MvnException("\"mvn\" -- non zero exit code " + status);
         }
     }
 

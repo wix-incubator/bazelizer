@@ -118,7 +118,7 @@ public interface Project {
                 try {
                     return invokable.invoke(self, args);
                 } catch (InvocationTargetException | IllegalAccessException e) {
-                    throw new BuildException(e);
+                    throw new MvnException(e);
                 }
             }
         });

@@ -11,7 +11,9 @@ import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Slf4j
 public class Cli {
@@ -106,13 +108,7 @@ public class Cli {
 
         @Override
         public Path workDir() {
-            final Path path = PathsCollection.fromManifest(srcs).commonPrefix();
-            final Path src = Paths.get("src");
-            for (int i = 0; i < path.getNameCount(); i++) {
-                if (path.getName(i).equals(src))
-                    return path.subpath(0, i);
-            }
-            throw new IllegalArgumentException("non maven layout: " + path);
+            return PathsCollection.fromManifest(srcs).commonPrefix();
         }
 
         @Override
@@ -165,11 +161,5 @@ public class Cli {
         int exitCode = new CommandLine(new Tool()).execute(args);
         log.info("*************** Done. ***************");
         System.exit(exitCode);
-    }
-
-    static class NoCommonPrefixForSrcsException extends RuntimeException {
-        public NoCommonPrefixForSrcsException(String message) {
-            super(message);
-        }
     }
 }
