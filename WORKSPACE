@@ -16,3 +16,6 @@ http_archive(
 
 load("//third_party:defs.bzl", "dependencies")
 dependencies()
+
+load("//third_party:pinn.bzl", "dependencies")
+dependencies()
