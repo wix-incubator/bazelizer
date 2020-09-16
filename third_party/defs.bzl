@@ -17,7 +17,7 @@ def dependencies(repositories=default_repository_urls()):
             "org.projectlombok:lombok:1.18.12",
             "com.github.spullara.mustache.java:compiler:0.9.6",
             "org.slf4j:slf4j-api:1.7.30",
-            'org.slf4j:slf4j-jdk14:1.7.30',
+            'ch.qos.logback:logback-classic:jar:1.2.3',
             "info.picocli:picocli:4.5.0",
             "org.apache.commons:commons-compress:1.20",
             "org.apache.maven:maven-compat:3.6.3",

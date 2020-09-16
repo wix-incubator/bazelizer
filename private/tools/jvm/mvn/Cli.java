@@ -9,11 +9,8 @@ import picocli.CommandLine;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
-import java.util.OptionalInt;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 @Slf4j
 public class Cli {
@@ -48,7 +45,7 @@ public class Cli {
         @Override
         public void run() {
             new Act.Iterative(
-                    new Acts.PomMustache(),
+                    new Acts.POM(),
                     new Acts.SettingsXml(),
                     new Acts.MvnBuild(false),
                     new Acts.MkRepoSnapshot(),
@@ -59,7 +56,7 @@ public class Cli {
 
 
 
-    @SuppressWarnings("UnstableApiUsage")
+    @SuppressWarnings({"UnstableApiUsage", "unused"})
     @CommandLine.Command(name = "build")
     public static class Build implements Runnable, Project {
         @CommandLine.Option(names = { "-pt", "--pom" }, paramLabel = "POM", description = "the pom xml template file")
@@ -140,7 +137,7 @@ public class Cli {
                     new Acts.DefRepository(),
                     new Acts.Version(),
                     new Acts.Deps(),
-                    new Acts.PomMustache(),
+                    new Acts.POM(),
                     new Acts.SettingsXml(),
                     new Acts.MvnBuild(true),
                     new Acts.Outputs()

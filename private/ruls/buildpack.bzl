@@ -38,7 +38,7 @@ def _create_mvn_repository_impl(ctx):
         arguments = [args],
         executable = ctx.executable._tool,
         use_default_shell_env = True,
-        progress_message = "createing mvn repo image... %s" % (ctx.label),
+        progress_message = "createing mvn repository tarball... %s" % (ctx.label),
     )
 
     return [

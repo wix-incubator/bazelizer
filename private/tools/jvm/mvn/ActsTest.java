@@ -12,7 +12,6 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,9 +38,9 @@ public class ActsTest {
                 "    </dependencies>\n" +
                 "</project>";
 
-        class Tmp implements Project {
-            Path tmpWorkDir = Files.createTempDir().toPath();
-            Tmp() throws IOException {
+        Project p  = new Project() {
+            final Path tmpWorkDir = Files.createTempDir().toPath();
+            {
                 tmpWorkDir.toFile().deleteOnExit();
             }
 
@@ -65,12 +64,12 @@ public class ActsTest {
             public Iterable<Dep> deps() {
                 return Lists.newArrayList(new Dep.Simple(null, "xyz", "xyz-aaa", "1.0"));
             }
-        }
+        };
 
-        final Act.Memento act = new Act.Memento(
-                new Acts.PomMustache()
+        final Act.Iterative act = new Act.Iterative(
+                new Acts.POM()
         );
-        final Project accept = act.accept(new Tmp());
+        final Project accept = act.accept(p);
         final List<Args.KW> kws = accept.args().toKW();
         final Optional<Args.KW> pomFileArg = kws.stream().filter(x -> x.key.equals("f")).findFirst();
         Assert.assertThat("was: " + kws, pomFileArg.isPresent(), Matchers.is(true));
@@ -84,11 +83,9 @@ public class ActsTest {
     }
 
 
-
-
     @Test
     public void install() throws IOException {
-        final Act.Memento act = new Act.Memento(
+        final Act.Iterative act = new Act.Iterative(
                 new Acts.Deps()
         );
         File tmpWorkDir = Files.createTempDir();
@@ -98,7 +95,7 @@ public class ActsTest {
         jar.toFile().deleteOnExit();
         tmpWorkDir.deleteOnExit();
 
-        class Tmp implements Project {
+        Project p = new Project() {
             @Override
             public Path workDir() {
                 return tmpWorkDir.toPath();
@@ -114,9 +111,9 @@ public class ActsTest {
                 return Lists.newArrayList(
                         new Dep.Simple(jar.toFile(), "xyz.com.baz", "xyz-aaa", "1.0"));
             }
-        }
+        };
 
-        act.accept(new Tmp());
+        act.accept(p);
 
         final Path resolve = tmpWorkDir.toPath().resolve("repository/xyz/com/baz/xyz-aaa/1.0/");
         Assert.assertTrue(resolve.resolve("xyz-aaa-1.0.jar").toFile().exists());

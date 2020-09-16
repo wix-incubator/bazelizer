@@ -5,7 +5,7 @@ import lombok.experimental.UtilityClass;
 import java.util.concurrent.ThreadLocalRandom;
 
 @UtilityClass
-public class RandomTextUtil {
+public final class RandomTextUtil {
 
     public static String randomStr(String pref) {
         return randomStr(pref, 10);
@@ -16,6 +16,6 @@ public class RandomTextUtil {
         for (int j = 0; j < len; j++) {
             s.append((char) ThreadLocalRandom.current().nextInt('a', 'z'));
         }
-        return s.toString();
+        return pref + s.toString();
     }
 }

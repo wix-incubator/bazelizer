@@ -57,6 +57,14 @@ public interface Project {
     }
 
     /**
+     * Make all it methods lazy cached and memorized.
+     * @return project
+     */
+    default Project freez() {
+        return Project.memento(this);
+    }
+
+    /**
      * Output.
      */
     interface Output {

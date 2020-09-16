@@ -18,47 +18,26 @@ _deps = [
     "@maven//:org_eclipse_aether_aether_transport_wagon",
 
     "@maven//:org_slf4j_slf4j_api",
-    "@maven//:org_slf4j_slf4j_simple",
-#        "@maven//:ch_qos_logback_logback_classic",
+    "@maven//:ch_qos_logback_logback_classic",
+    "@maven//:ch_qos_logback_logback_core",
+#    "@maven//:org_apache_logging_log4j_log4j_slf4j_impl",
     "@maven//:info_picocli_picocli",
 ]
 
-java_library(
-    name = "mvn_lib",
-    srcs = glob(["*.java"], exclude = ["*Test.java"]),
-    javacopts = [
-        "-source",
-        "8",
-        "-target",
-        "8",
-    ],
-    deps = _deps,
-    exports = _deps,
-    plugins = [
-        ":lombok_plugin",
-    ],
-    visibility = ["//visibility:public"],
-)
+_jopts = ["-source","8","-target","8",]
 
 java_binary(
     name = "mvn",
     srcs = glob(["*.java"], exclude = ["*Test.java"]),
-    javacopts = [
-        "-source",
-        "8",
-        "-target",
-        "8",
-    ],
-    main_class = "tools.jvm.mvn.Cli",
-    deps = [
-        ":mvn_lib",
-    ],
+    javacopts = _jopts,
+    resources = ["//private/tools/jvm/mvn/java:java_resources"],
+    deps = _deps,
     plugins = [
         ":lombok_plugin",
     ],
+    main_class = "tools.jvm.mvn.Cli",
     visibility = ["//visibility:public"],
 )
-
 
 run_tests(
     name = "mvn_test",
@@ -66,7 +45,7 @@ run_tests(
     srcs = glob(["*Test.java"]),
     data = glob(["**"],exclude = ["*.java"]),
     deps = [
-        ":mvn_lib",
+        ":mvn",
         "@maven//:junit_junit",
         "@maven//:com_jcabi_jcabi_xml",
         "@maven//:org_hamcrest_hamcrest_library",

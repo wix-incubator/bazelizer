@@ -17,31 +17,24 @@ public interface Act {
     /**
      * Exec one by one.
      */
-    class Iterative extends Memento implements Act {
+    class Iterative  implements Act {
+        private final List<Act> acts;
 
         public Iterative(Act...acts) {
             this(Lists.newArrayList(acts));
         }
 
         public Iterative(List<Act> acts) {
-            super(project -> {
-                for (Act act : acts) {
-                    project = act.accept(project);
-                }
-                return project;
-            });
+            this.acts = acts;
         }
-    }
-
-
-    @AllArgsConstructor
-    class Memento implements Act {
-        private final Act act;
 
         @Override
         public Project accept(Project project) {
-            Project p = Project.memento(project);
-            return act.accept(p);
+            project = project.freez();
+            for (Act act : acts) {
+                project = act.accept(project);
+            }
+            return project;
         }
     }
 

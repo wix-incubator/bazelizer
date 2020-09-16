@@ -28,17 +28,11 @@ public interface PathsCollection extends Iterable<Path> {
      * New stream of paths
      * @return stream of paths
      */
+    @SuppressWarnings("UnstableApiUsage")
     default Stream<Path> stream() {
         return Streams.stream(this);
     }
 
-    /**
-     * Get only one file as this files represent it or fail.
-     * @return file.
-     */
-    default Path onlyOne() {
-        return Iterables.getOnlyElement(this);
-    }
 
     /**
      * Try to find common prefix for all paths.
