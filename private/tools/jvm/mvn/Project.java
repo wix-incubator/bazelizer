@@ -56,13 +56,6 @@ public interface Project {
         return new Args();
     }
 
-    /**
-     * Make all it methods lazy cached and memorized.
-     * @return project
-     */
-    default Project freez() {
-        return Project.memento(this);
-    }
 
     /**
      * Output.
@@ -126,11 +119,24 @@ public interface Project {
                 try {
                     return invokable.invoke(self, args);
                 } catch (InvocationTargetException | IllegalAccessException e) {
-                    throw new MvnException(e);
+                    throw new ToolException(e);
                 }
             }
         });
     }
+
+
+
+    /**
+     *
+     */
+    class Memorized extends Wrap implements Project {
+
+        public Memorized(Project project) {
+            super(Project.memento(project));
+        }
+    }
+
 
 
     @AllArgsConstructor

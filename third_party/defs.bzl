@@ -13,6 +13,7 @@ def dependencies(repositories=default_repository_urls()):
             "com.jcabi.incubator:xembly:0.24.0",
             "com.jcabi:jcabi-xml:0.22.2",
             "org.cactoos:cactoos:0.46",
+            "commons-io:commons-io:2.5",
             "com.google.guava:guava:29.0-jre",
             "org.projectlombok:lombok:1.18.12",
             "com.github.spullara.mustache.java:compiler:0.9.6",

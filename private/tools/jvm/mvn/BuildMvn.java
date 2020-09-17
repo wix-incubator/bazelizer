@@ -12,6 +12,16 @@ import java.io.PrintStream;
 @Slf4j
 public class BuildMvn  {
 
+    private final boolean logOutputAlways;
+
+    public BuildMvn() {
+        this(false);
+    }
+
+    public BuildMvn(boolean logOutputAlways) {
+        this.logOutputAlways = logOutputAlways;
+    }
+
     public void run(Project project) {
         Std out = new Std();
         final MavenCli cli = new MavenCli();
@@ -20,10 +30,11 @@ public class BuildMvn  {
         System.setProperty("maven.multiModuleProjectDirectory", basedir);
         log.info("\"mvn\" command: {}", args);
         int status = cli.doMain(args.toArray(), basedir, out.stdout, out.stderr);
-        if (status != 0) {
-            out.log();
-            throw new MvnException("\"mvn\" -- non zero exit code " + status);
+        if (logOutputAlways || status != 0) {
+            out.logIfNeed();
         }
+        if (status != 0)
+            throw new ToolException("\"mvn\" -- non zero exit code " + status);
     }
 
 
@@ -46,7 +57,7 @@ public class BuildMvn  {
         }
 
         @lombok.SneakyThrows
-        void log() {
+        void logIfNeed() {
             if (stdout != System.out) {
                 ByteSource.wrap(bosStdout.toByteArray()).copyTo(System.out);
                 ByteSource.wrap(bosStderr.toByteArray()).copyTo(System.err);

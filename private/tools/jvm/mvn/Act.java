@@ -30,7 +30,7 @@ public interface Act {
 
         @Override
         public Project accept(Project project) {
-            project = project.freez();
+            project = Project.memento(project);
             for (Act act : acts) {
                 project = act.accept(project);
             }

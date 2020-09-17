@@ -1,33 +1,51 @@
 
-M2_REPO_IMG_EXT = ".tar"
-BASE_POM_NAME = "base_pom.xml"
+
+_M2_REPO_IMG_EXT = ".tar"
+_BASE_POM_NAME = "base_pom.xml"
 _TOOL = Label("//private/tools/jvm/mvn:mvn")
-
-
-def _find_exactly_one(_depset, file_sufix):
-    array = [x for x in _depset.to_list() if x.path.endswith(file_sufix)]
-    if len(array) != 1: fail("not found file that ends with %s in %s" % (file_sufix, _depset))
-    else: return array[0]
 
 
 MvnBuildpackInfo = provider(
     fields = {"pom": "pom file", "tarball": "archive m2 repository"},
 )
 
+
+def _setup_common_tool_falgs(ctx, args):
+    if ctx.attr.log_level:
+        args.add("--syslog=%s" % (ctx.attr.log_level))
+
+
+def _merged_dict(dicta, dictb):
+    return dict(dicta.items() + dictb.items())
+
+_common_attr = {
+    "log_level": attr.string(doc="specify log level for the tool")
+}
+
+_create_mvn_repository_attr = _merged_dict(
+    _common_attr,
+    {
+        "pom_file_init_content": attr.string(),
+        "pom_file_init_src": attr.label(allow_single_file = True),
+        "_tool": attr.label(default = _TOOL, allow_files = True, executable = True, cfg = "host"),
+    }
+)
+
 def _create_mvn_repository_impl(ctx):
     _content = ctx.attr.pom_file_init_content
     _content_file = ctx.file.pom_file_init_src
     if _content and not _content_file:
-        initial_pom = ctx.actions.declare_file(BASE_POM_NAME)
+        initial_pom = ctx.actions.declare_file(_BASE_POM_NAME)
         ctx.actions.write(initial_pom, ctx.attr.pom_file_init_content)
     elif _content_file and not _content:
         initial_pom = _content_file
     else:
         fail('Must use either "pom_file_init_content" or "pom_file_init_src" attr')
 
-    archive = ctx.actions.declare_file(ctx.label.name + M2_REPO_IMG_EXT)
+    archive = ctx.actions.declare_file(ctx.label.name + _M2_REPO_IMG_EXT)
 
     args = ctx.actions.args()
+    _setup_common_tool_falgs(ctx, args)
     args.add("repo2tar")
     args.add("--output", archive.path)
     args.add("--pom", initial_pom.path)
@@ -46,22 +64,14 @@ def _create_mvn_repository_impl(ctx):
         MvnBuildpackInfo(pom = initial_pom, tarball = archive),
     ]
 
+
 create_mvn_buildpack = rule(
     implementation = _create_mvn_repository_impl,
-    attrs = {
-        "pom_file_init_content": attr.string(),
-        "pom_file_init_src": attr.label(allow_single_file = True),
-        "_tool": attr.label(
-            default = _TOOL,
-            allow_files = True,
-            executable = True,
-            cfg = "host",
-        ),
-    },
+    attrs = _create_mvn_repository_attr,
 )
 
 
-def _manifest(name, ctx, files_paths):
+def _write_manifest_file(name, ctx, files_paths):
     manifest = ctx.actions.declare_file(name + ".manifest")
     args = ctx.actions.args()
     args.add_all(files_paths)
@@ -86,19 +96,42 @@ def _collect_deps(dep_targets):
 
     return _direct_deps
 
-def _execute_build_impl(ctx):
+
+_run_mvn_buildpack_attr = _merged_dict(
+    _common_attr,
+    {
+        "deps": attr.label_list(),
+        "srcs": attr.label_list(mandatory = True),
+        "outputs": attr.string_list(),
+        "artifactId": attr.string(),
+        "groupId": attr.string(),
+        "buildpack": attr.label(mandatory = True, allow_files = True),
+        "_tool": attr.label(
+            default = _TOOL,
+            allow_files = True,
+            executable = True,
+            cfg = "host",
+        )
+    }
+)
+
+
+def _run_mvn_buildpack_impl(ctx):
     buildpack_info = ctx.attr.buildpack[MvnBuildpackInfo]
     deps = _collect_deps(ctx.attr.deps)
-    srcs_manifest = _manifest("srcs", ctx, [src for src in ctx.files.srcs])
-    deps_manifest = _manifest("deps", ctx, [d.path for d in deps])
+    srcs_manifest = _write_manifest_file("srcs", ctx, [src for src in ctx.files.srcs])
+    deps_manifest = _write_manifest_file("deps", ctx, [d.path for d in deps])
     outputs = []
     output_args = []
     for o in ctx.attr.outputs:
         declare_file = ctx.actions.declare_file(o)
         outputs.append(declare_file)
-        output_args.append("-O{declared_file}={file_in_mvn_target}".format(declared_file = declare_file.path, file_in_mvn_target = o))
+        output_args.append(
+            "-O{declared_file}={file_in_mvn_target}".format(declared_file = declare_file.path, file_in_mvn_target = o)
+        )
 
     args = ctx.actions.args()
+    _setup_common_tool_falgs(ctx, args)
     args.add("build")
     args.add("--pom", buildpack_info.pom)
     args.add("--repo", buildpack_info.tarball)
@@ -112,12 +145,15 @@ def _execute_build_impl(ctx):
 
     ctx.actions.run(
         inputs = depset([srcs_manifest, deps_manifest],
-                        transitive = [depset([buildpack_info.pom, buildpack_info.tarball]), depset(deps)] + [f.files for f in ctx.attr.srcs]),
+                        transitive = [
+                            depset([buildpack_info.pom, buildpack_info.tarball]),
+                            depset(deps)
+                        ] + [f.files for f in ctx.attr.srcs]),
         outputs = outputs,
         arguments = [args],
         executable = ctx.executable._tool,
         use_default_shell_env = True,
-        progress_message = "Running maven build...",
+        progress_message = "running maven build... %s" % (ctx.label),
     )
 
     runfiles = ctx.runfiles(
@@ -132,19 +168,6 @@ def _execute_build_impl(ctx):
     ]
 
 run_mvn_buildpack = rule(
-    implementation = _execute_build_impl,
-    attrs = {
-        "deps": attr.label_list(),
-        "srcs": attr.label_list(mandatory = True),
-        "outputs": attr.string_list(),
-        "artifactId": attr.string(),
-        "groupId": attr.string(),
-        "buildpack": attr.label(mandatory = True, allow_files = True),
-        "_tool": attr.label(
-            default = _TOOL,
-            allow_files = True,
-            executable = True,
-            cfg = "host",
-        ),
-    },
+    implementation = _run_mvn_buildpack_impl,
+    attrs = _run_mvn_buildpack_attr,
 )

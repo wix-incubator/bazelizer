@@ -17,10 +17,9 @@ import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
-import org.cactoos.Output;
-import org.cactoos.io.OutputTo;
-import org.cactoos.io.TeeOutput;
-import org.cactoos.io.WriterTo;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.output.TeeOutputStream;
+import org.apache.commons.io.output.WriterOutputStream;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -112,9 +111,9 @@ public final class Acts {
                 try {
                     Files.copy(src, dest);
                 } catch (java.nio.file.NoSuchFileException e) {
-                    throw new MvnException("no such file: " + src + ", within: [" + exists(target) + " ...]", e);
+                    throw new ToolException("no such file: " + src + ", within: [" + exists(target) + " ...]", e);
                 } catch (IOException e) {
-                    throw new MvnException(e);
+                    throw new ToolException(e);
                 }
 
             });
@@ -141,16 +140,17 @@ public final class Acts {
             MustacheFactory mf = new DefaultMustacheFactory();
             try (Reader tpl = tplSource.openStream()) {
                 final StringWriter str = new StringWriter();
-                final Output output = new TeeOutput(
-                        new OutputTo(new WriterTo(syntheticPom)),
-                        str
+                final OutputStream stream = new TeeOutputStream(
+                        new FileOutputStream(syntheticPom),
+                        new WriterOutputStream(str, StandardCharsets.UTF_8)
                 );
-                try (Writer dest = new PrintWriter(output.stream())) {
+
+                try (Writer dest = new PrintWriter(stream)) {
                     Mustache mustache = mf.compile(tpl, "template.mustache");
                     mustache.execute(dest, project);
                 }
 
-                log.info("{}", str);
+                log.debug("\n{}", str);
             }
             project.args().append("-f", syntheticPom.getAbsolutePath());
             return project;
@@ -191,7 +191,7 @@ public final class Acts {
                             "<localRepository>" + repository + "</localRepository>\n" +
                             "</settings>";
             save(settingsXml, xml);
-            log.info("{}", xml);
+            log.debug("\n{}", xml);
             project.args().append("-s", settingsXml.toString());
             return project;
         }
@@ -263,7 +263,7 @@ public final class Acts {
      * Create snapshot from the repository.
      */
     @Slf4j
-    static class MkRepoSnapshot implements Act {
+    static class RepositoryArchiver implements Act {
 
         @SuppressWarnings("UnstableApiUsage")
         @Override
@@ -272,10 +272,11 @@ public final class Acts {
             final Path m2Home = project.m2Home();
             final Path src = m2Home.resolve("repository");
             final String dest = Iterables.getOnlyElement(project.getOutputs()).src();
-            log.info("Archive: src={} dest={}", src, dest);
+            log.debug("Archive: src={} dest={}", src, dest);
             final Closer closer = Closer.create();
+            final File destFile = new File(dest);
             final TarArchiveOutputStream aos = closer.register(new TarArchiveOutputStream(
-                    com.google.common.io.Files.asByteSink(new File(dest)).openBufferedStream()
+                    com.google.common.io.Files.asByteSink(destFile).openBufferedStream()
             ));
             aos.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
             final Stream<Path> walk = Files.walk(src);
@@ -286,6 +287,7 @@ public final class Acts {
             } finally {
                 closer.close();
             }
+            log.info("Repository archive created: {}", FileUtils.byteCountToDisplaySize(destFile.length()));
             return project;
         }
 
@@ -317,11 +319,13 @@ public final class Acts {
     }
 
 
+    @Slf4j
     static class Version implements Act {
 
         @Override
         public Project accept(Project project) {
-            new BuildMvn().run(new Project.Wrap(project) {
+            log.info("Verify maven version: ");
+            new BuildMvn(true).run(new Project.Wrap(project) {
                 @Override
                 public Args args() {
                     return new Args().append("--version");
