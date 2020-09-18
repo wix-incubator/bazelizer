@@ -35,6 +35,15 @@ public interface Dep {
     Path source();
 
     /**
+     * Maven packaging type.
+     * @return only jar for now
+     */
+    default String packaging() {
+        return "jar";
+    }
+
+
+    /**
      * Resolve maven layout, relative to repo
      * @param repo relative to this
      * @return artifact folder

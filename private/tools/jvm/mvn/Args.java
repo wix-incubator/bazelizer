@@ -1,23 +1,27 @@
 package tools.jvm.mvn;
 
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import lombok.Data;
 
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
+import java.util.*;
 
 /**
  * Args.
  */
-public class Args  {
+public class Args implements Iterable<String>  {
     private final LinkedHashSet<String> args = new LinkedHashSet<>();
+
+    public Args() { }
+
+
+    public Args(Args col) {
+        for (String s : col) {
+            append(s);
+        }
+    }
 
     /**
      * Add args to set.
@@ -48,33 +52,36 @@ public class Args  {
         return Joiner.on(" ").join(args);
     }
 
-    public List<KW> toKW() {
-        final List<String> strings = Lists.newArrayList(toArray());
-        final List<KW> vals = Lists.newArrayList();
-
-        for (int i = 0; i < strings.size();) {
-            final String n = strings.get(i);
-
+    public List<KeyValue> getKeyValues() {
+        final String[] strings = toArray();
+        final List<KeyValue> vals = Lists.newArrayList();
+        for (int i = 0; i < strings.length;) {
+            final String n = strings[i];
             if (n.startsWith("-")) {
                 String key = n;
                 while (key.startsWith("-")) {
                     key = key.substring(1);
                 }
-                String val = Iterables.get(strings, ++i, null);
-                KW kw = new KW(key, val);
+                String val = strings[++i];
+                KeyValue kw = new KeyValue(key, val);
                 vals.add(kw);
             } else {
-                vals.add(new KW(n, null));
+                vals.add(new KeyValue(n, null));
             }
-
             i++;
         }
         return vals;
     }
 
     @Data
-    public static class KW {
+    public static class KeyValue {
         final String key;
         final String value;
+    }
+
+
+    @Override
+    public Iterator<String> iterator() {
+        return Collections.unmodifiableCollection(args).iterator();
     }
 }

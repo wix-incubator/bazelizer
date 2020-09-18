@@ -9,6 +9,7 @@ import com.google.common.reflect.Reflection;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.SneakyThrows;
+import lombok.ToString;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -102,36 +103,10 @@ public interface Project {
         }
     }
 
-
-    @SuppressWarnings({"UnstableApiUsage"})
-    static Project memento(Project self) {
-        final Map<Method,Object> cache = Maps.newHashMap();
-        return Reflection.newProxy(Project.class, new AbstractInvocationHandler() {
-
-            @Override
-            protected Object handleInvocation(Object o, Method method, Object[] args) {
-                return cache.computeIfAbsent(method, (m) -> call(args, m));
-            }
-
-            @SuppressWarnings("unchecked")
-            private Object call(Object[] args, Method m)  {
-                final Invokable<Project, Object> invokable = (Invokable<Project, Object>) Invokable.from(m);
-                try {
-                    return invokable.invoke(self, args);
-                } catch (InvocationTargetException | IllegalAccessException e) {
-                    throw new ToolException(e);
-                }
-            }
-        });
-    }
-
-
-
     /**
-     *
+     * Lazy memorized Project.
      */
     class Memorized extends Wrap implements Project {
-
         public Memorized(Project project) {
             super(Project.memento(project));
         }
@@ -140,6 +115,7 @@ public interface Project {
 
 
     @AllArgsConstructor
+    @ToString
     class Wrap implements Project {
         private final Project project;
 
@@ -189,4 +165,28 @@ public interface Project {
             return project.args();
         }
     }
+
+
+    @SuppressWarnings({"UnstableApiUsage"})
+    static Project memento(Project self) {
+        final Map<Method,Object> cache = Maps.newHashMap();
+        return Reflection.newProxy(Project.class, new AbstractInvocationHandler() {
+
+            @Override
+            protected Object handleInvocation(Object o, Method method, Object[] args) {
+                return cache.computeIfAbsent(method, (m) -> call(args, m));
+            }
+
+            @SuppressWarnings("unchecked")
+            private Object call(Object[] args, Method m)  {
+                final Invokable<Project, Object> invokable = (Invokable<Project, Object>) Invokable.from(m);
+                try {
+                    return invokable.invoke(self, args);
+                } catch (InvocationTargetException | IllegalAccessException e) {
+                    throw new ToolException(e);
+                }
+            }
+        });
+    }
+
 }

@@ -20,6 +20,7 @@ run_mvn_buildpack(
     deps = [
         "//tests/integration/lib/src/com/mavenizer/examples/subliby"
     ],
+    log_level = "INFO",
     srcs = [":sources"],
     buildpack = ":app=._buildpack",
     outputs = ["myapi-1.0.0-SNAPSHOT.jar"],

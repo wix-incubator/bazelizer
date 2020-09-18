@@ -6,6 +6,7 @@
     <dependencies>
         {{#deps}}
         <dependency>
+            <!--  file: {{source}}-->
             <groupId>{{groupId}}</groupId>
             <artifactId>{{artifactId}}</artifactId>
             <version>{{version}}</version>
@@ -35,6 +36,14 @@
             <artifactId>jaxb2-basics-runtime</artifactId>
             <version>1.11.1</version>
         </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
     <build>
         <plugins>

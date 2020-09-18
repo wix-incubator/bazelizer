@@ -14,8 +14,6 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static picocli.CommandLine.Spec.Target.MIXEE;
-
 @Slf4j
 public class Cli {
 
@@ -75,7 +73,7 @@ public class Cli {
             new Act.Iterative(
                     new Acts.POM(),
                     new Acts.SettingsXml(),
-                    new Acts.MvnBuild(false),
+                    new Acts.MvnGoOffline(),
                     new Acts.RepositoryArchiver(),
                     new Acts.Outputs()
             ).accept(project);
@@ -173,7 +171,7 @@ public class Cli {
                     new Acts.Deps(),
                     new Acts.POM(),
                     new Acts.SettingsXml(),
-                    new Acts.MvnBuild(true),
+                    new Acts.MvnBuildOffline(),
                     new Acts.Outputs()
             ).accept(project);
         }
@@ -196,8 +194,6 @@ public class Cli {
         log.info("*************** {} ***************", exitCode == 0 ? "Done" : "Fail");
         LocalDateTime to = LocalDateTime.now();
         log.info("*****  Time elapsed: {}", Duration.between(from, to));
-        log.info("*****  Finished: {}", to);
-        log.info("*************** ---- ***************");
         System.exit(exitCode);
     }
 }

@@ -28,6 +28,7 @@ java_binary(
     srcs = glob(["*.java"], exclude = ["*Test.java"]),
     javacopts = _jopts,
     resources = ["//private/tools/jvm/mvn/java:java_resources"],
+    jvm_flags = ["--illegal-access=warn"],
     deps = _deps,
     plugins = [
         ":lombok_plugin",

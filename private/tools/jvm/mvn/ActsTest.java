@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 
 @SuppressWarnings("UnstableApiUsage")
 public class ActsTest {
@@ -70,9 +71,9 @@ public class ActsTest {
                 new Acts.POM()
         );
         final Project accept = act.accept(p);
-        final List<Args.KW> kws = accept.args().toKW();
-        final Optional<Args.KW> pomFileArg = kws.stream().filter(x -> x.key.equals("f")).findFirst();
-        Assert.assertThat("was: " + kws, pomFileArg.isPresent(), Matchers.is(true));
+        final List<Args.KeyValue> kws = accept.args().getKeyValues();
+        final Optional<Args.KeyValue> pomFileArg = kws.stream().filter(x -> x.key.equals("f")).findFirst();
+        assertThat("was: " + kws, pomFileArg.isPresent(), Matchers.is(true));
 
         XML xml = new XMLDocument(new File(pomFileArg.get().value));
         Assert.assertEquals(xml.xpath("//project/groupId/text()").get(0).trim(), "BBBB");
