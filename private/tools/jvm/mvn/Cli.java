@@ -65,7 +65,7 @@ public class Cli {
 
                         @Override
                         public Iterable<Output> getOutputs() {
-                            return ImmutableList.of(new Project.TmpSrc(output));
+                            return ImmutableList.of(new Output.TmpSrc(output));
                         }
                     }
             );
@@ -115,55 +115,53 @@ public class Cli {
         @Override
         @lombok.SneakyThrows
         public void run() {
-            Project project = new Project.Memorized(
-                    new Project() {
-                        @Override
-                        public String artifactId() {
-                            return artifactId;
-                        }
+            Project project = new Project() {
+                @Override
+                public String artifactId() {
+                    return artifactId;
+                }
 
-                        @Override
-                        public String groupId() {
-                            return groupId;
-                        }
+                @Override
+                public String groupId() {
+                    return groupId;
+                }
 
-                        @Override
-                        public Iterable<Dep> deps() {
-                            return PathsCollection.fromManifest(deps)
-                                    .stream().map(Dep.DigestCoords::new)
-                                    .collect(Collectors.toSet());
-                        }
+                @Override
+                public Iterable<Dep> deps() {
+                    return PathsCollection.fromManifest(deps)
+                            .stream().map(Dep.DigestCoords::new)
+                            .collect(Collectors.toSet());
+                }
 
-                        @Override
-                        public Path workDir() {
-                            return PathsCollection.fromManifest(srcs)
-                                    .commonPrefix();
-                        }
+                @Override
+                public Path workDir() {
+                    return PathsCollection.fromManifest(srcs)
+                            .commonPrefix();
+                }
 
-                        @Override
-                        public Iterable<Output> getOutputs() {
-                            return outputs.entrySet()
-                                    .stream()
-                                    .map(entry -> {
-                                        final String declared = entry.getKey();
-                                        final String buildFile = entry.getValue();
-                                        return new Project.OutputPaths(buildFile, declared);
-                                    })
-                                    .collect(Collectors.toList());
-                        }
+                @Override
+                public Iterable<Output> getOutputs() {
+                    return outputs.entrySet()
+                            .stream()
+                            .map(entry -> {
+                                final String declared = entry.getKey();
+                                final String buildFile = entry.getValue();
+                                return new Output.Paths(buildFile, declared, this.lazy());
+                            })
+                            .collect(Collectors.toList());
+                }
 
-                        @Override
-                        public Path repoImage() {
-                            return repo;
-                        }
+                @Override
+                public Path repoImage() {
+                    return repo;
+                }
 
-                        @Override
-                        public ByteSource pomXmlTpl() {
-                            return Files.asByteSource(pomXmlTpl.toFile());
-                        }
+                @Override
+                public ByteSource pomXmlTpl() {
+                    return Files.asByteSource(pomXmlTpl.toFile());
+                }
 
-                    }
-            );
+            };
 
             new Act.Iterative(
                     new Acts.DefRepository(),

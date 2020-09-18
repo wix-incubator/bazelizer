@@ -66,6 +66,15 @@ public final class Acts {
             return project;
         }
 
+        @lombok.SneakyThrows
+        private static void writeTo(Path pomFile, String pom) {
+            java.nio.file.Files.write(pomFile, pom.getBytes(StandardCharsets.UTF_8));
+        }
+
+        @lombok.SneakyThrows
+        private static void copyTo(Dep dep, Path jarFile) {
+            Files.copy(dep.source(), jarFile);
+        }
     }
 
     /**
@@ -170,61 +179,18 @@ public final class Acts {
         @Override
         @lombok.SneakyThrows
         public Project accept(Project project) {
-            final PomProperties props = pomProperties(project);
-            final File syntheticPom = newPomXML(project.workDir().toFile());
+            final Project.PropsView props = project.toView();
+            final File syntheticPom = project.pom().toFile();
             final CharSource renderedTpl = new TemplateEnvelop.Mustache(
                     project.pomXmlTpl(),
                     props
             ).eval();
-
             renderedTpl.copyTo(asByteSink(syntheticPom).asCharSink(StandardCharsets.UTF_8));
             if (log.isDebugEnabled()) {
                 log.debug("\n{}", renderedTpl.read());
             }
             project.args().append("-f", syntheticPom.getAbsolutePath());
             return project;
-        }
-
-        interface PomProperties {
-            Iterable<Dep> deps();
-            String groupId();
-            String artifactId();
-        }
-
-        private PomProperties pomProperties(Project project) {
-            return new PomProperties() {
-                @Override
-                public Iterable<Dep> deps() {
-                    return project.deps();
-                }
-
-                @Override
-                public String groupId() {
-                    return project.groupId();
-                }
-
-                @Override
-                public String artifactId() {
-                    return project.artifactId();
-                }
-            };
-        }
-
-        @lombok.SneakyThrows
-        private static File newPomXML(File dir) {
-            for (int i = 0; i < 1000; i++) {
-                StringBuilder s = new StringBuilder();
-                for (int j = 0; j < 10; j++) {
-                    s.append((char) ThreadLocalRandom.current().nextInt('a', 'z'));
-                }
-                File file = new File(dir, "pom-" + s + "-" + i  + ".xml");
-                if (!file.exists()) {
-                    //noinspection UnstableApiUsage
-                    com.google.common.io.Files.touch(file);
-                    return file;
-                }
-            }
-            throw new IllegalStateException("random file");
         }
     }
 
@@ -370,22 +336,5 @@ public final class Acts {
             });
             return project;
         }
-    }
-
-
-
-    @lombok.SneakyThrows
-    private static void writeTo(Path pomFile, String pom) {
-        java.nio.file.Files.write(pomFile, pom.getBytes(StandardCharsets.UTF_8));
-    }
-
-    @lombok.SneakyThrows
-    private static void copyTo(Path src, Path jarFile) {
-        Files.copy(src, jarFile);
-    }
-
-    @lombok.SneakyThrows
-    private static void copyTo(Dep dep, Path jarFile) {
-        copyTo(dep.source(), jarFile);
     }
 }

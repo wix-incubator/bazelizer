@@ -1,31 +1,22 @@
 package tools.jvm.mvn;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
-import com.google.common.reflect.AbstractInvocationHandler;
-import com.google.common.reflect.Invokable;
-import com.google.common.reflect.Reflection;
 import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.SneakyThrows;
 import lombok.ToString;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
 
-@SuppressWarnings("NullableProblems")
 public interface Project {
 
     default String artifactId() {
-        return RandomTextUtil.randomStr("artifact-id");
+        return RandomText.randomStr("artifact-id");
     }
 
     default String groupId() {
-        return RandomTextUtil.randomStr("group-id");
+        return RandomText.randomStr("group-id");
     }
 
     default Iterable<Dep> deps() {
@@ -38,7 +29,7 @@ public interface Project {
 
     @SneakyThrows
     default Path m2Home() {
-        return Files.createTempDirectory("M2_HOME");
+        return Files.createTempDirectory("M2_HOME-");
     }
 
     default Iterable<Output> getOutputs() {
@@ -57,61 +48,60 @@ public interface Project {
         return new Args();
     }
 
+    default Path pom() {
+        for (int i = 0; i < 1000; i++) {
+            final Path pom = workDir().resolve(RandomText.randomStr("pom_synthetic") + "-" + i + ".xml");
+            if (Files.notExists(pom)) {
+                return pom;
+            }
+        }
+        throw new IllegalStateException();
+    }
 
     /**
-     * Output.
+     * Memorized version of a Project.
      */
-    interface Output {
-        String src();
-        String dest();
+    default Project lazy() {
+        return Memento.memorize(this);
     }
 
-    @Data
-    class OutputPaths implements Output {
-        private final String src;
-        private final String dest;
 
-        @Override
-        public String src() {
-            return src;
-        }
+    default PropsView toView() {
+        return new PropsView() {
+            @Override
+            public Iterable<Dep> deps() {
+                return Project.this.deps();
+            }
 
-        @Override
-        public String dest() {
-            return dest;
-        }
+            @Override
+            public String groupId() {
+                return Project.this.groupId();
+            }
+
+            @Override
+            public String artifactId() {
+                return Project.this.artifactId();
+            }
+        };
     }
 
-    class TmpSrc implements Output {
-        private final Path dest;
-        private final Path src;
+    interface PropsView {
+        Iterable<Dep> deps();
 
-        @SneakyThrows
-        public TmpSrc(Path dest) {
-            this.dest = dest;
-            this.src = Files.createTempFile("tmp-src", ".dat");
-        }
+        String groupId();
 
-        @Override
-        public String src() {
-            return src.toString();
-        }
-
-        @Override
-        public String dest() {
-            return dest.toString();
-        }
+        String artifactId();
     }
+
 
     /**
      * Lazy memorized Project.
      */
     class Memorized extends Wrap implements Project {
         public Memorized(Project project) {
-            super(Project.memento(project));
+            super(Memento.memorize(project));
         }
     }
-
 
 
     @AllArgsConstructor
@@ -165,28 +155,4 @@ public interface Project {
             return project.args();
         }
     }
-
-
-    @SuppressWarnings({"UnstableApiUsage"})
-    static Project memento(Project self) {
-        final Map<Method,Object> cache = Maps.newHashMap();
-        return Reflection.newProxy(Project.class, new AbstractInvocationHandler() {
-
-            @Override
-            protected Object handleInvocation(Object o, Method method, Object[] args) {
-                return cache.computeIfAbsent(method, (m) -> call(args, m));
-            }
-
-            @SuppressWarnings("unchecked")
-            private Object call(Object[] args, Method m)  {
-                final Invokable<Project, Object> invokable = (Invokable<Project, Object>) Invokable.from(m);
-                try {
-                    return invokable.invoke(self, args);
-                } catch (InvocationTargetException | IllegalAccessException e) {
-                    throw new ToolException(e);
-                }
-            }
-        });
-    }
-
 }

@@ -3,7 +3,7 @@
 _M2_REPO_IMG_EXT = ".tar"
 _BASE_POM_NAME = "base_pom.xml"
 _TOOL = Label("//private/tools/jvm/mvn:mvn")
-
+_MARKER_SRC_DEFAULT_OUTPUT_JAR = "@@TARGET-JAR-OUTPUT@@"
 
 MvnBuildpackInfo = provider(
     fields = {"pom": "pom file", "tarball": "archive m2 repository"},
@@ -123,12 +123,25 @@ def _run_mvn_buildpack_impl(ctx):
     deps_manifest = _write_manifest_file("deps", ctx, [d.path for d in deps])
     outputs = []
     output_args = []
+    output_param = "-O{declared_file}={file_in_mvn_target}"
     for o in ctx.attr.outputs:
         declare_file = ctx.actions.declare_file(o)
         outputs.append(declare_file)
         output_args.append(
-            "-O{declared_file}={file_in_mvn_target}".format(declared_file = declare_file.path, file_in_mvn_target = o)
+            output_param.format(
+                declared_file = declare_file.path,
+                file_in_mvn_target = o
+            )
         )
+    out_jar = ctx.label.name + ".jar"
+    declared_out_jar = ctx.actions.declare_file(out_jar)
+    outputs.append(declared_out_jar)
+    output_args.append(
+        output_param.format(
+            declared_file = declared_out_jar.path,
+            file_in_mvn_target = _MARKER_SRC_DEFAULT_OUTPUT_JAR
+        )
+    )
 
     args = ctx.actions.args()
     _setup_common_tool_falgs(ctx, args)
@@ -165,6 +178,7 @@ def _run_mvn_buildpack_impl(ctx):
             files = depset(outputs),
             runfiles = runfiles,
         ),
+        JavaInfo(output_jar = declared_out_jar, compile_jar = declared_out_jar)
     ]
 
 run_mvn_buildpack = rule(
