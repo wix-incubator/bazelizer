@@ -21,7 +21,7 @@ public interface TemplateEnvelop {
     /**
      * Mustache template with data resolved from pom.xml
      */
-    class PomBased extends Mustache implements TemplateEnvelop {
+    class PomXPathProps extends Mustache implements TemplateEnvelop {
         @Data
         static class Props {
             final String groupId;
@@ -30,13 +30,13 @@ public interface TemplateEnvelop {
         }
 
         @SuppressWarnings("UnstableApiUsage")
-        public PomBased(String source, Project project) {
-            super(CharSource.wrap(source).asByteSource(StandardCharsets.UTF_8), getBean(project));
+        public PomXPathProps(String source, File pom) {
+            super(CharSource.wrap(source).asByteSource(StandardCharsets.UTF_8), getBean(pom));
         }
 
         @SneakyThrows
-        private static Props getBean(Project project) {
-            final XML xml = new XMLDocument(project.pom().toFile());
+        private static Props getBean(File pom) {
+            final XML xml = new XMLDocument(pom);
             String gid =  xml.xpath("/project/groupId/text()").get(0);
             String aid =  xml.xpath("/project/artifactId/text()").get(0);
             String v =  xml.xpath("/project/version/text()").get(0);

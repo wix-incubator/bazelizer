@@ -2,7 +2,6 @@ package tools.jvm.mvn;
 
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
@@ -51,24 +50,11 @@ public class Cli {
 
         @Override
         public void run() {
-            Project project = new Project.Memorized(
-                    new Project() {
-                        @Override
-                        public ByteSource pomXmlTpl() {
-                            return Files.asByteSource(pomXmlTpl.toFile());
-                        }
-
-                        @Override
-                        public Path workDir() {
-                            return pomXmlTpl.getParent();
-                        }
-
-                        @Override
-                        public Iterable<Output> getOutputs() {
-                            return ImmutableList.of(new Output.TmpSrc(output));
-                        }
-                    }
-            );
+            final Project project = Project.builder()
+                    .pomXmlSrc(Files.asByteSource(pomXmlTpl.toFile()))
+                    .workDir(pomXmlTpl.getParent())
+                    .outputs(ImmutableList.of(new Output.TmpSrc(output)))
+                    .build();
 
             new Act.Iterative(
                     new Acts.POM(),
@@ -112,56 +98,38 @@ public class Cli {
                 description = "the output: desired file -> source file in <workspace>/target")
         public Map<String, String> outputs;
 
+        private Path getWorkDir() {
+            return PathsCollection.fromManifest(srcs).commonPrefix();
+        }
+
+        private Path getPomFileDest(Path workDir) {
+            return workDir.resolve(String.format("%s_%s.xml",
+                    RandomText.randomStr("pom_", 14),
+                    Long.toHexString(System.currentTimeMillis())));
+        }
+
         @Override
         @lombok.SneakyThrows
         public void run() {
-            Project project = new Project() {
-                @Override
-                public String artifactId() {
-                    return artifactId;
-                }
-
-                @Override
-                public String groupId() {
-                    return groupId;
-                }
-
-                @Override
-                public Iterable<Dep> deps() {
-                    return PathsCollection.fromManifest(deps)
-                            .stream().map(Dep.DigestCoords::new)
-                            .collect(Collectors.toSet());
-                }
-
-                @Override
-                public Path workDir() {
-                    return PathsCollection.fromManifest(srcs)
-                            .commonPrefix();
-                }
-
-                @Override
-                public Iterable<Output> getOutputs() {
-                    return outputs.entrySet()
+            final Path workDir = getWorkDir();
+            final Path pom = getPomFileDest(workDir);
+            final Project project = Project.builder()
+                    .artifactId(artifactId)
+                    .groupId(groupId)
+                    .pomDest(pom)
+                    .deps(PathsCollection.fromManifest(deps).stream().map(Dep.DigestCoords::new).collect(Collectors.toSet()))
+                    .workDir(workDir)
+                    .pomXmlSrc(Files.asByteSource(pomXmlTpl.toFile()))
+                    .outputs(outputs.entrySet()
                             .stream()
                             .map(entry -> {
                                 final String declared = entry.getKey();
                                 final String buildFile = entry.getValue();
-                                return new Output.Paths(buildFile, declared, this.lazy());
+                                return new Output.Paths(buildFile, declared, pom.toFile());
                             })
-                            .collect(Collectors.toList());
-                }
-
-                @Override
-                public Path repoImage() {
-                    return repo;
-                }
-
-                @Override
-                public ByteSource pomXmlTpl() {
-                    return Files.asByteSource(pomXmlTpl.toFile());
-                }
-
-            };
+                            .collect(Collectors.toList()))
+                    .baseImage(repo)
+                    .build();
 
             new Act.Iterative(
                     new Acts.DefRepository(),

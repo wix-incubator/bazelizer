@@ -15,7 +15,8 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.io.FileUtils;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,7 +24,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -105,12 +105,11 @@ public final class Acts {
                 args.append("--offline");
             }
             this.args.forEach(args::append);
-            new BuildMvn().run(new Project.Wrap(project) {
-                @Override
-                public Args args() {
-                    return args;
-                }
-            });
+            new BuildMvn().run(
+                    project.toBuilder()
+                            .args(args)
+                            .build()
+            );
             return project;
         }
     }
@@ -150,7 +149,7 @@ public final class Acts {
         public Project accept(Project project) {
             final Path workDir = project.workDir();
             final Path target = workDir.resolve("target").toAbsolutePath();
-            project.getOutputs().forEach(name -> {
+            project.outputs().forEach(name -> {
                 Path src = target.resolve(name.src());
                 Path dest = Paths.get(name.dest());
                 try {
@@ -180,9 +179,9 @@ public final class Acts {
         @lombok.SneakyThrows
         public Project accept(Project project) {
             final Project.PropsView props = project.toView();
-            final File syntheticPom = project.pom().toFile();
+            final File syntheticPom = project.pomDest().toFile();
             final CharSource renderedTpl = new TemplateEnvelop.Mustache(
-                    project.pomXmlTpl(),
+                    project.pomXmlSrc(),
                     props
             ).eval();
             renderedTpl.copyTo(asByteSink(syntheticPom).asCharSink(StandardCharsets.UTF_8));
@@ -231,7 +230,7 @@ public final class Acts {
         @Override
         @lombok.SneakyThrows
         public Project accept(Project project) {
-            final Path tar = project.repoImage();
+            final Path tar = project.baseImage();
             final Path dest = project.m2Home().resolve("repository");
             final Closer closer = Closer.create();
             final TarArchiveInputStream ais = closer.register(new TarArchiveInputStream(
@@ -290,7 +289,7 @@ public final class Acts {
         public Project accept(Project project) {
             final Path m2Home = project.m2Home();
             final Path src = m2Home.resolve("repository");
-            final String dest = Iterables.getOnlyElement(project.getOutputs()).src();
+            final String dest = Iterables.getOnlyElement(project.outputs()).src();
             log.debug("Archive: src={} dest={}", src, dest);
             final Closer closer = Closer.create();
             final File destFile = new File(dest);
@@ -327,13 +326,13 @@ public final class Acts {
 
         @Override
         public Project accept(Project project) {
-            log.info("Verify maven version: ");
-            new BuildMvn(true).run(new Project.Wrap(project) {
-                @Override
-                public Args args() {
-                    return new Args().append("--version");
-                }
-            });
+            log.info("*** Maven version ***");
+            new BuildMvn(true).run(
+                    project.toBuilder()
+                            .args(new Args().append("--version"))
+                            .build()
+
+            );
             return project;
         }
     }

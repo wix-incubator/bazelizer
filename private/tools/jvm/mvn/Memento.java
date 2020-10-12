@@ -30,29 +30,4 @@ public class Memento {
             }
         });
     }
-
-
-    @SuppressWarnings({"UnstableApiUsage"})
-    static Project memorize(Project self) {
-        return (Project) IDENT.computeIfAbsent(self, (k) -> {
-            final Map<Method, Object> cache = Maps.newHashMap();
-            return Reflection.newProxy(Project.class, new AbstractInvocationHandler() {
-                @SuppressWarnings("NullableProblems")
-                @Override
-                protected Object handleInvocation(Object o, Method method, Object[] args) {
-                    return cache.computeIfAbsent(method, (m) -> call(args, m));
-                }
-                @SuppressWarnings("unchecked")
-                private Object call(Object[] args, Method m) {
-                    final Invokable<Project, Object> invokable = (Invokable<Project, Object>) Invokable.from(m);
-                    try {
-                        return invokable.invoke(self, args);
-                    } catch (InvocationTargetException | IllegalAccessException e) {
-                        throw new ToolException(e);
-                    }
-                }
-            });
-        });
-
-    }
 }

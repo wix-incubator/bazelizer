@@ -3,6 +3,7 @@ package tools.jvm.mvn;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Supplier;
@@ -32,9 +33,10 @@ public interface Output {
         private final Supplier<String> src;
         private final String dest;
 
-        public Paths(String src, String dest, Project project) {
+        public Paths(String src, String dest, File pom) {
             this.dest = resolve(dest);
-            this.src = Memento.memorize(() -> new TemplateEnvelop.PomBased(resolve(src), project.lazy()).eval().read());
+            this.src = Memento.memorize(() ->
+                    new TemplateEnvelop.PomXPathProps(resolve(src), pom).eval().read());
         }
 
         private String resolve(String src) {

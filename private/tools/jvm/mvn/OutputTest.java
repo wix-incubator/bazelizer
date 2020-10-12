@@ -12,16 +12,11 @@ public class OutputTest {
 
     @Test
     public void templating() throws IOException {
-        Project p = new Project() {
-            @Override
-            public Path pom() {
-                try {
-                    return Files.createTempFile("pom", ".xml");
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }.lazy();
+        final Path pomFile = Files.createTempFile("pom", ".xml");
+
+        final Project p = Project.builder()
+                .pomDest(pomFile)
+                .build();
 
         String pom = "<project>\n" +
                 "    <modelVersion>4.0.0</modelVersion>\n" +
@@ -30,9 +25,9 @@ public class OutputTest {
                 "    <version>1.0.0-SNAPSHOT</version>\n" +
                 "</project>";
 
-        Files.write(p.pom(), pom.getBytes());
+        Files.write(p.pomDest(), pom.getBytes());
 
-        final String src = new Output.Paths("{{artifactId}}-{{version}}.jar", "jar", p).src();
+        final String src = new Output.Paths("{{artifactId}}-{{version}}.jar", "jar", pomFile.toFile()).src();
         Assert.assertEquals(src, "xyz-1.0.0-SNAPSHOT.jar");
     }
 }

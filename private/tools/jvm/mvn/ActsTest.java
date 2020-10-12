@@ -38,34 +38,16 @@ public class ActsTest {
                 "        {{/deps}}\n" +
                 "    </dependencies>\n" +
                 "</project>";
+        final Path tmpWorkDir = Files.createTempDir().toPath();
+        tmpWorkDir.toFile().deleteOnExit();
 
-        Project p  = new Project() {
-            final Path tmpWorkDir = Files.createTempDir().toPath();
-            {
-                tmpWorkDir.toFile().deleteOnExit();
-            }
-
-            @Override
-            public String artifactId() {
-                return "AAAA";
-            }
-            @Override
-            public String groupId() {
-                return "BBBB";
-            }
-            @Override
-            public Path workDir() {
-                return tmpWorkDir;
-            }
-            @Override
-            public ByteSource pomXmlTpl() {
-                return ByteSource.wrap(pom.getBytes());
-            }
-            @Override
-            public Iterable<Dep> deps() {
-                return Lists.newArrayList(new Dep.Simple(null, "xyz", "xyz-aaa", "1.0"));
-            }
-        };
+        Project p = Project.builder()
+                .artifactId("AAAA")
+                .groupId("BBBB")
+                .workDir(tmpWorkDir)
+                .pomXmlSrc(ByteSource.wrap(pom.getBytes()))
+                .deps(Lists.newArrayList(new Dep.Simple(null, "xyz", "xyz-aaa", "1.0")))
+                .build();
 
         final Act.Iterative act = new Act.Iterative(
                 new Acts.POM()
@@ -96,23 +78,12 @@ public class ActsTest {
         jar.toFile().deleteOnExit();
         tmpWorkDir.deleteOnExit();
 
-        Project p = new Project() {
-            @Override
-            public Path workDir() {
-                return tmpWorkDir.toPath();
-            }
-
-            @Override
-            public Path m2Home() {
-                return tmpWorkDir.toPath();
-            }
-
-            @Override
-            public Iterable<Dep> deps() {
-                return Lists.newArrayList(
-                        new Dep.Simple(jar.toFile(), "xyz.com.baz", "xyz-aaa", "1.0"));
-            }
-        };
+        final Project p = Project.builder()
+                .workDir(tmpWorkDir.toPath())
+                .m2Home(tmpWorkDir.toPath())
+                .deps(Lists.newArrayList(
+                        new Dep.Simple(jar.toFile(), "xyz.com.baz", "xyz-aaa", "1.0")))
+                .build();
 
         act.accept(p);
 
