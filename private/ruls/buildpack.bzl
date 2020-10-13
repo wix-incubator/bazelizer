@@ -5,10 +5,7 @@ _BASE_POM_NAME = "base_pom.xml"
 _TOOL = Label("//private/tools/jvm/mvn:mvn")
 _MARKER_SRC_DEFAULT_OUTPUT_JAR = "@@TARGET-JAR-OUTPUT@@"
 
-MvnBuildpackInfo = provider(
-    fields = {"pom": "pom file", "tarball": "archive m2 repository"},
-)
-
+MvnBuildpackInfo = provider()
 
 def _setup_common_tool_falgs(ctx, args):
     if ctx.attr.log_level:
@@ -22,62 +19,11 @@ _common_attr = {
     "log_level": attr.string(doc="specify log level for the tool")
 }
 
-_create_mvn_repository_attr = _merged_dict(
-    _common_attr,
-    {
-        "pom_parent": attr.label(allow_single_file = True),
-        "pom_file_vars": attr.string_dict(),
-        "pom_file_init_src": attr.label(allow_single_file = True),
-        "_tool": attr.label(default = _TOOL, allow_files = True, executable = True, cfg = "host"),
-    }
-)
-
-def _create_mvn_repository_impl(ctx):
-    _content_file = ctx.file.pom_file_init_src
-    if _content_file:
-        initial_pom = _content_file
-    else:
-        fail('Must use either "pom_file_init_content" or "pom_file_init_src" attr')
-
-    archive = ctx.actions.declare_file(ctx.label.name + _M2_REPO_IMG_EXT)
-    args = ctx.actions.args()
-    _setup_common_tool_falgs(ctx, args)
-    args.add("repo2tar")
-    args.add("--output", archive.path)
-    args.add("--pom", initial_pom.path)
-
-    pom_parent_file = ctx.file.pom_parent
-    transitive_input = []
-    if pom_parent_file:
-            args.add("--parent", pom_parent_file.path)
-            transitive_input.append(depset([pom_parent_file]))
-
-    ctx.actions.run(
-        inputs = depset([initial_pom], transitive = transitive_input),
-        outputs = [archive],
-        arguments = [args],
-        executable = ctx.executable._tool,
-        use_default_shell_env = True,
-        progress_message = "createing mvn repository tarball... %s" % (ctx.label),
-    )
-
-    return [
-        platform_common.TemplateVariableInfo({'FOO': 'bar'}),
-        DefaultInfo(files = depset([archive, initial_pom])),
-        MvnBuildpackInfo(pom = initial_pom, tarball = archive),
-    ]
-
-
-create_mvn_buildpack = rule(
-    implementation = _create_mvn_repository_impl,
-    attrs = _create_mvn_repository_attr,
-)
-
 _create_mvn_repository_attr_outputs = {
     "image": "%{name}_img.tar",
 }
 
-_create_mvn_repository_attr_v2 = _merged_dict(
+_create_mvn_repository_attr = _merged_dict(
     _common_attr,
     {
         "pom_parent": attr.label(allow_single_file = True),
@@ -91,10 +37,10 @@ _create_mvn_repository_attr_v2 = _merged_dict(
 def _rlocation(ctx, file):
        return "${RUNFILES_DIR}/" + ctx.workspace_name + "/" + file.short_path
 
-def _create_mvn_repository_impl_v2(ctx):
+def _create_mvn_repository_impl(ctx):
     pom_file = ctx.file.pom_file
     archive = ctx.outputs.image
-    optional_transitive_inputs = [] # TODO
+    optional_transitive_inputs = []
 
     args = ctx.actions.args()
     _setup_common_tool_falgs(ctx, args)
@@ -104,15 +50,15 @@ def _create_mvn_repository_impl_v2(ctx):
     pom_parent_file = ctx.file.pom_parent
     if pom_parent_file:
             args.add("--parent", pom_parent_file.path)
-            optional_transitive_inputs.append(depset([pom_parent_file]))
+            optional_transitive_inputs.append(pom_parent_file)
 
     ctx.actions.run(
-        inputs = depset([pom_file], transitive = optional_transitive_inputs),
+        inputs = depset([pom_file], transitive = [depset(optional_transitive_inputs)]),
         outputs = [archive],
         arguments = [args],
         executable = ctx.executable._tool,
         use_default_shell_env = True,
-        progress_message = "createing mvn repository tarball... %s" % (ctx.label),
+        progress_message = "createing mvn embedded tool... %s" % (ctx.label),
     )
 
     # Write the wrapper.
@@ -157,7 +103,7 @@ def _create_mvn_repository_impl_v2(ctx):
     )
 
     runfiles = ctx\
-        .runfiles(files = [pom_file, executable, archive, ctx.executable._tool])\
+        .runfiles(files = [pom_file, executable, archive, ctx.executable._tool] + optional_transitive_inputs)\
         .merge(ctx.attr._tool[DefaultInfo].default_runfiles)
 
     files_to_build = depset(direct=[executable], transitive = [
@@ -165,12 +111,13 @@ def _create_mvn_repository_impl_v2(ctx):
     ])
     return [
         DefaultInfo(runfiles = runfiles, files = files_to_build),
+        MvnBuildpackInfo()
     ]
 
 
-create_mvn_buildpack_v2 = rule(
-    implementation = _create_mvn_repository_impl_v2,
-    attrs = _create_mvn_repository_attr_v2,
+create_mvn_buildpack = rule(
+    implementation = _create_mvn_repository_impl,
+    attrs = _create_mvn_repository_attr,
     outputs = _create_mvn_repository_attr_outputs,
     executable = True,
 )
@@ -225,9 +172,10 @@ _run_mvn_buildpack_attr = _merged_dict(
     }
 )
 
-
 def _run_mvn_buildpack_impl(ctx):
-#    buildpack_info = ctx.attr.buildpack[MvnBuildpackInfo]
+    if not ctx.attr.buildpack[MvnBuildpackInfo]:
+        fail("attr.buildpack must be created by 'create_mvn_buildpack' rule")
+
     deps = _collect_deps(ctx.attr.deps)
     srcs_manifest = _write_manifest_file("srcs", ctx, [src for src in ctx.files.srcs])
     deps_manifest = _write_manifest_file("deps", ctx, [d.path for d in deps])
@@ -255,9 +203,6 @@ def _run_mvn_buildpack_impl(ctx):
 
     args = ctx.actions.args()
     _setup_common_tool_falgs(ctx, args)
-#    args.add("build")
-#    args.add("--pom", buildpack_info.pom)
-#    args.add("--repo", buildpack_info.tarball)
     args.add("--srcs", srcs_manifest)
     args.add("--deps", deps_manifest)
     if ctx.attr.artifactId: args.add("--artifactId", ctx.attr.artifactId)
@@ -266,10 +211,7 @@ def _run_mvn_buildpack_impl(ctx):
 
     ctx.actions.run(
         inputs = depset([srcs_manifest, deps_manifest],
-                        transitive = [
-#                            depset([buildpack_info.pom, buildpack_info.tarball]),
-                            depset(deps)
-                        ] + [f.files for f in ctx.attr.srcs]),
+                        transitive = [depset(deps)] + [f.files for f in ctx.attr.srcs]),
         outputs = outputs,
         arguments = [args],
         executable = ctx.executable.buildpack,

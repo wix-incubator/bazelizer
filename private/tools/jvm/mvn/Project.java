@@ -62,7 +62,13 @@ public final class Project {
 
             @Override
             public String parent() {
-                return pomParent != null ? pomParent.toString() : null;
+                if (pomParent != null) {
+                    final Path pom = pom();
+                    final Path relativize = pom.relativize(pomParent);
+                    return relativize.toString();
+                }
+                return null;
+
             }
         };
     }

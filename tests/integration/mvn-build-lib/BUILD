@@ -1,5 +1,4 @@
 load("//:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
-load("//private/ruls:buildpack.bzl", "create_mvn_buildpack_v2")
 
 
 filegroup(
@@ -11,7 +10,7 @@ filegroup(
 
 create_mvn_buildpack(
     name = "app=._buildpack",
-    pom_file_init_src = "pom.xml",
+    pom_file = "pom.xml",
     pom_parent = "//tests/integration/mvn-parent-pom:sources",
     visibility = ["//visibility:public"]
 )

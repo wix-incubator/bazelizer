@@ -356,9 +356,7 @@ public final class Acts {
                 final Path parentDir = createParentProjectTmpDir(project);
                 final Path parentPomFile = parentDir.resolve("pom.xml");
                 Files.copy(origParent, parentPomFile);
-                final Path pom = project.pom();
-                final Path relativize = pom.relativize(parentPomFile);
-                return project.toBuilder().pomParent(relativize).build();
+                return project.toBuilder().pomParent(parentPomFile).build();
             }
             return project;
         }
@@ -366,7 +364,7 @@ public final class Acts {
         @SuppressWarnings("ResultOfMethodCallIgnored")
         private Path createParentProjectTmpDir(Project project) {
             final Path workDir = project.workDir();
-            final Path parentDir = workDir.resolve(RandomText.randomStr("parent-"));
+            final Path parentDir = workDir.resolve(RandomText.randomFileName("parent"));
             final File file = parentDir.toFile();
             file.mkdirs();
             file.deleteOnExit();
@@ -383,10 +381,9 @@ public final class Acts {
         public Project accept(Project project) {
             final Path origParent = project.pomParent();
             if (origParent != null) {
-                final Path parentPomFile = origParent.normalize();
-                Path parentDir = parentPomFile.getParent();
+                final Path parentPomFile = origParent.toAbsolutePath();
+                Path parentDir = parentPomFile.getParent().normalize();
                 log.info("Install parent project into repository...");
-
                 final Project parentProject = project.toBuilder()
                         .pom(parentPomFile)
                         .workDir(parentDir)
