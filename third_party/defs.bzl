@@ -28,7 +28,7 @@ def dependencies(repositories=default_repository_urls()):
             "org.apache.maven.wagon:wagon-provider-api:2.9",
             "org.eclipse.aether:aether-connector-basic:1.1.0",
             "org.eclipse.aether:aether-transport-wagon:1.0.2.v20150114",
-            "junit:junit:4.12",
+            "junit:junit:4.13.1",
             "org.hamcrest:hamcrest-library:1.3",
         ],
         repositories = repositories,
