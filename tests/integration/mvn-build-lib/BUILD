@@ -11,6 +11,7 @@ filegroup(
 create_mvn_buildpack(
     name = "app=._buildpack",
     pom_file_init_src = "pom.xml",
+    pom_parent = "//tests/integration/mvn-parent-pom:sources",
     visibility = ["//visibility:public"]
 )
 

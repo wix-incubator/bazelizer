@@ -25,33 +25,35 @@ _common_attr = {
 _create_mvn_repository_attr = _merged_dict(
     _common_attr,
     {
-        "pom_file_init_content": attr.string(),
+        "pom_parent": attr.label(allow_single_file = True),
+        "pom_file_vars": attr.string_dict(),
         "pom_file_init_src": attr.label(allow_single_file = True),
         "_tool": attr.label(default = _TOOL, allow_files = True, executable = True, cfg = "host"),
     }
 )
 
 def _create_mvn_repository_impl(ctx):
-    _content = ctx.attr.pom_file_init_content
     _content_file = ctx.file.pom_file_init_src
-    if _content and not _content_file:
-        initial_pom = ctx.actions.declare_file(_BASE_POM_NAME)
-        ctx.actions.write(initial_pom, ctx.attr.pom_file_init_content)
-    elif _content_file and not _content:
+    if _content_file:
         initial_pom = _content_file
     else:
         fail('Must use either "pom_file_init_content" or "pom_file_init_src" attr')
 
     archive = ctx.actions.declare_file(ctx.label.name + _M2_REPO_IMG_EXT)
-
     args = ctx.actions.args()
     _setup_common_tool_falgs(ctx, args)
     args.add("repo2tar")
     args.add("--output", archive.path)
     args.add("--pom", initial_pom.path)
 
+    pom_parent_file = ctx.file.pom_parent
+    transitive_input = []
+    if pom_parent_file:
+            args.add("--parent", pom_parent_file.path)
+            transitive_input.append(depset([pom_parent_file]))
+
     ctx.actions.run(
-        inputs = depset([initial_pom], transitive = []),
+        inputs = depset([initial_pom], transitive = transitive_input),
         outputs = [archive],
         arguments = [args],
         executable = ctx.executable._tool,
@@ -60,6 +62,7 @@ def _create_mvn_repository_impl(ctx):
     )
 
     return [
+        platform_common.TemplateVariableInfo({'FOO': 'bar'}),
         DefaultInfo(files = depset([archive, initial_pom])),
         MvnBuildpackInfo(pom = initial_pom, tarball = archive),
     ]

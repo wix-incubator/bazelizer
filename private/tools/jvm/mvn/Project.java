@@ -6,21 +6,24 @@ import com.google.common.io.ByteSource;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.SneakyThrows;
+import lombok.ToString;
 import lombok.experimental.Accessors;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
 
-@Accessors(fluent = true, chain = false)
+@Accessors(fluent = true)
 @Getter
 @Builder(toBuilder = true)
+@ToString
 public final class Project {
     private String artifactId;
     private String groupId;
     @Builder.Default
     private Iterable<Dep> deps = ImmutableList.of();
     private Path workDir;
+    private Path pomParent;
     @Builder.Default
     private Path m2Home = getTmpDirectory();
     private Iterable<Output> outputs;
@@ -28,7 +31,7 @@ public final class Project {
     private ByteSource pomXmlSrc;
     @Builder.Default
     private Args args = new Args();
-    private Path pomDest;
+    private Path pom;
 
     PropsView toView() {
         return new PropsView() {
@@ -56,6 +59,11 @@ public final class Project {
             public String artifactId() {
                 return artifactId;
             }
+
+            @Override
+            public String parent() {
+                return pomParent != null ? pomParent.toString() : null;
+            }
         };
     }
 
@@ -63,14 +71,15 @@ public final class Project {
         Iterable<Dep> deps();
         String groupId();
         String artifactId();
+        String parent();
 
     }
 
-    public Path pomDest() {
-        if (pomDest == null) {
-            pomDest = syntheticPom();
+    public Path pom() {
+        if (pom == null) {
+            pom = syntheticPom();
         }
-        return pomDest;
+        return pom;
     }
 
     @SneakyThrows

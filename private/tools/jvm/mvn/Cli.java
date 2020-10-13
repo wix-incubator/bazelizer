@@ -47,6 +47,8 @@ public class Cli {
         @CommandLine.Option(names = {"-o", "--output"}, paramLabel = "PATH", description = "desired output for repo snapshot")
         public Path output;
 
+        @CommandLine.Option(names = {"-pr", "--parent"}, paramLabel = "P", description = "parent pom path")
+        public Path parent;
 
         @Override
         public void run() {
@@ -54,11 +56,13 @@ public class Cli {
                     .pomXmlSrc(Files.asByteSource(pomXmlTpl.toFile()))
                     .workDir(pomXmlTpl.getParent())
                     .outputs(ImmutableList.of(new Output.TmpSrc(output)))
+                    .pomParent(parent)
                     .build();
 
             new Act.Iterative(
-                    new Acts.POM(),
                     new Acts.SettingsXml(),
+                    new Acts.OptionalParentPomDef(),
+                    new Acts.POM(),
                     new Acts.MvnGoOffline(),
                     new Acts.RepositoryArchiver(),
                     new Acts.Outputs()
@@ -116,7 +120,7 @@ public class Cli {
             final Project project = Project.builder()
                     .artifactId(artifactId)
                     .groupId(groupId)
-                    .pomDest(pom)
+                    .pom(pom)
                     .deps(PathsCollection.fromManifest(deps).stream().map(Dep.DigestCoords::new).collect(Collectors.toSet()))
                     .workDir(workDir)
                     .pomXmlSrc(Files.asByteSource(pomXmlTpl.toFile()))

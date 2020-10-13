@@ -179,7 +179,7 @@ public final class Acts {
         @lombok.SneakyThrows
         public Project accept(Project project) {
             final Project.PropsView props = project.toView();
-            final File syntheticPom = project.pomDest().toFile();
+            final File syntheticPom = project.pom().toFile();
             final CharSource renderedTpl = new TemplateEnvelop.Mustache(
                     project.pomXmlSrc(),
                     props
@@ -334,6 +334,44 @@ public final class Acts {
 
             );
             return project;
+        }
+    }
+
+
+    @Slf4j
+    static class OptionalParentPomDef implements Act {
+
+        @SneakyThrows
+        @Override
+        public Project accept(Project project) {
+            final Path origParent = project.pomParent();
+            if (origParent != null) {
+                final Path parentDir = createParentProjectTmpDir(project);
+                final Path parentPomFile = parentDir.resolve("pom.xml");
+                Files.copy(origParent, parentPomFile);
+                final Path pom = project.pom();
+                final Path relativize = pom.relativize(parentPomFile);
+
+                log.info("Install parent project into repository...");
+                new Mvn().accept(project.toBuilder()
+                        .pom(parentPomFile)
+                        .workDir(parentDir)
+                        .args(new Args(project.args()).append("install"))
+                        .build());
+
+                return project.toBuilder().pomParent(relativize).build();
+            }
+            return project;
+        }
+
+        @SuppressWarnings("ResultOfMethodCallIgnored")
+        private Path createParentProjectTmpDir(Project project) {
+            final Path workDir = project.workDir();
+            final Path parentDir = workDir.resolve(RandomText.randomStr("parent-"));
+            final File file = parentDir.toFile();
+            file.mkdirs();
+            file.deleteOnExit();
+            return parentDir;
         }
     }
 }
