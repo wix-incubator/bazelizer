@@ -1,7 +1,6 @@
 load("//private/ruls:tests.bzl", "run_tests")
 
 _deps = [
-    "@maven//:com_jcabi_incubator_xembly",
     "@maven//:org_projectlombok_lombok",
     "@maven//:com_google_guava_guava",
     "@maven//:com_jcabi_jcabi_xml",
@@ -28,11 +27,9 @@ java_binary(
     srcs = glob(["*.java"], exclude = ["*Test.java"]),
     javacopts = _jopts,
     resources = ["//private/tools/jvm/mvn/java:java_resources"],
-    jvm_flags = ["--illegal-access=warn"],
+    jvm_flags = ["--illegal-access=permit"],
     deps = _deps,
-    plugins = [
-        ":lombok_plugin",
-    ],
+    plugins = [":lombok_plugin"],
     main_class = "tools.jvm.mvn.Cli",
     visibility = ["//visibility:public"],
 )
