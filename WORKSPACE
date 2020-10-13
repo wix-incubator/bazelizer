@@ -1,4 +1,4 @@
-repository_name = "mavenizer"
+repository_name = "bazelizer"
 
 workspace(name = repository_name)
 
