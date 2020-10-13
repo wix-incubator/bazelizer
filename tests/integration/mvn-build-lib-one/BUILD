@@ -12,19 +12,20 @@ filegroup(
 create_mvn_buildpack(
     name = "app=._buildpack",
     pom_file_init_src = "pom.xml",
-    pom_parent = "//tests/integration/mvn-parent-pom:sources",
     visibility = ["//visibility:public"]
 )
 
+create_mvn_buildpack_v2(
+    name = "app=._buildpack2",
+    pom_file = "pom.xml",
+    visibility = ["//visibility:public"]
+)
 
 run_mvn_buildpack(
     name = "jaxb2api",
-    deps = [
-        "//tests/integration/lib/src/com/mavenizer/examples/subliby"
-    ],
     log_level = "INFO",
     srcs = [":sources"],
-    buildpack = ":app=._buildpack",
-    outputs = ["myapi-1.0.0-SNAPSHOT.jar"],
+    buildpack = ":app=._buildpack2",
+    outputs = ["myapi-single-1.0.0-SNAPSHOT.jar"],
     visibility = ["//visibility:public"]
 )

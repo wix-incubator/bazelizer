@@ -35,7 +35,6 @@ sh_test(
     deps = [":MavenImageDummy"]
 )
 
-
 #
 # running
 #

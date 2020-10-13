@@ -89,7 +89,8 @@ public final class Project {
 
     private Path syntheticPom() {
         for (int i = 0; i < 1000; i++) {
-            final Path pom = this.workDir().resolve(RandomText.randomStr("pom_synthetic") + "-" + i + ".xml");
+            final Path pom = this.workDir().resolve(
+                    RandomText.randomStr("pom_synthetic-") + "-" + i + ".xml");
             if (Files.notExists(pom)) {
                 return pom;
             }
