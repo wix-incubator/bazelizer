@@ -1,6 +1,5 @@
 package tools.jvm.mvn;
 
-import com.google.common.io.ByteSource;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -15,7 +14,7 @@ public class OutputTest {
         final Path pomFile = Files.createTempFile("pom", ".xml");
 
         final Project p = Project.builder()
-                .pomDest(pomFile)
+                .pom(pomFile)
                 .build();
 
         String pom = "<project>\n" +
@@ -25,7 +24,7 @@ public class OutputTest {
                 "    <version>1.0.0-SNAPSHOT</version>\n" +
                 "</project>";
 
-        Files.write(p.pomDest(), pom.getBytes());
+        Files.write(p.pom(), pom.getBytes());
 
         final String src = new Output.Paths("{{artifactId}}-{{version}}.jar", "jar", pomFile.toFile()).src();
         Assert.assertEquals(src, "xyz-1.0.0-SNAPSHOT.jar");

@@ -34,7 +34,8 @@ public final class Acts {
 
 
     /**
-     * Install deps into M2_HOME
+     * Install deps into M2_HOME folder.
+     * Generate simple synthetic pom file inside.
      */
     @Slf4j
     static class Deps implements Act {
@@ -80,20 +81,20 @@ public final class Acts {
     /**
      * Run maven build.
      */
-    private final static class Mvn implements Act {
+    private final static class RunMavenCommand implements Act {
         private boolean offline;
         private final List<String> args;
 
-        Mvn(boolean offline, String...args) {
+        RunMavenCommand(boolean offline, String...args) {
             this.offline = offline;
             this.args = Lists.newArrayList(args);
         }
 
-        Mvn( String...args) {
+        RunMavenCommand(String...args) {
             this(false, args);
         }
 
-        Mvn useOffline() {
+        RunMavenCommand useOffline() {
             this.offline = true;
             return this;
         }
@@ -121,7 +122,7 @@ public final class Acts {
 
         @Override
         public Project accept(Project project) {
-            return new Mvn( "clean", "package")
+            return new RunMavenCommand( "clean", "package")
                     .useOffline()
                     .accept(project);
         }
@@ -135,14 +136,14 @@ public final class Acts {
         @Override
         public Project accept(Project project) {
             log.info("eagerly fetch dependencies to go offline...");
-            new Mvn( "dependency:go-offline").accept(project);
-            new Mvn( "clean", "package").accept(project);
+            new RunMavenCommand( "dependency:go-offline").accept(project);
+            new RunMavenCommand( "clean", "package").accept(project);
             return project;
         }
     }
 
     /**
-     * Output.
+     * Write registered outputs.
      */
     static class Outputs implements Act {
         @Override
@@ -155,7 +156,7 @@ public final class Acts {
                 try {
                     Files.copy(src, dest);
                 } catch (java.nio.file.NoSuchFileException e) {
-                    throw new ToolException("no such file: " + src + ", within: [" + exists(target) + " ...]", e);
+                    throw new ToolException("No such file: \n" + src + ",\n within: [" + exists(target) + " ...]", e);
                 } catch (IOException e) {
                     throw new ToolException(e);
                 }
@@ -167,10 +168,13 @@ public final class Acts {
         @SneakyThrows
         private String exists(Path target)  {
             return Files.walk(target, 2)
-                    .limit(10).map(Path::toString).collect(Collectors.joining(", "));
+                    .limit(10).map(Path::toString).collect(Collectors.joining("\n"));
         }
     }
 
+    /**
+     * Process pom file from template.
+     */
     @SuppressWarnings("UnstableApiUsage")
     @Slf4j
     static class POM implements Act {
@@ -179,7 +183,7 @@ public final class Acts {
         @lombok.SneakyThrows
         public Project accept(Project project) {
             final Project.PropsView props = project.toView();
-            final File syntheticPom = project.pomDest().toFile();
+            final File syntheticPom = project.pom().toFile();
             final CharSource renderedTpl = new TemplateEnvelop.Mustache(
                     project.pomXmlSrc(),
                     props
@@ -222,7 +226,7 @@ public final class Acts {
 
 
     /**
-     * Repository snapshot handler.
+     * Unarchive repository snapshot into M2_HOME.
      */
     @SuppressWarnings("UnstableApiUsage")
     static class DefRepository implements Act {
@@ -274,9 +278,6 @@ public final class Acts {
         }
     }
 
-
-
-
     /**
      * Create snapshot from the repository.
      */
@@ -321,18 +322,75 @@ public final class Acts {
     }
 
 
+    /**
+     * Print Maven version.
+     */
     @Slf4j
     static class Version implements Act {
 
         @Override
         public Project accept(Project project) {
-            log.info("*** Maven version ***");
+            log.info("*** <Maven version> ***");
             new BuildMvn(true).run(
                     project.toBuilder()
                             .args(new Args().append("--version"))
                             .build()
 
             );
+            log.info("*** <Maven version> END ***");
+            return project;
+        }
+    }
+
+    /**
+     * Resolve relative path to optional parent project.
+     */
+    @Slf4j
+    static class DefineParentPom implements Act {
+
+        @SneakyThrows
+        @Override
+        public Project accept(Project project) {
+            final Path origParent = project.pomParent();
+            if (origParent != null) {
+                final Path parentDir = createParentProjectTmpDir(project);
+                final Path parentPomFile = parentDir.resolve("pom.xml");
+                Files.copy(origParent, parentPomFile);
+                return project.toBuilder().pomParent(parentPomFile).build();
+            }
+            return project;
+        }
+
+        @SuppressWarnings("ResultOfMethodCallIgnored")
+        private Path createParentProjectTmpDir(Project project) {
+            final Path workDir = project.workDir();
+            final Path parentDir = workDir.resolve(RandomText.randomFileName("parent"));
+            final File file = parentDir.toFile();
+            file.mkdirs();
+            file.deleteOnExit();
+            return parentDir;
+        }
+    }
+
+    /**
+     * Install parent project.
+     */
+    @Slf4j
+    static class InstallParentPOM implements Act {
+        @Override
+        public Project accept(Project project) {
+            final Path origParent = project.pomParent();
+            if (origParent != null) {
+                final Path parentPomFile = origParent.toAbsolutePath();
+                Path parentDir = parentPomFile.getParent().normalize();
+                log.info("Install parent project into repository...");
+                final Project parentProject = project.toBuilder()
+                        .pom(parentPomFile)
+                        .workDir(parentDir)
+                        .build();
+
+                new RunMavenCommand("install").accept(parentProject);
+            }
             return project;
         }
     }

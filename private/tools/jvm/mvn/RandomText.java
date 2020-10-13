@@ -7,6 +7,10 @@ import java.util.concurrent.ThreadLocalRandom;
 @UtilityClass
 public final class RandomText {
 
+    public static String randomFileName(String pref) {
+        return randomStr(pref + "-", 10)  + "-" + Long.toHexString(System.currentTimeMillis());
+    }
+
     public static String randomStr(String pref) {
         return randomStr(pref, 10);
     }
