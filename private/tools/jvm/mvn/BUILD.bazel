@@ -1,63 +1,23 @@
 load("//private/ruls:tests.bzl", "run_tests")
+load("//third_party:rules_repository.bzl", _maven_bin = "MAVEN_BINARY_WS_NAME")
 
-_EXECUTABLE_TOOL_WS = "maven_bin"
+_EXECUTABLE_TOOL_WS = _maven_bin
 
 _deps = [
     "@rules_bazelizer_maven//:org_projectlombok_lombok",
-    "@rules_bazelizer_maven//:org_apache_maven_shared_maven_invoker",
-	"@rules_bazelizer_maven//:org_apache_maven_shared_maven_shared_utils",
     "@rules_bazelizer_maven//:com_google_guava_guava",
-    "@rules_bazelizer_maven//:com_jcabi_jcabi_xml",
+
+    "@info_picocli_picocli",
+    "@org_apache_maven_shared_maven_invoker",
+    "@org_apache_maven_shared_maven_shared_utils",
+    "@com_github_spullara_mustache_java_compiler",
+    "@com_jcabi_jcabi_xml",
+
     "@rules_bazelizer_maven//:commons_io_commons_io",
-    "@rules_bazelizer_maven//:com_github_spullara_mustache_java_compiler",
     "@rules_bazelizer_maven//:org_apache_commons_commons_compress",
-#    "@rules_bazelizer_maven//:org_apache_maven_maven_compat",
-#		"@rules_bazelizer_maven//:org_apache_maven_maven_model",
-#		"@rules_bazelizer_maven//:org_apache_maven_maven_repository_metadata",
-#		"@rules_bazelizer_maven//:org_apache_maven_maven_model_builder",
-#		"@rules_bazelizer_maven//:org_apache_maven_resolver_maven_resolver_impl",
-#		"@rules_bazelizer_maven//:org_apache_maven_maven_artifact",
-#		"@rules_bazelizer_maven//:org_apache_maven_maven_resolver_provider",
-#		"@rules_bazelizer_maven//:org_apache_maven_resolver_maven_resolver_api",
-#		"@rules_bazelizer_maven//:org_codehaus_plexus_plexus_interpolation",
-#		"@rules_bazelizer_maven//:org_apache_maven_maven_core",
-#		"@rules_bazelizer_maven//:org_eclipse_sisu_org_eclipse_sisu_plexus",
-#		"@rules_bazelizer_maven//:org_codehaus_plexus_plexus_utils",
-#		"@rules_bazelizer_maven//:org_apache_maven_resolver_maven_resolver_util",
-#		"@rules_bazelizer_maven//:org_apache_maven_maven_settings_builder",
-#		"@rules_bazelizer_maven//:org_codehaus_plexus_plexus_component_annotations",
-#		"@rules_bazelizer_maven//:org_apache_maven_wagon_wagon_provider_api",
-#		"@rules_bazelizer_maven//:org_apache_maven_maven_settings",
-#    "@rules_bazelizer_maven//:org_apache_maven_maven_embedder",
-#		"@rules_bazelizer_maven//:org_sonatype_plexus_plexus_cipher",
-#		"@rules_bazelizer_maven//:org_codehaus_plexus_plexus_classworlds",
-#		"@rules_bazelizer_maven//:org_slf4j_slf4j_api",
-#		"@rules_bazelizer_maven//:org_apache_maven_maven_model",
-#		"@rules_bazelizer_maven//:org_apache_maven_maven_model_builder",
-#		"@rules_bazelizer_maven//:org_apache_commons_commons_lang3",
-#		"@rules_bazelizer_maven//:org_apache_maven_maven_builder_support",
-#		"@rules_bazelizer_maven//:com_google_inject_guice_no_aop",
-#		"@rules_bazelizer_maven//:org_apache_maven_resolver_maven_resolver_api",
-#		"@rules_bazelizer_maven//:org_apache_maven_shared_maven_shared_utils",
-#		"@rules_bazelizer_maven//:org_apache_maven_maven_core",
-#		"@rules_bazelizer_maven//:org_eclipse_sisu_org_eclipse_sisu_plexus",
-#		"@rules_bazelizer_maven//:org_sonatype_plexus_plexus_sec_dispatcher",
-#		"@rules_bazelizer_maven//:org_codehaus_plexus_plexus_utils",
-#		"@rules_bazelizer_maven//:org_apache_maven_maven_plugin_api",
-#		"@rules_bazelizer_maven//:org_apache_maven_resolver_maven_resolver_util",
-#		"@rules_bazelizer_maven//:org_apache_maven_maven_settings_builder",
-#		"@rules_bazelizer_maven//:javax_inject_javax_inject",
-#		"@rules_bazelizer_maven//:commons_cli_commons_cli",
-#		"@rules_bazelizer_maven//:org_apache_maven_maven_settings",
-#		"@rules_bazelizer_maven//:javax_annotation_jsr250_api",
-#    "@rules_bazelizer_maven//:org_apache_maven_wagon_wagon_http",
-#    "@rules_bazelizer_maven//:org_apache_maven_wagon_wagon_http_lightweight",
-#    "@rules_bazelizer_maven//:org_eclipse_aether_aether_connector_basic",
-#    "@rules_bazelizer_maven//:org_eclipse_aether_aether_transport_wagon",
     "@rules_bazelizer_maven//:org_slf4j_slf4j_api",
     "@rules_bazelizer_maven//:ch_qos_logback_logback_classic",
     "@rules_bazelizer_maven//:ch_qos_logback_logback_core",
-    "@rules_bazelizer_maven//:info_picocli_picocli",
     # bazel infra support
     "@bazel_tools//tools/java/runfiles"
 ]
@@ -84,8 +44,10 @@ run_tests(
     data = glob(["**"],exclude = ["*.java"]),
     deps = [
         ":mvn",
-        "@rules_bazelizer_maven//:junit_junit",
-        "@rules_bazelizer_maven//:org_hamcrest_hamcrest_library",
+        "@junit_junit",
+        "@org_hamcrest_hamcrest_core",
+        "@org_hamcrest_hamcrest_library",
+#        "@rules_bazelizer_maven//:org_hamcrest_hamcrest_library",
     ] + _deps,
 )
 

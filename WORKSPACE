@@ -20,11 +20,5 @@ dependencies()
 load("//third_party:pinn.bzl", "dependencies")
 dependencies()
 
-
-http_archive(
-   name = "maven_bin",
-   url = "https://www2.apache.paket.ua/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz",
-   build_file = "//private/ruls/maven:BUILD.maven",
-   sha256 = "26ad91d751b3a9a53087aefa743f4e16a17741d3915b219cf74112bf87a438c5",
-   strip_prefix = "apache-maven-3.6.3"
-)
+load("//third_party:rules_repository.bzl", "install")
+install()

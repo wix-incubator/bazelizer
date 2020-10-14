@@ -3,8 +3,6 @@
 _M2_REPO_IMG_EXT = ".tar"
 _BASE_POM_NAME = "base_pom.xml"
 _TOOL = Label("//private/tools/jvm/mvn:mvn")
-#_EXECUTABLE_TOOL_WS = "maven_bin"
-#_EXECUTABLE_TOOL = Label("@" + _EXECUTABLE_TOOL_WS + "//:bin")
 _MARKER_SRC_DEFAULT_OUTPUT_JAR = "@@TARGET-JAR-OUTPUT@@"
 
 MvnBuildpackInfo = provider()
@@ -61,7 +59,6 @@ def _create_mvn_repository_impl(ctx):
         executable = ctx.executable._tool,
         # use_default_shell_env = True,
         progress_message = "createing mvn embedded tool... %s" % (ctx.label),
-#        tools = [ctx.attr._maven[DefaultInfo].files_to_run]
     )
 
     # Write the wrapper.
