@@ -53,11 +53,8 @@ public class ActsTest {
                 new Acts.POM()
         );
         final Project accept = act.accept(p);
-        final List<Args.KeyValue> kws = accept.args().getKeyValues();
-        final Optional<Args.KeyValue> pomFileArg = kws.stream().filter(x -> x.key.equals("f")).findFirst();
-        assertThat("was: " + kws, pomFileArg.isPresent(), Matchers.is(true));
 
-        XML xml = new XMLDocument(new File(pomFileArg.get().value));
+        XML xml = new XMLDocument(accept.pom().toFile());
         Assert.assertEquals(xml.xpath("//project/groupId/text()").get(0).trim(), "BBBB");
         Assert.assertEquals(xml.xpath("//project/artifactId/text()").get(0).trim(), "AAAA");
         Assert.assertEquals(xml.xpath("//project/dependencies/dependency/groupId/text()"), Lists.newArrayList("xyz"));
