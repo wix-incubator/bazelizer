@@ -3,6 +3,7 @@ package tools.jvm.mvn;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
@@ -12,6 +13,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -38,7 +40,6 @@ public class Cli {
         }
     }
 
-
     @SuppressWarnings({"UnstableApiUsage", "unused"})
     @CommandLine.Command(name = "repo2tar")
     public static class Snapshot implements Runnable {
@@ -57,9 +58,9 @@ public class Cli {
         @Override
         public void run() {
             final Project project = Project.builder()
-                    .pomXmlSrc(Files.asByteSource(pomXmlTpl.toFile()))
+                    .pomXmlSrc(getPomXmlSrc())
                     .workDir(pomXmlTpl.getParent())
-                    .outputs(ImmutableList.of(new Output.TmpSrc(output)))
+                    .outputs(ImmutableList.of(new Output.TemporaryFileSrc(output)))
                     .pomParent(parent)
                     .build();
 
@@ -72,6 +73,10 @@ public class Cli {
                     new Acts.RepositoryArchiver(),
                     new Acts.Outputs()
             ).accept(project);
+        }
+
+        private ByteSource getPomXmlSrc() {
+            return Files.asByteSource(pomXmlTpl.toFile());
         }
     }
 
@@ -116,16 +121,6 @@ public class Cli {
         @CommandLine.Option(names = {"-pr", "--parent"}, paramLabel = "P", description = "parent pom path")
         public Path parent;
 
-        private Path getWorkDir() {
-            return PathsCollection.fromManifest(srcs).commonPrefix();
-        }
-
-        private Path getPomFileDest(Path workDir) {
-            return workDir.resolve(String.format("%s_%s.xml",
-                    RandomText.randomStr("pom_", 14),
-                    Long.toHexString(System.currentTimeMillis())));
-        }
-
         @Override
         @lombok.SneakyThrows
         public void run() {
@@ -137,7 +132,7 @@ public class Cli {
                     .groupId(groupId)
                     .pomParent(parent)
                     .pom(pom)
-                    .deps(PathsCollection.fromManifest(deps).stream().map(Dep.DigestCoords::new).collect(Collectors.toSet()))
+                    .deps(getDeps())
                     .workDir(workDir)
                     .pomXmlSrc(Files.asByteSource(pomXmlTpl.toFile()))
                     .outputs(outputs.entrySet()
@@ -145,7 +140,7 @@ public class Cli {
                             .map(entry -> {
                                 final String declared = entry.getKey();
                                 final String buildFile = entry.getValue();
-                                return new Output.Paths(buildFile, declared, pom.toFile());
+                                return new Output.Default(buildFile, declared, pom.toFile());
                             })
                             .collect(Collectors.toList()))
                     .baseImage(repo)
@@ -153,7 +148,6 @@ public class Cli {
 
             new Act.Iterative(
                     new Acts.DefRepository(),
-                    new Acts.Version(),
                     new Acts.SettingsXml(),
                     new Acts.Deps(),
                     new Acts.DefineParentPom(),
@@ -162,8 +156,22 @@ public class Cli {
                     new Acts.Outputs()
             ).accept(project);
         }
-    }
 
+        private Set<Dep> getDeps() {
+            return new FilePaths.Manifest(deps)
+                    .stream()
+                    .map(Dep.DigestCoords::new)
+                    .collect(Collectors.toSet());
+        }
+
+        private Path getWorkDir() {
+            return new FilePaths.Manifest(srcs).resolveCommonPrefix();
+        }
+
+        private Path getPomFileDest(Path workDir) {
+            return workDir.resolve(RandomText.randomFileName("pom"));
+        }
+    }
 
     @CommandLine.Command(subcommands = {
             Snapshot.class,

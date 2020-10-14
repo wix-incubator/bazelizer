@@ -8,11 +8,12 @@ def default_repository_urls():
     ]
 
 def dependencies(repositories=default_repository_urls()):
+
     maven_install(
+        name = "rules_bazelizer_maven",
         artifacts = [
-            "com.jcabi.incubator:xembly:0.24.0",
+            'org.apache.maven.shared:maven-invoker:3.0.1',
             "com.jcabi:jcabi-xml:0.22.2",
-            "org.cactoos:cactoos:0.46",
             "commons-io:commons-io:2.5",
             "com.google.guava:guava:29.0-jre",
             "org.projectlombok:lombok:1.18.12",

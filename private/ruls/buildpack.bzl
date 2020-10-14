@@ -3,6 +3,8 @@
 _M2_REPO_IMG_EXT = ".tar"
 _BASE_POM_NAME = "base_pom.xml"
 _TOOL = Label("//private/tools/jvm/mvn:mvn")
+#_EXECUTABLE_TOOL_WS = "maven_bin"
+#_EXECUTABLE_TOOL = Label("@" + _EXECUTABLE_TOOL_WS + "//:bin")
 _MARKER_SRC_DEFAULT_OUTPUT_JAR = "@@TARGET-JAR-OUTPUT@@"
 
 MvnBuildpackInfo = provider()
@@ -29,7 +31,7 @@ _create_mvn_repository_attr = _merged_dict(
         "pom_parent": attr.label(allow_single_file = True),
         "pom_file_vars": attr.string_dict(),
         "pom_file": attr.label(allow_single_file = True, mandatory = True),
-        "_tool": attr.label(default = _TOOL, allow_files = True, executable = True, cfg = "host"),
+        "_tool": attr.label(default = _TOOL, allow_files = True, executable = True, cfg = "host")
     }
 )
 
@@ -57,8 +59,9 @@ def _create_mvn_repository_impl(ctx):
         outputs = [archive],
         arguments = [args],
         executable = ctx.executable._tool,
-        use_default_shell_env = True,
+        # use_default_shell_env = True,
         progress_message = "createing mvn embedded tool... %s" % (ctx.label),
+#        tools = [ctx.attr._maven[DefaultInfo].files_to_run]
     )
 
     # Write the wrapper.
@@ -123,6 +126,24 @@ create_mvn_buildpack = rule(
 )
 
 
+
+_run_mvn_buildpack_attr = _merged_dict(
+    _common_attr,
+    {
+        "deps": attr.label_list(),
+        "srcs": attr.label_list(mandatory = True),
+        "outputs": attr.string_list(),
+        "artifactId": attr.string(),
+        "groupId": attr.string(),
+        "buildpack": attr.label(
+            mandatory = True,
+            allow_files = True,
+            executable = True,
+            cfg = "host",
+        )
+    }
+)
+
 def _write_manifest_file(name, ctx, files_paths):
     manifest = ctx.actions.declare_file(name + ".manifest")
     args = ctx.actions.args()
@@ -148,29 +169,6 @@ def _collect_deps(dep_targets):
 
     return _direct_deps
 
-
-_run_mvn_buildpack_attr = _merged_dict(
-    _common_attr,
-    {
-        "deps": attr.label_list(),
-        "srcs": attr.label_list(mandatory = True),
-        "outputs": attr.string_list(),
-        "artifactId": attr.string(),
-        "groupId": attr.string(),
-        "buildpack": attr.label(
-            mandatory = True,
-            allow_files = True,
-            executable = True,
-            cfg = "host",
-        ),
-        "_tool": attr.label(
-            default = _TOOL,
-            allow_files = True,
-            executable = True,
-            cfg = "host",
-        )
-    }
-)
 
 def _run_mvn_buildpack_impl(ctx):
     if not ctx.attr.buildpack[MvnBuildpackInfo]:
