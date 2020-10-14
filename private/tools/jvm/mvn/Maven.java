@@ -10,6 +10,7 @@ import org.apache.maven.shared.invoker.Invoker;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.Properties;
 
 public interface Maven {
 
@@ -32,12 +33,11 @@ public interface Maven {
         public void run(Project build) {
             final String ws = System.getProperty("maven.bin.workspace");
             Runfiles runfiles = Runfiles.create();
-            String path = runfiles.rlocation(ws + "/bin/mvn");
-            log.info("Invoke exec " + path);
+
+            String mavenBinRunfileDir = runfiles.rlocation(ws );
 
             DefaultInvoker invoker = new DefaultInvoker();
-            invoker.setMavenExecutable(new File(path));
-            invoker.setMavenHome(build.m2Home().toFile());
+            invoker.setMavenHome(new File(mavenBinRunfileDir));
             invoker.setWorkingDirectory(build.workDir().toFile());
 
             final DefaultInvocationRequest request = new DefaultInvocationRequest();
@@ -49,6 +49,24 @@ public interface Maven {
 
             if (build.args().offline()) {
                 request.setOffline(true);
+            }
+
+            switch (SLF4JConfigurer.getLogLevel()) {
+                case OFF:
+                    Properties properties = request.getProperties();
+                    if (properties == null) {
+                        properties = new Properties();
+                        request.setProperties(properties);
+                    }
+                    final Properties props = new Properties();
+                    props.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "WARN");
+                    request.setProperties(props);
+                    break;
+                case INFO: break;
+                case DEBUG:
+                case TRACE:
+                    request.setDebug(true);
+                    break;
             }
 
             invoker.execute(request);
