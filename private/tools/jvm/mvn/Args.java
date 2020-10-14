@@ -4,24 +4,24 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.experimental.Accessors;
 
 import java.util.*;
 
 /**
  * Args.
  */
+@Accessors(fluent = true)
 public class Args implements Iterable<String>  {
     private final LinkedHashSet<String> args = new LinkedHashSet<>();
 
-    public Args() { }
-
-
-    public Args(Args col) {
-        for (String s : col) {
-            append(s);
-        }
-    }
+    @Setter
+    @Getter
+    private boolean offline;
 
     /**
      * Add args to set.

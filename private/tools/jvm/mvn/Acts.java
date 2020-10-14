@@ -78,42 +78,6 @@ public final class Acts {
         }
     }
 
-    /**
-     * Run maven build.
-     */
-    private final static class RunMavenCommand implements Act {
-        private boolean offline;
-        private final List<String> args;
-
-        RunMavenCommand(boolean offline, String...args) {
-            this.offline = offline;
-            this.args = Lists.newArrayList(args);
-        }
-
-        RunMavenCommand(String...args) {
-            this(false, args);
-        }
-
-        RunMavenCommand useOffline() {
-            this.offline = true;
-            return this;
-        }
-
-        @Override
-        public Project accept(Project project) {
-            final Args args = new Args(project.args());
-            if (offline) {
-                args.append("--offline");
-            }
-            this.args.forEach(args::append);
-            new BuildMvn().run(
-                    project.toBuilder()
-                            .args(args)
-                            .build()
-            );
-            return project;
-        }
-    }
 
     /**
      * Maven build. Turn off online resolving dependencies.
@@ -122,9 +86,12 @@ public final class Acts {
 
         @Override
         public Project accept(Project project) {
-            return new RunMavenCommand( "clean", "package")
-                    .useOffline()
-                    .accept(project);
+            project.args()
+                    .offline(true)
+                    .append("clean", "package");
+
+            new Maven.BazelInvoker().run(project);
+            return project;
         }
     }
 
@@ -136,8 +103,10 @@ public final class Acts {
         @Override
         public Project accept(Project project) {
             log.info("eagerly fetch dependencies to go offline...");
-            new RunMavenCommand( "dependency:go-offline").accept(project);
-            new RunMavenCommand( "clean", "package").accept(project);
+            project.args()
+                    .offline(false)
+                    .append("clean", "package");
+            new Maven.BazelInvoker().run(project);
             return project;
         }
     }
@@ -190,9 +159,7 @@ public final class Acts {
             ).eval();
             renderedTpl.copyTo(asByteSink(syntheticPom).asCharSink(StandardCharsets.UTF_8));
             if (log.isDebugEnabled()) {
-                log.debug("\n{}", renderedTpl.read());
-            }
-            project.args().append("-f", syntheticPom.getAbsolutePath());
+                log.debug("\n{}", renderedTpl.read()); }
             return project;
         }
     }
@@ -204,17 +171,19 @@ public final class Acts {
     @Slf4j
     static class SettingsXml implements Act {
 
+        @SneakyThrows
         @Override
         public Project accept(Project project) {
             final Path m2Home = project.m2Home();
             final Path settingsXml = m2Home.resolve("settings.xml").toAbsolutePath();
             final Path repository = m2Home.resolve("repository").toAbsolutePath();
+            Files.createDirectories(repository);
             String xml = "<settings xsi:schemaLocation=\"http://maven.apache.org/SETTINGS/1.1.0 http://maven.apache.org/xsd/settings-1.1.0.xsd\" xmlns=\"http://maven.apache.org/SETTINGS/1.1.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n" +
                             "<localRepository>" + repository + "</localRepository>\n" +
                             "</settings>";
+
             save(settingsXml, xml);
             log.debug("\n{}", xml);
-            project.args().append("-s", settingsXml.toString());
             return project;
         }
 
@@ -321,27 +290,6 @@ public final class Acts {
         }
     }
 
-
-    /**
-     * Print Maven version.
-     */
-    @Slf4j
-    static class Version implements Act {
-
-        @Override
-        public Project accept(Project project) {
-            log.info("*** <Maven version> ***");
-            new BuildMvn(true).run(
-                    project.toBuilder()
-                            .args(new Args().append("--version"))
-                            .build()
-
-            );
-            log.info("*** <Maven version> END ***");
-            return project;
-        }
-    }
-
     /**
      * Resolve relative path to optional parent project.
      */
@@ -387,9 +335,10 @@ public final class Acts {
                 final Project parentProject = project.toBuilder()
                         .pom(parentPomFile)
                         .workDir(parentDir)
+                        .args(new Args().append("install"))
                         .build();
 
-                new RunMavenCommand("install").accept(parentProject);
+                new Maven.BazelInvoker().run(parentProject);
             }
             return project;
         }

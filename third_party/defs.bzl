@@ -8,11 +8,12 @@ def default_repository_urls():
     ]
 
 def dependencies(repositories=default_repository_urls()):
+
     maven_install(
+        name = "rules_bazelizer_maven",
         artifacts = [
-            "com.jcabi.incubator:xembly:0.24.0",
+            'org.apache.maven.shared:maven-invoker:3.0.1',
             "com.jcabi:jcabi-xml:0.22.2",
-            "org.cactoos:cactoos:0.46",
             "commons-io:commons-io:2.5",
             "com.google.guava:guava:29.0-jre",
             "org.projectlombok:lombok:1.18.12",
@@ -21,13 +22,6 @@ def dependencies(repositories=default_repository_urls()):
             'ch.qos.logback:logback-classic:jar:1.2.3',
             "info.picocli:picocli:4.5.0",
             "org.apache.commons:commons-compress:1.20",
-            "org.apache.maven:maven-compat:3.6.3",
-            "org.apache.maven:maven-embedder:3.6.3",
-            "org.apache.maven.wagon:wagon-http:2.9",
-            "org.apache.maven.wagon:wagon-http-lightweight:2.9",
-            "org.apache.maven.wagon:wagon-provider-api:2.9",
-            "org.eclipse.aether:aether-connector-basic:1.1.0",
-            "org.eclipse.aether:aether-transport-wagon:1.0.2.v20150114",
             "junit:junit:4.13.1",
             "org.hamcrest:hamcrest-library:1.3",
         ],

@@ -1,6 +1,6 @@
 package tools.jvm.mvn;
 
-import lombok.AllArgsConstructor;
+import com.google.common.base.Suppliers;
 import lombok.SneakyThrows;
 
 import java.io.File;
@@ -13,7 +13,11 @@ import java.util.function.Supplier;
  */
 public interface Output {
 
-    String DEFAULT_TARGET_JAR_OUTPUT = "@@TARGET-JAR-OUTPUT@@";
+    /**
+     * Marker that can be specified in output arguments to indicate that maven
+     * build default jar should be resolved.
+     */
+    String DEFAULT_TARGET_JAR_OUTPUT_MARKER = "@@TARGET-JAR-OUTPUT@@";
 
     /**
      * Maven resulting artifact inside target/
@@ -28,19 +32,26 @@ public interface Output {
     String dest();
 
 
-
-    class Paths implements Output {
+    /**
+     * Default source and destination resolution logic.
+     */
+    class Default implements Output {
         private final Supplier<String> src;
         private final String dest;
 
-        public Paths(String src, String dest, File pom) {
+        public Default(String src, String dest, File pom) {
             this.dest = resolve(dest);
-            this.src = Memento.memorize(() ->
-                    new TemplateEnvelop.PomXPathProps(resolve(src), pom).eval().read());
+            this.src = Suppliers.memoize(() -> {
+                try {
+                    return new TemplateEnvelop.PomXPathProps(resolve(src), pom).eval().read();
+                } catch (Exception e) {
+                    throw new IllegalStateException(e);
+                }
+            });
         }
 
         private String resolve(String src) {
-            if (src.contains(DEFAULT_TARGET_JAR_OUTPUT)) {
+            if (src.contains(DEFAULT_TARGET_JAR_OUTPUT_MARKER)) {
                 return "{{artifactId}}-{{version}}.jar";
             }
             return src;
@@ -57,34 +68,12 @@ public interface Output {
         }
     }
 
-
-    @AllArgsConstructor
-    class Jar implements Output {
-        final Output output;
-
-        @Override
-        public String src() {
-            final String src = output.src();
-            if (src.contains("@@MVN@@")) {
-                final int from = src.lastIndexOf("@MVN:IF@");
-                final int end = src.lastIndexOf("@MVN:END@");
-                final String substring = src.substring(from, end);
-            }
-            return null;
-        }
-
-        @Override
-        public String dest() {
-            return null;
-        }
-    }
-
-    class TmpSrc implements Output {
+    class TemporaryFileSrc implements Output {
         private final Path dest;
         private final Path src;
 
         @SneakyThrows
-        public TmpSrc(Path dest) {
+        public TemporaryFileSrc(Path dest) {
             this.dest = dest;
             this.src = Files.createTempFile("tmp-src", ".dat");
         }

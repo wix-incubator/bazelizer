@@ -5,7 +5,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Streams;
 import com.google.common.io.CharSource;
 import com.google.common.io.Files;
-import lombok.AllArgsConstructor;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -13,16 +12,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.BiPredicate;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
  * Collection of a paths.
  *
  */
-public interface PathsCollection extends Iterable<Path> {
+public interface FilePaths extends Iterable<Path> {
 
     /**
      * New stream of paths
@@ -38,7 +35,7 @@ public interface PathsCollection extends Iterable<Path> {
      * Try to find common prefix for all paths.
      * @return common prefix path
      */
-    default Path commonPrefix() {
+    default Path resolveCommonPrefix() {
         final Path first = Iterables.getFirst(this, null);
         if (first == null) {
             throw new IllegalStateException("empty");
@@ -73,22 +70,13 @@ public interface PathsCollection extends Iterable<Path> {
         }).orElseThrow(() -> new IllegalStateException("no maven layout within paths: " + this));
     }
 
-    /**
-     * Read source from a manifest file. Expect each line a a source path.
-     * @param file file
-     * @return sources
-     */
-    static PathsCollection fromManifest(File file) {
-        return new Manifest(file);
-    }
-
 
     /**
      * Paths based on manifest file.
      */
     @SuppressWarnings("UnstableApiUsage")
-    class Manifest implements PathsCollection {
-        public static final String SUFFIX = "'";
+    class Manifest implements FilePaths {
+        public static final String WRAP = "'";
         private final Collection<Path> paths;
 
         public Manifest(File man) {
@@ -101,10 +89,10 @@ public interface PathsCollection extends Iterable<Path> {
                     .readLines().stream()
                     .map(p -> {
                         String base = p.trim();
-                        if (base.startsWith(SUFFIX)) {
+                        if (base.startsWith(WRAP)) {
                             base = base.substring(1);
                         }
-                        if (base.endsWith(SUFFIX)) {
+                        if (base.endsWith(WRAP)) {
                             base = base.substring(0, base.length() - 1);
                         }
                         return base;
