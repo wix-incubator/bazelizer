@@ -48,3 +48,17 @@ sh_test(
     data = [_run],
     deps = [":MavenRunDummy"]
 )
+
+#genrule(
+#    name = "xxx",
+#    outs = ["t.data"],
+#    cmd = "ls $(locations @maven_bin//:bin) > \"$@\"",
+#    srcs = ["@maven_bin//:bin"],
+#)
+
+#genrule(
+#    name = "xxxy",
+#    outs = ["xxxy.data"],
+#    cmd = "./external/maven_bin/bin/mvn > \"$@\"",
+#    srcs = ["@maven_bin//:bin"],
+#)

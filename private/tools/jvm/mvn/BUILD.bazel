@@ -3,6 +3,8 @@ load("//third_party:rules_repository.bzl", _maven_bin = "MAVEN_BINARY_NAME")
 
 _EXECUTABLE_TOOL_WS = _maven_bin
 
+_EXECUTABLE_TOOL_WS = "maven_bin"
+
 _deps = [
     "@org_projectlombok_lombok",
     "@com_google_guava_guava",
