@@ -14,11 +14,12 @@ There is a wide variety of maven plugins already written. Moreover, some plugins
 - you use Bazel as main build tool, your CI use bazel and all 99% teams and all infra are using Bazel
 - and there is a maven plugin that you need;
 
-Then, you need *mavenizer*. 
+Then, you need *bazelizer*. 
+Someone can call it a dirty hack, but we know the truths ;)
 
 This tool represents overall maven project as one Bazel's target.
 In this whey you can isolate all your maven stuff as one unit (_if desired, put everything that is not specific to the maven into Bazel_) and integrate it into  Bazel environment.
-Use bazel deps, depends on bazel target and event doing it efficiently. Cool, isn't it?
+Use bazel deps, depends on bazel target and event doing it efficiently. 
 
 ***
 
