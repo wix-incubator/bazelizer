@@ -21,6 +21,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
 
 public interface Template {
 
@@ -55,24 +56,9 @@ public interface Template {
         @SneakyThrows
         private static Props props(InputOf xmlIn) {
             try (InputStream src = xmlIn.stream()) {
-//                final Constructor<XMLDocument> constructor = XMLDocument.class
-//                        .getDeclaredConstructor(Node.class, XPathContext.class, boolean.class);
-//                constructor.setAccessible(true);
-//                final Field field = XMLDocument.class.getDeclaredField("DFACTORY");
-//                field.setAccessible(true);
-//                final DocumentBuilderFactory dfactory = (DocumentBuilderFactory) field.get(XMLDocument.class);
-//
-//                final Invokable<XMLDocument, XMLDocument> invokable = Invokable.from(constructor);
-//                XML xml = invokable.invoke(null,
-//                        dfactory.newDocumentBuilder().parse(src),
-//                        new XPathContext().add("pom", "http://maven.apache.org/POM/4.0.0"),
-//                        false
-//                );
-
-
                 XML xml = new XMLDocument(src).registerNs("pom", "http://maven.apache.org/POM/4.0.0");
-
-                if (!xml.xpath("/*/namespace::*[name()='']").isEmpty()) {
+                final List<String> namespaces = xml.xpath("/*/namespace::*[name()='']");
+                if (!namespaces.isEmpty()) {
                     String gid =  xml.xpath("/pom:project/pom:groupId/text()").get(0);
                     String aid =  xml.xpath("/pom:project/pom:artifactId/text()").get(0);
                     String v =  xml.xpath("/pom:project/pom:version/text()").get(0);
