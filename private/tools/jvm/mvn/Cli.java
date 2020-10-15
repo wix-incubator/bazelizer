@@ -142,14 +142,14 @@ public class Cli {
         }
 
         private Set<Dep> getDeps() {
-            return new FilePaths.Manifest(deps)
+            return new Deps.Manifest(deps)
                     .stream()
-                    .map(Dep.DigestCoords::new)
+                    .map(Dep.DependencyOf::new)
                     .collect(Collectors.toSet());
         }
 
         private Path getWorkDir() {
-            return new FilePaths.Manifest(srcs).resolveCommonPrefix();
+            return new Deps.Manifest(srcs).resolveCommonPrefix();
         }
 
         private Path getPomFileDest(Path workDir) {

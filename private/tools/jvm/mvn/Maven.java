@@ -88,7 +88,9 @@ public interface Maven {
             final DefaultInvocationRequest request = new DefaultInvocationRequest();
             request.setPomFile(build.pom().toFile());
             request.setJavaHome(new File(System.getProperty("java.home")));
-            request.setGoals(Arrays.asList(build.args().toArray()));
+            final List<String> args = Arrays.asList(build.args().toArray());
+            log.info("execute: {}", args);
+            request.setGoals(args);
             request.setLocalRepositoryDirectory(build.repository().toFile());
             request.setBatchMode(true);
 

@@ -14,11 +14,11 @@ import java.util.Collection;
 import java.util.Iterator;
 
 @RunWith(BlockJUnit4ClassRunner.class)
-public class FilePathsTest {
+public class DepsTest {
 
     @Test
     public void commonPrefixSingle() {
-        FilePaths col = getPaths(
+        Deps col = getPaths(
                 ImmutableList.of(
                         Paths.get("/foo/bar/baz/A.txt")
                 )
@@ -30,7 +30,7 @@ public class FilePathsTest {
 
     @Test
     public void commonPrefix() {
-        FilePaths col = getPaths(ImmutableList.of(
+        Deps col = getPaths(ImmutableList.of(
                 Paths.get("/foo/bar/baz/A.txt"),
                 Paths.get("/foo/bar/baz/B.txt"),
                 Paths.get("/foo/bar/jaz/C.txt"),
@@ -44,7 +44,7 @@ public class FilePathsTest {
 
     @Test
     public void load() {
-        FilePaths col = new FilePaths.Manifest(CharSource.wrap(
+        Deps col = new Deps.Manifest(CharSource.wrap(
                 "{\"path\": \"/foo/bar/baz/A.java\"}'\n" +
                         "{\"path\": \"/foo/bar/baz/B.java?scope=provided\"}\n" +
                         "{\"path\": \"/foo/bar/jazz/C.java?scope=provided\"}\n" +
@@ -59,7 +59,7 @@ public class FilePathsTest {
 
     @Test
     public void url() {
-        FilePaths col = new FilePaths.Manifest(CharSource.wrap(
+        Deps col = new Deps.Manifest(CharSource.wrap(
                 "{\"path\": \"bazel-out/darwin-fastbuild/bin/tests/integration/lib/src/com/mavenizer/examples/subliby/libsubliby.jar\"}"
         ));
 
@@ -67,11 +67,11 @@ public class FilePathsTest {
                 "bazel-out/darwin-fastbuild/bin/tests/integration/lib/src/com/mavenizer/examples/subliby/libsubliby.jar"), col.paths().findFirst().get());
     }
 
-    private static FilePaths getPaths(Collection<Path> of) {
-        return new FilePaths() {
+    private static Deps getPaths(Collection<Path> of) {
+        return new Deps() {
             @Override
-            public Iterator<FilePaths.Target> iterator() {
-                return Iterators.transform(of.iterator(), Target::new);
+            public Iterator<DepArtifact> iterator() {
+                return Iterators.transform(of.iterator(), DepArtifact::new);
             }
         };
     }

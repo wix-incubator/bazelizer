@@ -1,19 +1,13 @@
 package tools.jvm.mvn;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Streams;
 import com.google.common.io.CharSource;
 import com.google.common.io.Files;
 import com.google.gson.*;
 import lombok.*;
-import org.cactoos.io.ReaderOf;
 
 import java.io.File;
-import java.lang.reflect.Type;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -25,7 +19,7 @@ import java.util.stream.Stream;
 /**
  * Collection of a paths.
  */
-public interface FilePaths extends Iterable<FilePaths.Target> {
+public interface Deps extends Iterable<Deps.DepArtifact> {
 
     Gson G = new GsonBuilder()
             .setPrettyPrinting()
@@ -37,11 +31,11 @@ public interface FilePaths extends Iterable<FilePaths.Target> {
 
     @Data
     @NoArgsConstructor
-    class Target {
+    class DepArtifact {
         private Path path;
         private Map<String, String> tags = Collections.emptyMap();
 
-        public Target(Path p) {
+        public DepArtifact(Path p) {
             this.path = p;
         }
     }
@@ -53,7 +47,7 @@ public interface FilePaths extends Iterable<FilePaths.Target> {
      */
     @SuppressWarnings("UnstableApiUsage")
     default Stream<Path> paths() {
-        return Streams.stream(this).map(Target::getPath);
+        return Streams.stream(this).map(DepArtifact::getPath);
     }
 
     /**
@@ -62,7 +56,7 @@ public interface FilePaths extends Iterable<FilePaths.Target> {
      * @return stream of paths
      */
     @SuppressWarnings("UnstableApiUsage")
-    default Stream<Target> stream() {
+    default Stream<DepArtifact> stream() {
         return Streams.stream(this);
     }
 
@@ -108,9 +102,9 @@ public interface FilePaths extends Iterable<FilePaths.Target> {
      * Paths based on manifest file.
      */
     @SuppressWarnings("UnstableApiUsage")
-    class Manifest implements FilePaths {
+    class Manifest implements Deps {
         public static final String WRAP = "'";
-        private final Collection<FilePaths.Target> paths;
+        private final Collection<DepArtifact> paths;
 
         public Manifest(File man) {
             this(Files.asCharSource(man, StandardCharsets.UTF_8));
@@ -131,15 +125,14 @@ public interface FilePaths extends Iterable<FilePaths.Target> {
                         return base;
                     })
                     .map(p -> {
-                        return G.fromJson(p, Target.class);
-//                        return new Target(null, null);
+                        return G.fromJson(p, DepArtifact.class);
                     })
                     .collect(Collectors.toSet());
         }
 
         @Override
         @SuppressWarnings("NullableProblems")
-        public Iterator<FilePaths.Target> iterator() {
+        public Iterator<DepArtifact> iterator() {
             return paths.iterator();
         }
 

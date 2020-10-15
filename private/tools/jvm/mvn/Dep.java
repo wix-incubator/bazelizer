@@ -1,21 +1,31 @@
 package tools.jvm.mvn;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.Iterables;
 import com.google.common.hash.Hashing;
+import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.SneakyThrows;
 import lombok.ToString;
+import lombok.experimental.Delegate;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 
 import java.io.File;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 /**
  * Extenral dependency.
  */
 public interface Dep {
+
+    String IS_FULL_ARTIFACT_DIST_TAG = "artifact";
+
 
     /**
      * Group Id.
@@ -62,6 +72,55 @@ public interface Dep {
     }
 
 
+    /**
+     * Dependency resolved .
+     */
+    class DependencyOf extends Wrap {
+
+        /**
+         * Ctro.
+         * @param artifact artifact
+         */
+        public DependencyOf(Deps.DepArtifact artifact) {
+            super(build(artifact));
+        }
+
+        @SuppressWarnings("StaticPseudoFunctionalStyleMethod")
+        @SneakyThrows
+        private static Dep build(Deps.DepArtifact artifact) {
+            if (artifact.getTags().containsKey(IS_FULL_ARTIFACT_DIST_TAG)) {
+                final Path path = artifact.getPath();
+                @SuppressWarnings("ConstantConditions")
+                final TarArchiveEntry archiveEntry = Iterables.find(new Archive.TarList(path),
+                        entry -> String.valueOf(entry.getName()).endsWith(".jar"), null);
+                if (archiveEntry != null) {
+                    final String name = archiveEntry.getName();
+                    //example: com/mavenizer/examples/api/myapi-single/1.0.0-SNAPSHOT/myapi-single-1.0.0-SNAPSHOT.jar
+                    return fromTarEntry(artifact.getTags(), path, name);
+                }
+            }
+
+            return new Dep.DigestCoords(artifact);
+        }
+
+        public static Dep fromTarEntry(Map<String,String> tags, Path tar, String artifactPath) {
+            final List<String> parts = Arrays.asList(artifactPath.split("/"));
+            final String version = parts.get(parts.size() - 2);
+            final String art = parts.get(parts.size() - 3);
+            final String gid = Joiner.on(".").join(parts.subList(0, parts.size() - 3));
+            return new Simple(tar.toFile(), gid, art, version, tags);
+        }
+    }
+
+
+
+    @AllArgsConstructor
+    @ToString
+    class Wrap implements Dep {
+        @Delegate
+        private final Dep dep;
+    }
+
     @EqualsAndHashCode(of = {"gid", "aid", "version"})
     @ToString
     class Simple implements Dep {
@@ -104,13 +163,14 @@ public interface Dep {
         }
     }
 
+
     @EqualsAndHashCode(of = {"orig"})
     @ToString
     class DigestCoords implements Dep {
         private final Dep orig;
 
         @SneakyThrows
-        public DigestCoords(FilePaths.Target jarFile) {
+        public DigestCoords(Deps.DepArtifact jarFile) {
             this.orig = create(jarFile.getPath().toFile(), jarFile.getTags());
         }
 

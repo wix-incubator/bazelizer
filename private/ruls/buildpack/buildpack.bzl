@@ -172,11 +172,11 @@ def _collect_deps(dep_targets):
     _direct_deps = []
     _direct_deps_files = []
     for dep_target in dep_targets:
-#        if MvnRunArtifactInfo in dep_target:
-#            mvn_run_out = dep_target[MvnRunArtifactInfo]
-#            _direct_deps.append(_collect_dep(mvn_run_out.tar), artifact=True)
-#            _direct_deps_files.append(mvn_run_out.tar)
-#            continue
+        if MvnRunArtifactInfo in dep_target:
+            mvn_run_out = dep_target[MvnRunArtifactInfo]
+            _direct_deps.append(_collect_dep(mvn_run_out.tar.path, artifact=True))
+            _direct_deps_files.append(mvn_run_out.tar)
+            continue
 
         # Expect only java compatible targets
         java_provider = dep_target[JavaInfo]
