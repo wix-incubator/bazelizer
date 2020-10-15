@@ -4,10 +4,10 @@ filegroup(
    name = "bin",
     visibility = ["//visibility:public"],
     srcs = glob([
-                   "bin/**",
-                   "boot/**",
-                   "conf/**",
-                   "lib/**",
-                   ]
-               )
+           "bin/**",
+           "boot/**",
+           "conf/**",
+           "lib/**",
+        ]
+    )
 )

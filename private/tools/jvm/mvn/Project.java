@@ -37,17 +37,7 @@ public final class Project {
         return new PropsView() {
             @Override
             public Iterable<Dep> deps() {
-                return () -> new UnmodifiableIterator<Dep>() {
-                    final Iterator<Dep> it = Project.this.deps.iterator();
-                    @Override
-                    public boolean hasNext() {
-                        return it.hasNext();
-                    }
-                    @Override
-                    public Dep next() {
-                        return it.next();
-                    }
-                };
+                return ImmutableList.copyOf(deps);
             }
 
             @Override

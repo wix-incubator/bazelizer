@@ -141,12 +141,13 @@ _run_mvn_buildpack_attr = _merged_dict(
     }
 )
 
-def _write_manifest_file(name, ctx, files_paths):
+def _create_manifest_file(name, ctx, files_paths):
     manifest = ctx.actions.declare_file(name + ".manifest")
     args = ctx.actions.args()
     args.add_all(files_paths)
     ctx.actions.write(manifest, args)
     return manifest
+
 
 def _collect_deps(dep_targets):
     # Collect only direct dependencies for each target
@@ -172,8 +173,8 @@ def _run_mvn_buildpack_impl(ctx):
         fail("attr.buildpack must be created by 'create_mvn_buildpack' rule")
 
     deps = _collect_deps(ctx.attr.deps)
-    srcs_manifest = _write_manifest_file("srcs", ctx, [src for src in ctx.files.srcs])
-    deps_manifest = _write_manifest_file("deps", ctx, [d.path for d in deps])
+    srcs_manifest = _create_manifest_file("srcs", ctx, [src for src in ctx.files.srcs])
+    deps_manifest = _create_manifest_file("deps", ctx, [d.path for d in deps])
     outputs = []
     output_args = []
     output_param = "-O{declared_file}={file_in_mvn_target}"
@@ -220,6 +221,7 @@ def _run_mvn_buildpack_impl(ctx):
         DefaultInfo(files = depset(outputs), runfiles = runfiles),
         JavaInfo(output_jar = declared_out_jar, compile_jar = declared_out_jar)
     ]
+
 
 run_mvn_buildpack = rule(
     implementation = _run_mvn_buildpack_impl,

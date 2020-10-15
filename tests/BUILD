@@ -1,14 +1,8 @@
-load("//:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
+load("//maven:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
 
 
 #
 # preparing
-#
-
-#create_mvn_buildpack(
-#    name = "MavenImage",
-#    pom_file_init_src = "example_pom.xml"
-#)
 #
 
 _buildpack = "//tests/integration/mvn-build-lib:app=._buildpack"
@@ -54,17 +48,3 @@ sh_test(
     data = [_run],
     deps = [":MavenRunDummy"]
 )
-
-#genrule(
-#    name = "xxx",
-#    outs = ["t.data"],
-#    cmd = "ls $(locations @maven_bin//:bin) > \"$@\"",
-#    srcs = ["@maven_bin//:bin"],
-#)
-
-#genrule(
-#    name = "xxxy",
-#    outs = ["xxxy.data"],
-#    cmd = "./external/maven_bin/bin/mvn > \"$@\"",
-#    srcs = ["@maven_bin//:bin"],
-#)

@@ -1,23 +1,21 @@
 load("//private/ruls:tests.bzl", "run_tests")
-load("//third_party:rules_repository.bzl", _maven_bin = "MAVEN_BINARY_WS_NAME")
+load("//third_party:rules_repository.bzl", _maven_bin = "MAVEN_BINARY_NAME")
 
 _EXECUTABLE_TOOL_WS = _maven_bin
 
 _deps = [
-    "@rules_bazelizer_maven//:org_projectlombok_lombok",
-    "@rules_bazelizer_maven//:com_google_guava_guava",
-
+    "@org_projectlombok_lombok",
+    "@com_google_guava_guava",
     "@info_picocli_picocli",
     "@org_apache_maven_shared_maven_invoker",
     "@org_apache_maven_shared_maven_shared_utils",
     "@com_github_spullara_mustache_java_compiler",
     "@com_jcabi_jcabi_xml",
-
-    "@rules_bazelizer_maven//:commons_io_commons_io",
-    "@rules_bazelizer_maven//:org_apache_commons_commons_compress",
-    "@rules_bazelizer_maven//:org_slf4j_slf4j_api",
-    "@rules_bazelizer_maven//:ch_qos_logback_logback_classic",
-    "@rules_bazelizer_maven//:ch_qos_logback_logback_core",
+    "@commons_io_commons_io",
+    "@org_apache_commons_commons_compress",
+    "@org_slf4j_slf4j_api",
+    "@ch_qos_logback_logback_classic",
+    "@ch_qos_logback_logback_core",
     # bazel infra support
     "@bazel_tools//tools/java/runfiles"
 ]
@@ -47,7 +45,6 @@ run_tests(
         "@junit_junit",
         "@org_hamcrest_hamcrest_core",
         "@org_hamcrest_hamcrest_library",
-#        "@rules_bazelizer_maven//:org_hamcrest_hamcrest_library",
     ] + _deps,
 )
 
@@ -56,7 +53,7 @@ java_plugin(
     name = "lombok_plugin",
     processor_class = "lombok.launch.AnnotationProcessorHider$AnnotationProcessor",
     deps = [
-        "@rules_bazelizer_maven//:org_projectlombok_lombok",
+        "@org_projectlombok_lombok",
     ],
     generates_api = 1,
 )
