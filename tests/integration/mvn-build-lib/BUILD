@@ -12,7 +12,8 @@ create_mvn_buildpack(
     name = "app=._buildpack",
     pom_file = "pom.xml",
     pom_parent = "//tests/integration/mvn-parent-pom:sources",
-    visibility = ["//visibility:public"]
+    visibility = ["//visibility:public"],
+    log_level = "INFO"
 )
 
 

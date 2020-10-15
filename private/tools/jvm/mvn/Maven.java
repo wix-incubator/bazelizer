@@ -62,8 +62,8 @@ public interface Maven {
                     props.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "WARN");
                     request.setProperties(props);
                     break;
-                case INFO: break;
-                case DEBUG:
+                case INFO:
+                case DEBUG: break;
                 case TRACE:
                     request.setDebug(true);
                     break;

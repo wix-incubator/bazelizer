@@ -7,10 +7,6 @@ _MARKER_SRC_DEFAULT_OUTPUT_JAR = "@@TARGET-JAR-OUTPUT@@"
 
 MvnBuildpackInfo = provider()
 
-def _setup_common_tool_falgs(ctx, args):
-    if ctx.attr.log_level:
-        args.add("--syslog=%s" % (ctx.attr.log_level))
-
 
 def _merged_dict(dicta, dictb):
     return dict(dicta.items() + dictb.items())
@@ -43,7 +39,10 @@ def _create_mvn_repository_impl(ctx):
     optional_transitive_inputs = []
 
     args = ctx.actions.args()
-    _setup_common_tool_falgs(ctx, args)
+    if ctx.attr.log_level:
+        # add jvm flags for java_binary
+        args.add("--jvm_flag=-Dtools.jvm.mvn.LogLevel=%s" % (ctx.attr.log_level))
+
     args.add("repo2tar")
     args.add("--output", archive.path)
     args.add("--pom", pom_file.path)
@@ -198,12 +197,17 @@ def _run_mvn_buildpack_impl(ctx):
     )
 
     args = ctx.actions.args()
-    _setup_common_tool_falgs(ctx, args)
     args.add("--srcs", srcs_manifest)
     args.add("--deps", deps_manifest)
+
     if ctx.attr.artifactId: args.add("--artifactId", ctx.attr.artifactId)
     if ctx.attr.groupId: args.add("--groupId", ctx.attr.groupId)
     args.add_all(output_args)
+
+    if ctx.attr.log_level:
+        # add jvm flags for java_binary
+        # wrap via wrapper_script_flag so it have to goes at the end of args line
+        args.add("--wrapper_script_flag=--jvm_flag=-Dtools.jvm.mvn.LogLevel=%s" % (ctx.attr.log_level))
 
     ctx.actions.run(
         inputs = depset([srcs_manifest, deps_manifest],

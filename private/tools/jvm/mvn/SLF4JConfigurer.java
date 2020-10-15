@@ -16,8 +16,12 @@ import java.util.Optional;
 public class SLF4JConfigurer extends ContextAwareBase implements Configurator {
     private static ToolLogLevel root = ToolLogLevel.OFF;
 
-    public static ToolLogLevel getLogLevel() {
+    public synchronized static ToolLogLevel getLogLevel() {
         return root;
+    }
+
+    private synchronized static void setLogLevel(ToolLogLevel l) {
+        root = l;
     }
 
     enum ToolLogLevel {
@@ -52,15 +56,12 @@ public class SLF4JConfigurer extends ContextAwareBase implements Configurator {
         }
     }
 
-    static void logLevel(ToolLogLevel lvl) {
-        System.out.println("Log level " + lvl);
-        setLoggers(lvl);
-    }
-
     @Override
     public void configure(LoggerContext logCtx) {
         String logLvl = System.getProperty("tools.jvm.mvn.LogLevel");
         ToolLogLevel logLevel = ToolLogLevel.find(logLvl).orElse(ToolLogLevel.OFF);
+        System.out.println("tools.jvm.mvn.LogLevel=" + logLevel);
+        setLogLevel(logLevel);
         initLoggers(logCtx, logLevel);
     }
 

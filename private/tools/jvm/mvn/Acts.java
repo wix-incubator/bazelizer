@@ -3,7 +3,6 @@ package tools.jvm.mvn;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterables;
-import com.google.common.io.CharSource;
 import com.google.common.io.Closer;
 import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
@@ -151,7 +150,7 @@ public final class Acts {
         @Override
         @lombok.SneakyThrows
         public Project accept(Project project) {
-            final Project.PropsView props = project.toView();
+            final Project.ProjectView props = project.toView();
             final Path syntheticPom = project.pom();
             final Text renderedTpl = new Template.Mustache(
                     project.pomXmlSrc(),
@@ -161,7 +160,7 @@ public final class Acts {
             Files.copy(new InputOf(renderedTpl, StandardCharsets.UTF_8).stream(),syntheticPom);
 
             if (log.isDebugEnabled()) {
-                log.debug("\n{}", renderedTpl.toString()); }
+                log.debug("\n{}", renderedTpl.asString()); }
             return project;
         }
     }

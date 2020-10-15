@@ -1,7 +1,6 @@
 package tools.jvm.mvn;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.UnmodifiableIterator;
 import com.google.common.io.ByteSource;
 import lombok.Builder;
 import lombok.Getter;
@@ -11,7 +10,6 @@ import lombok.experimental.Accessors;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Iterator;
 
 @Accessors(fluent = true)
 @Getter
@@ -33,8 +31,8 @@ public final class Project {
     private Args args = new Args();
     private Path pom;
 
-    PropsView toView() {
-        return new PropsView() {
+    ProjectView toView() {
+        return new ProjectView() {
             @Override
             public Iterable<Dep> deps() {
                 return ImmutableList.copyOf(deps);
@@ -63,7 +61,7 @@ public final class Project {
         };
     }
 
-    interface PropsView {
+    interface ProjectView {
         Iterable<Dep> deps();
         String groupId();
         String artifactId();
@@ -86,7 +84,8 @@ public final class Project {
     private Path syntheticPom() {
         for (int i = 0; i < 1000; i++) {
             final Path pom = this.workDir().resolve(
-                    RandomText.randomStr("pom_synthetic-") + "-" + i + ".xml");
+                    RandomText.randomFileName("pom_synthetic") + "-" + i + ".xml"
+            );
             if (Files.notExists(pom)) {
                 return pom;
             }

@@ -19,32 +19,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class Cli {
 
-    @SuppressWarnings("unused")
-    static class LoggingMixin {
-
-        SLF4JConfigurer.ToolLogLevel logLevel;
-
-        /**
-         * Sets the specified verbosity on the LoggingMixin of the top-level command.
-         *
-         * @param logLevel the new verbosity value
-         */
-        @CommandLine.Option(names = "--syslog", defaultValue = "OFF", fallbackValue = "INFO",
-                description = {
-                        "When specified without arguments, start sending syslog messages at INFO level.",
-                        "If absent, no messages are sent to syslog.",
-                        "Optionally specify a severity value. Valid values: ${COMPLETION-CANDIDATES}."})
-        public void setLogLevel(SLF4JConfigurer.ToolLogLevel logLevel) {
-            SLF4JConfigurer.logLevel(logLevel);
-            this.logLevel = logLevel;
-        }
-    }
-
     @SuppressWarnings({"UnstableApiUsage", "unused"})
     @CommandLine.Command(name = "repo2tar")
     public static class Snapshot implements Runnable {
-        @CommandLine.Mixin
-        private LoggingMixin mixin;
 
         @CommandLine.Option(names = {"-pt", "--pom"}, paramLabel = "POM", description = "the pom xml template file")
         public Path pomXmlTpl;
@@ -59,6 +36,8 @@ public class Cli {
         public void run() {
             final Project project = Project.builder()
                     .pomXmlSrc(getPomXmlSrc())
+                    .groupId("io.bazelbuild")
+                    .artifactId("tmp-" + RandomText.randomStr(6))
                     .workDir(pomXmlTpl.getParent())
                     .outputs(ImmutableList.of(new Output.TemporaryFileSrc(output)))
                     .pomParent(parent)
@@ -84,8 +63,6 @@ public class Cli {
     @SuppressWarnings({"unused", "UnstableApiUsage"})
     @CommandLine.Command(name = "build")
     public static class Build implements Runnable {
-        @CommandLine.Mixin
-        private LoggingMixin mixin;
 
         @CommandLine.Option(names = {"-pt", "--pom"}, required = true,
                 paramLabel = "POM", description = "the pom xml template file")
