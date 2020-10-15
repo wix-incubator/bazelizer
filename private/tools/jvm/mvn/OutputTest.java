@@ -26,7 +26,7 @@ public class OutputTest {
 
         Files.write(p.pom(), pom.getBytes());
 
-        final String src = new Output.Default("{{artifactId}}-{{version}}.jar", "jar", pomFile.toFile()).src();
+        final String src = new Output.Default(Output.DEFAULT_TARGET_JAR_OUTPUT_MARKER, "jar", pomFile.toFile()).src();
         Assert.assertEquals(src, "xyz-1.0.0-SNAPSHOT.jar");
     }
 }

@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 public class Cli {
@@ -103,12 +104,17 @@ public class Cli {
         public void run() {
             final Path workDir = getWorkDir();
             final Path pom = getPomFileDest(workDir);
+            final Args args = new Args();
+            if (this.args != null) {
+                Stream.of(this.args.split(" ")).forEach(args::append);
+            }
 
             final Project project = Project.builder()
                     .artifactId(artifactId)
                     .groupId(groupId)
                     .pomParent(parent)
                     .pom(pom)
+                    .args(args)
                     .deps(getDeps())
                     .workDir(workDir)
                     .pomXmlSrc(Files.asByteSource(pomXmlTpl.toFile()))
@@ -124,12 +130,13 @@ public class Cli {
                     .build();
 
             new Act.Iterative(
-                    new Acts.DefRepository(),
+                    new Acts.Repository(),
                     new Acts.SettingsXml(),
                     new Acts.Deps(),
                     new Acts.DefineParentPom(),
                     new Acts.POM(),
-                    new Acts.MvnBuildOffline(),
+                    new Acts.MvnBuild(),
+                    new Acts.ArtifactTar(),
                     new Acts.Outputs()
             ).accept(project);
         }

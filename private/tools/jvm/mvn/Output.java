@@ -1,11 +1,14 @@
 package tools.jvm.mvn;
 
 import com.google.common.base.Suppliers;
+import com.google.common.collect.Lists;
 import lombok.SneakyThrows;
 
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.Supplier;
 
 /**
@@ -20,6 +23,11 @@ public interface Output {
     String DEFAULT_TARGET_JAR_OUTPUT_MARKER = "@@TARGET-JAR-OUTPUT@@";
 
     /**
+     * Marker for tar for whole installed artifact folder.
+     */
+    String ARTIFACT_DIR_TARGET_OUTPUT_MARKER = "@@MVN_ARTIFACT_ALL@@";
+
+    /**
      * Maven resulting artifact inside target/
      * @return path
      */
@@ -31,6 +39,13 @@ public interface Output {
      */
     String dest();
 
+    /**
+     * Tags of output.
+     * @return tags
+     */
+    default List<String> tags() {
+        return Collections.emptyList();
+    }
 
     /**
      * Default source and destination resolution logic.
@@ -40,21 +55,18 @@ public interface Output {
         private final String dest;
 
         public Default(String src, String dest, File pom) {
-            this.dest = resolve(dest);
-            this.src = Suppliers.memoize(() -> {
-                try {
-                    return new Template.PomXPath(resolve(src), pom).eval().asString();
-                } catch (Exception e) {
-                    throw new IllegalStateException(e);
-                }
-            });
-        }
-
-        private String resolve(String src) {
             if (src.contains(DEFAULT_TARGET_JAR_OUTPUT_MARKER)) {
-                return "{{artifactId}}-{{version}}.jar";
+                this.src = Suppliers.memoize(() -> {
+                    try {
+                        return new Template.PomXPath("{{artifactId}}-{{version}}.jar", pom).eval().asString();
+                    } catch (Exception e) {
+                        throw new IllegalStateException(e);
+                    }
+                });
+            } else {
+                this.src = () -> src;
             }
-            return src;
+            this.dest = dest;
         }
 
         @Override

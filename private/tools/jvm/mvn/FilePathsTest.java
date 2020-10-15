@@ -1,6 +1,7 @@
 package tools.jvm.mvn;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
 import com.google.common.io.CharSource;
 import org.junit.Assert;
 import org.junit.Test;
@@ -44,19 +45,33 @@ public class FilePathsTest {
     @Test
     public void load() {
         FilePaths col = new FilePaths.Manifest(CharSource.wrap(
-                "'/foo/bar/baz/A.java'\n" +
-                "'/foo/bar/baz/B.java'\n" +
-                "'/foo/bar/jazz/C.java'\n" +
-                "'/foo/bar/roo/X.java'"));
+                "{\"path\": \"/foo/bar/baz/A.java\"}'\n" +
+                        "{\"path\": \"/foo/bar/baz/B.java?scope=provided\"}\n" +
+                        "{\"path\": \"/foo/bar/jazz/C.java?scope=provided\"}\n" +
+                        "{\"path\": \"/foo/bar/roo/X.java\"}")
+        );
         final Path path = col.resolveCommonPrefix();
-        Assert.assertEquals("col="+col,Paths.get("foo/bar"), path);
+        Assert.assertEquals("col="+col, Paths.get("foo/bar"), path);
+        Assert.assertEquals("col="+col, Paths.get("/foo/bar/baz/A.java"), col.paths().findFirst().get());
+    }
+
+
+
+    @Test
+    public void url() {
+        FilePaths col = new FilePaths.Manifest(CharSource.wrap(
+                "{\"path\": \"bazel-out/darwin-fastbuild/bin/tests/integration/lib/src/com/mavenizer/examples/subliby/libsubliby.jar\"}"
+        ));
+
+        Assert.assertEquals("col="+col, Paths.get(
+                "bazel-out/darwin-fastbuild/bin/tests/integration/lib/src/com/mavenizer/examples/subliby/libsubliby.jar"), col.paths().findFirst().get());
     }
 
     private static FilePaths getPaths(Collection<Path> of) {
         return new FilePaths() {
             @Override
-            public Iterator<Path> iterator() {
-                return of.iterator();
+            public Iterator<FilePaths.Target> iterator() {
+                return Iterators.transform(of.iterator(), Target::new);
             }
         };
     }

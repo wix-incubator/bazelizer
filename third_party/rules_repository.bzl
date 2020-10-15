@@ -202,3 +202,12 @@ def install(server_urls = _def_server_urls):
         artifact_sha256 = "0aeb625c948c697ea7b205156e112363b59ed5e2551212cd4e460bdb72c7c06e",
         srcjar_sha256 = "0eb5d7f270c2fccdab31daa5f7091b038ad0099b29885040604d66e07fd46a18",
     )
+
+    _jvm_import(
+	    name = "com_google_code_gson_gson",
+        artifact = 'com.google.code.gson:gson:jar:2.8.6',
+        fetch_sources = True,
+        server_urls = server_urls,
+#        artifact_sha256 = "0aeb625c948c697ea7b205156e112363b59ed5e2551212cd4e460bdb72c7c06e",
+#        srcjar_sha256 = "0eb5d7f270c2fccdab31daa5f7091b038ad0099b29885040604d66e07fd46a18",
+    )

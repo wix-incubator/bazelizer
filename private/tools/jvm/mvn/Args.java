@@ -41,7 +41,7 @@ public class Args implements Iterable<String>  {
     public String[] toArray() {
         int i = 0;
         final String[] arr = new String[args.size()];
-        for (String arg : args) {
+        for (String arg : this) {
             arr[i++] = arg;
         }
         return arr;
@@ -52,36 +52,9 @@ public class Args implements Iterable<String>  {
         return Joiner.on(" ").join(args);
     }
 
-    public List<KeyValue> getKeyValues() {
-        final String[] strings = toArray();
-        final List<KeyValue> vals = Lists.newArrayList();
-        for (int i = 0; i < strings.length;) {
-            final String n = strings[i];
-            if (n.startsWith("-")) {
-                String key = n;
-                while (key.startsWith("-")) {
-                    key = key.substring(1);
-                }
-                String val = strings[++i];
-                KeyValue kw = new KeyValue(key, val);
-                vals.add(kw);
-            } else {
-                vals.add(new KeyValue(n, null));
-            }
-            i++;
-        }
-        return vals;
-    }
-
-    @Data
-    public static class KeyValue {
-        final String key;
-        final String value;
-    }
-
 
     @Override
     public Iterator<String> iterator() {
-        return Collections.unmodifiableCollection(args).iterator();
+        return Lists.reverse(Lists.newLinkedList(args)).iterator();
     }
 }

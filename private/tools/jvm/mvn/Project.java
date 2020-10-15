@@ -10,6 +10,7 @@ import lombok.experimental.Accessors;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 @Accessors(fluent = true)
 @Getter
@@ -24,12 +25,16 @@ public final class Project {
     private Path pomParent;
     @Builder.Default
     private Path m2Home = getTmpDirectory();
-    private Iterable<Output> outputs;
+    private List<Output> outputs;
     private Path baseImage;
     private ByteSource pomXmlSrc;
     @Builder.Default
     private Args args = new Args();
     private Path pom;
+
+    public Path repository() {
+        return this.m2Home().resolve("repository");
+    }
 
     ProjectView toView() {
         return new ProjectView() {

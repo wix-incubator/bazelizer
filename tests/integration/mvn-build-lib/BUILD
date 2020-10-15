@@ -26,5 +26,6 @@ run_mvn_buildpack(
     srcs = [":sources"],
     buildpack = ":app=._buildpack",
     outputs = ["myapi-1.0.0-SNAPSHOT.jar"],
-    visibility = ["//visibility:public"]
+    visibility = ["//visibility:public"],
+    args = ["install"]
 )

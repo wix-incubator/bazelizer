@@ -4,8 +4,18 @@ _M2_REPO_IMG_EXT = ".tar"
 _BASE_POM_NAME = "base_pom.xml"
 _TOOL = Label("//private/tools/jvm/mvn:mvn")
 _MARKER_SRC_DEFAULT_OUTPUT_JAR = "@@TARGET-JAR-OUTPUT@@"
+_MARKER_TALLY = "@@MVN_ARTIFACT_ALL@@"
 
 MvnBuildpackInfo = provider()
+_DepInfo = provider(
+    fields = {
+        "path": """Artifact binaries as is. Can be more then one file""",
+        "tags": ""
+    }
+)
+MvnRunArtifactInfo = provider(fields = {
+    "tar": """Artifact binaries as is. Can be more then one file"""
+})
 
 
 def _merged_dict(dicta, dictb):
@@ -127,10 +137,12 @@ _run_mvn_buildpack_attr = _merged_dict(
     _common_attr,
     {
         "deps": attr.label_list(),
-        "srcs": attr.label_list(mandatory = True),
+        "srcs": attr.label_list(mandatory = True,allow_files = True),
         "outputs": attr.string_list(),
         "artifactId": attr.string(),
         "groupId": attr.string(),
+        "args": attr.string_list(),
+        "install": attr.bool(),
         "buildpack": attr.label(
             mandatory = True,
             allow_files = True,
@@ -143,15 +155,29 @@ _run_mvn_buildpack_attr = _merged_dict(
 def _create_manifest_file(name, ctx, files_paths):
     manifest = ctx.actions.declare_file(name + ".manifest")
     args = ctx.actions.args()
-    args.add_all(files_paths)
+    for x in files_paths:
+        args.add(x.to_json())
     ctx.actions.write(manifest, args)
     return manifest
+
+
+def _collect_dep(file, **kwargs):
+    # Dep id if url with file schema
+    # All metadata comes as url params
+    return _DepInfo(path=file, tags=dict(kwargs))
 
 
 def _collect_deps(dep_targets):
     # Collect only direct dependencies for each target
     _direct_deps = []
+    _direct_deps_files = []
     for dep_target in dep_targets:
+#        if MvnRunArtifactInfo in dep_target:
+#            mvn_run_out = dep_target[MvnRunArtifactInfo]
+#            _direct_deps.append(_collect_dep(mvn_run_out.tar), artifact=True)
+#            _direct_deps_files.append(mvn_run_out.tar)
+#            continue
+
         # Expect only java compatible targets
         java_provider = dep_target[JavaInfo]
 
@@ -162,35 +188,37 @@ def _collect_deps(dep_targets):
             # so, we should exclude it
             if d.path.endswith("PlaceHolderClassToCreateEmptyJarForScalaImport.jar"):
                 continue
-            _direct_deps.append(d)
+            _direct_deps.append(_collect_dep(d.path))
+            _direct_deps_files.append(d)
 
-    return _direct_deps
+    return _direct_deps, _direct_deps_files
 
 
 def _run_mvn_buildpack_impl(ctx):
     if not ctx.attr.buildpack[MvnBuildpackInfo]:
         fail("attr.buildpack must be created by 'create_mvn_buildpack' rule")
 
-    deps = _collect_deps(ctx.attr.deps)
-    srcs_manifest = _create_manifest_file("srcs", ctx, [src for src in ctx.files.srcs])
-    deps_manifest = _create_manifest_file("deps", ctx, [d.path for d in deps])
-    outputs = []
-    output_args = []
-    output_param = "-O{declared_file}={file_in_mvn_target}"
+    deps_ids, deps = _collect_deps(ctx.attr.deps)
+    srcs_manifest = _create_manifest_file("srcs--%s" % (ctx.label.name), ctx, [_collect_dep(src.path) for src in ctx.files.srcs])
+    deps_manifest = _create_manifest_file("deps--%s" % (ctx.label.name), ctx, deps_ids)
+    providers = []
+    declared_outputs = []
+    output_flags = []
+    output_param_format = "-O{declared_file}={file_in_mvn_target}"
     for o in ctx.attr.outputs:
         declare_file = ctx.actions.declare_file(o)
-        outputs.append(declare_file)
-        output_args.append(
-            output_param.format(
+        declared_outputs.append(declare_file)
+        output_flags.append(
+            output_param_format.format(
                 declared_file = declare_file.path,
                 file_in_mvn_target = o
             )
         )
     out_jar = ctx.label.name + ".jar"
     declared_out_jar = ctx.actions.declare_file(out_jar)
-    outputs.append(declared_out_jar)
-    output_args.append(
-        output_param.format(
+    declared_outputs.append(declared_out_jar)
+    output_flags.append(
+        output_param_format.format(
             declared_file = declared_out_jar.path,
             file_in_mvn_target = _MARKER_SRC_DEFAULT_OUTPUT_JAR
         )
@@ -199,10 +227,26 @@ def _run_mvn_buildpack_impl(ctx):
     args = ctx.actions.args()
     args.add("--srcs", srcs_manifest)
     args.add("--deps", deps_manifest)
-
+    # if ctx.attr.args: args.add("--args", " ".join(ctx.attr.args))
     if ctx.attr.artifactId: args.add("--artifactId", ctx.attr.artifactId)
     if ctx.attr.groupId: args.add("--groupId", ctx.attr.groupId)
-    args.add_all(output_args)
+
+    if ctx.attr.install:
+        args.add("--args", " ".join(["install"]))
+        tally = "%s_tally.tar" % (ctx.label.name)
+        tally_file = ctx.actions.declare_file(tally)
+        declared_outputs.append(tally_file)
+        output_flags.append(
+            output_param_format.format(
+                declared_file = tally_file.path,
+                file_in_mvn_target = _MARKER_TALLY
+            )
+        )
+        providers.append(
+            MvnRunArtifactInfo(tar = tally_file)
+        )
+
+    args.add_all(output_flags)
 
     if ctx.attr.log_level:
         # add jvm flags for java_binary
@@ -212,17 +256,17 @@ def _run_mvn_buildpack_impl(ctx):
     ctx.actions.run(
         inputs = depset([srcs_manifest, deps_manifest],
                         transitive = [depset(deps)] + [f.files for f in ctx.attr.srcs]),
-        outputs = outputs,
+        outputs = declared_outputs,
         arguments = [args],
         executable = ctx.executable.buildpack,
         use_default_shell_env = True,
         progress_message = "running maven build... %s" % (ctx.label),
     )
 
-    runfiles = ctx.runfiles(files = outputs).merge(ctx.attr.buildpack[DefaultInfo].default_runfiles)
+    runfiles = ctx.runfiles(files = declared_outputs).merge(ctx.attr.buildpack[DefaultInfo].default_runfiles)
 
-    return [
-        DefaultInfo(files = depset(outputs), runfiles = runfiles),
+    return providers + [
+        DefaultInfo(files = depset(declared_outputs), runfiles = runfiles),
         JavaInfo(output_jar = declared_out_jar, compile_jar = declared_out_jar)
     ]
 
