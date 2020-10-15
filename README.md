@@ -1,6 +1,8 @@
-# mavenizer
+# bazelizer
 
 [![mavenizer actions Status](https://github.com/wix-incubator/mavenizer/workflows/CI/badge.svg)](https://github.com/wix-incubator/mavenizer/actions)
+
+## IN PROGRESS 
 
 #### TL;DR
 This is your last chance if you really need some maven plugin inside your Bazel build and you cannot rewrite or adapt it to Bazel.
@@ -34,13 +36,13 @@ RULES_MAVENOZER_URL = ...
 RULES_MAVENOZER_SHA = ...
 
 http_archive(
-    name = "mavenizer",
+    name = "bazelizer",
     strip_prefix = "mavenizer-%s" % RULES_MAVENOZER_TAG,
     sha256 = RULES_MAVENOZER_SHA,
     url = RULES_MAVENOZER_URL,
 )
 
-load("@mavenizer//:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
+load("@bazelizer//:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
 
 # usage ....
 ```
