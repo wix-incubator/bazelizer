@@ -1,20 +1,21 @@
 load("//private/ruls:tests.bzl", "run_tests")
 load("//third_party:rules_repository.bzl", _maven_bin_name = "MAVEN_BINARY_NAME")
 
-
 _deps = [
-    "@org_projectlombok_lombok",
-    "@com_google_guava_guava",
-    "@info_picocli_picocli",
-    "@org_apache_maven_shared_maven_invoker",
-    "@org_apache_maven_shared_maven_shared_utils",
-    "@com_github_spullara_mustache_java_compiler",
-    "@com_jcabi_jcabi_xml",
-    "@commons_io_commons_io",
-    "@org_apache_commons_commons_compress",
-    "@org_slf4j_slf4j_api",
-    "@ch_qos_logback_logback_classic",
-    "@ch_qos_logback_logback_core",
+    "//external:wix_incubator_bazelizer_rules/dependency/org_projectlombok_lombok",
+    "//external:wix_incubator_bazelizer_rules/dependency/com_google_guava_guava",
+    "//external:wix_incubator_bazelizer_rules/dependency/info_picocli_picocli",
+    "//external:wix_incubator_bazelizer_rules/dependency/org_apache_maven_shared_maven_invoker",
+    "//external:wix_incubator_bazelizer_rules/dependency/org_apache_maven_shared_maven_shared_utils",
+    "//external:wix_incubator_bazelizer_rules/dependency/com_github_spullara_mustache_java_compiler",
+    "//external:wix_incubator_bazelizer_rules/dependency/com_jcabi_jcabi_xml",
+    "//external:wix_incubator_bazelizer_rules/dependency/org_cactoos_cactoos",
+    "//external:wix_incubator_bazelizer_rules/dependency/com_jcabi_jcabi_log",
+    "//external:wix_incubator_bazelizer_rules/dependency/commons_io_commons_io",
+    "//external:wix_incubator_bazelizer_rules/dependency/org_apache_commons_commons_compress",
+    "//external:wix_incubator_bazelizer_rules/dependency/org_slf4j_slf4j_api",
+    "//external:wix_incubator_bazelizer_rules/dependency/ch_qos_logback_logback_classic",
+    "//external:wix_incubator_bazelizer_rules/dependency/ch_qos_logback_logback_core",
     # bazel infra support
     "@bazel_tools//tools/java/runfiles"
 ]
@@ -41,9 +42,9 @@ run_tests(
     data = glob(["**"],exclude = ["*.java"]),
     deps = [
         ":mvn",
-        "@junit_junit",
-        "@org_hamcrest_hamcrest_core",
-        "@org_hamcrest_hamcrest_library",
+        "//external:wix_incubator_bazelizer_rules/dependency/junit_junit",
+        "//external:wix_incubator_bazelizer_rules/dependency/org_hamcrest_hamcrest_core",
+        "//external:wix_incubator_bazelizer_rules/dependency/org_hamcrest_hamcrest_library",
     ] + _deps,
 )
 
@@ -51,8 +52,6 @@ run_tests(
 java_plugin(
     name = "lombok_plugin",
     processor_class = "lombok.launch.AnnotationProcessorHider$AnnotationProcessor",
-    deps = [
-        "@org_projectlombok_lombok",
-    ],
+    deps = ["//external:wix_incubator_bazelizer_rules/dependency/org_projectlombok_lombok"],
     generates_api = 1,
 )

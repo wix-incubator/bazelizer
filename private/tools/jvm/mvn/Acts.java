@@ -3,7 +3,6 @@ package tools.jvm.mvn;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.io.CharSource;
 import com.google.common.io.Closer;
 import lombok.SneakyThrows;
@@ -14,6 +13,8 @@ import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.io.FileUtils;
+import org.cactoos.Text;
+import org.cactoos.io.InputOf;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,7 +24,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Iterator;
-import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -152,14 +152,16 @@ public final class Acts {
         @lombok.SneakyThrows
         public Project accept(Project project) {
             final Project.PropsView props = project.toView();
-            final File syntheticPom = project.pom().toFile();
-            final CharSource renderedTpl = new TemplateEnvelop.Mustache(
+            final Path syntheticPom = project.pom();
+            final Text renderedTpl = new Template.Mustache(
                     project.pomXmlSrc(),
                     props
             ).eval();
-            renderedTpl.copyTo(asByteSink(syntheticPom).asCharSink(StandardCharsets.UTF_8));
+
+            Files.copy(new InputOf(renderedTpl, StandardCharsets.UTF_8).stream(),syntheticPom);
+
             if (log.isDebugEnabled()) {
-                log.debug("\n{}", renderedTpl.read()); }
+                log.debug("\n{}", renderedTpl.toString()); }
             return project;
         }
     }

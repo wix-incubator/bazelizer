@@ -43,7 +43,7 @@ public interface Output {
             this.dest = resolve(dest);
             this.src = Suppliers.memoize(() -> {
                 try {
-                    return new TemplateEnvelop.PomXPathProps(resolve(src), pom).eval().read();
+                    return new Template.PomXPath(resolve(src), pom).eval().asString();
                 } catch (Exception e) {
                     throw new IllegalStateException(e);
                 }
