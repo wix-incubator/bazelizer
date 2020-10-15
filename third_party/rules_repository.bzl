@@ -19,7 +19,11 @@ def install(server_urls = _def_server_urls):
         http_archive(
            name = MAVEN_BINARY_NAME,
            url = "https://www2.apache.paket.ua/maven/maven-3/" + _maven_binary_version + "/binaries/apache-maven-" + _maven_binary_version + "-bin.tar.gz",
-           build_file = "//private/ruls/maven:BUILD.maven",
+           build_file_content = "\n".join([
+               'filegroup(name = "' + MAVEN_BINARY_NAME + '", visibility = ["//visibility:public"],',
+               '  srcs = glob(["bin/**", "boot/**", "conf/**", "lib/**"])',
+               ")"
+           ]),
            sha256 = _maven_binary_sha256,
            strip_prefix = "apache-maven-" + _maven_binary_version
         )

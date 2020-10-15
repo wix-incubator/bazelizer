@@ -1,9 +1,6 @@
 load("//private/ruls:tests.bzl", "run_tests")
-load("//third_party:rules_repository.bzl", _maven_bin = "MAVEN_BINARY_NAME")
+load("//third_party:rules_repository.bzl", _maven_bin_name = "MAVEN_BINARY_NAME")
 
-_EXECUTABLE_TOOL_WS = _maven_bin
-
-_EXECUTABLE_TOOL_WS = "maven_bin"
 
 _deps = [
     "@org_projectlombok_lombok",
@@ -29,9 +26,9 @@ java_binary(
     srcs = glob(["*.java"], exclude = ["*Test.java"]),
     javacopts = _jopts,
     resources = ["//private/tools/jvm/mvn/java:java_resources"],
-    jvm_flags = ["--illegal-access=permit", "-Dmaven.bin.workspace=\"%s\"" % _EXECUTABLE_TOOL_WS],
+    jvm_flags = ["--illegal-access=permit", "-Dmaven.bin.workspace=\"%s\"" % _maven_bin_name],
     deps = _deps,
-    data = ["@%s//:bin" % (_EXECUTABLE_TOOL_WS)],
+    data = ["@%s//:%s" % (_maven_bin_name, _maven_bin_name)],
     plugins = [":lombok_plugin"],
     main_class = "tools.jvm.mvn.Cli",
     visibility = ["//visibility:public"],

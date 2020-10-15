@@ -1,8 +1,6 @@
 
 
-filegroup(
-   name = "bin",
-    visibility = ["//visibility:public"],
+filegroup( name = "bin", visibility = ["//visibility:public"],
     srcs = glob([
            "bin/**",
            "boot/**",
