@@ -4,6 +4,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
@@ -17,7 +18,7 @@ import java.util.*;
  */
 @Accessors(fluent = true)
 public class Args implements Iterable<String>  {
-    private final LinkedHashSet<String> args = new LinkedHashSet<>();
+    private final ArrayDeque<String> args = new ArrayDeque<>();
 
     @Setter
     @Getter
@@ -30,7 +31,23 @@ public class Args implements Iterable<String>  {
      */
     @SuppressWarnings("UnusedReturnValue")
     public Args append(String...s) {
+        for (String ss : s) {
+            args.addLast(ss);
+        }
         args.addAll(Arrays.asList(s));
+        return this;
+    }
+
+    /**
+     * Add args to set.
+     * @param s args
+     * @return this
+     */
+    @SuppressWarnings("UnusedReturnValue")
+    public Args prepend(String...s) {
+        for (String ss : s) {
+            args.addFirst(ss);
+        }
         return this;
     }
 
@@ -40,6 +57,7 @@ public class Args implements Iterable<String>  {
      */
     public String[] toArray() {
         int i = 0;
+        final LinkedHashSet<String> args = Sets.newLinkedHashSet(this.args);
         final String[] arr = new String[args.size()];
         for (String arg : args) {
             arr[i++] = arg;
@@ -49,39 +67,12 @@ public class Args implements Iterable<String>  {
 
     @Override
     public String toString() {
-        return Joiner.on(" ").join(args);
-    }
-
-    public List<KeyValue> getKeyValues() {
-        final String[] strings = toArray();
-        final List<KeyValue> vals = Lists.newArrayList();
-        for (int i = 0; i < strings.length;) {
-            final String n = strings[i];
-            if (n.startsWith("-")) {
-                String key = n;
-                while (key.startsWith("-")) {
-                    key = key.substring(1);
-                }
-                String val = strings[++i];
-                KeyValue kw = new KeyValue(key, val);
-                vals.add(kw);
-            } else {
-                vals.add(new KeyValue(n, null));
-            }
-            i++;
-        }
-        return vals;
-    }
-
-    @Data
-    public static class KeyValue {
-        final String key;
-        final String value;
+        return Joiner.on(" ").join(this);
     }
 
 
     @Override
     public Iterator<String> iterator() {
-        return Collections.unmodifiableCollection(args).iterator();
+        return Sets.newLinkedHashSet(args).iterator();
     }
 }

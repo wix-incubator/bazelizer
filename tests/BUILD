@@ -1,14 +1,8 @@
-load("//:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
+load("//maven:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
 
 
 #
 # preparing
-#
-
-#create_mvn_buildpack(
-#    name = "MavenImage",
-#    pom_file_init_src = "example_pom.xml"
-#)
 #
 
 _buildpack = "//tests/integration/mvn-build-lib:app=._buildpack"
@@ -55,16 +49,17 @@ sh_test(
     deps = [":MavenRunDummy"]
 )
 
-#genrule(
-#    name = "xxx",
-#    outs = ["t.data"],
-#    cmd = "ls $(locations @maven_bin//:bin) > \"$@\"",
-#    srcs = ["@maven_bin//:bin"],
-#)
 
-#genrule(
-#    name = "xxxy",
-#    outs = ["xxxy.data"],
-#    cmd = "./external/maven_bin/bin/mvn > \"$@\"",
-#    srcs = ["@maven_bin//:bin"],
+#sh_library(
+#    name = "MavenRunDummyLin",
+#    srcs = ["dummy.sh"],
+#    data = ["//tests/integration/mvn-build-lib-one:lib"],
+#)
+#
+#sh_test(
+#    name = "MavenRunLibTest",
+#    srcs = ["test_jar.sh"],
+#    args = ["tests/integration/mvn-build-lib/myapi-1.0.0-SNAPSHOT.jar", "com/mavenizer/examples/jaxbapi/API.class"],
+#    data = [":MavenRunDummyLin"],
+#    deps = [":MavenRunDummyLin"]
 #)

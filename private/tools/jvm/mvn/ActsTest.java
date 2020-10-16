@@ -5,15 +5,12 @@ import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.jcabi.xml.XML;
 import com.jcabi.xml.XMLDocument;
-import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 

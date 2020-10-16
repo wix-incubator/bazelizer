@@ -1,23 +1,22 @@
-load("//:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
+load("//maven:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
 
 
 filegroup(
     name = "sources",
-    srcs = glob(["**/*"]),
+    srcs = glob(["src/**/*"]),
     visibility = ["//visibility:public"]
 )
 
 create_mvn_buildpack(
-    name = "app=._buildpack",
+    name = "buildpack",
     pom_file = "pom.xml",
     visibility = ["//visibility:public"]
 )
 
 run_mvn_buildpack(
     name = "lib",
-    log_level = "INFO",
+    log_level = "OFF",
     srcs = [":sources"],
-    buildpack = ":app=._buildpack",
-    outputs = ["myapi-single-1.0.0-SNAPSHOT.jar"],
+    buildpack = ":buildpack",
     visibility = ["//visibility:public"]
 )

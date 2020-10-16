@@ -1,45 +1,65 @@
 package tools.jvm.mvn;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import com.google.common.io.CharSource;
 import com.google.common.io.Files;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializer;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.Optional;
 import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
  * Collection of a paths.
- *
  */
-public interface FilePaths extends Iterable<Path> {
+public interface Deps extends Iterable<Dep> {
+
+    Gson G = new GsonBuilder()
+            .setPrettyPrinting()
+            .registerTypeAdapter(Path.class, (JsonDeserializer<Path>) (json, typeOfT, context) -> {
+                final String asString = json.getAsString();
+                return Paths.get(asString);
+            }).create();
 
     /**
      * New stream of paths
+     *
      * @return stream of paths
      */
     @SuppressWarnings("UnstableApiUsage")
-    default Stream<Path> stream() {
+    default Stream<Path> paths() {
+        return Streams.stream(this).map(Dep::source);
+    }
+
+    /**
+     * New stream of paths
+     *
+     * @return stream of paths
+     */
+    @SuppressWarnings("UnstableApiUsage")
+    default Stream<Dep> stream() {
         return Streams.stream(this);
     }
 
-
     /**
      * Try to find common prefix for all paths.
+     *
      * @return common prefix path
      */
     default Path resolveCommonPrefix() {
-        final Path first = Iterables.getFirst(this, null);
-        if (first == null) {
-            throw new IllegalStateException("empty");
-        }
+        final Path first = paths().findFirst().orElseThrow(() -> new IllegalStateException("empty"));
 
         BiPredicate<Path, Integer> matches = (path, i) -> {
             if (path == null) return false;
@@ -51,17 +71,17 @@ public interface FilePaths extends Iterable<Path> {
             return path0.startsWith(path1);
         };
 
-        return this.stream().map(Path::getNameCount).max(Comparator.naturalOrder()).flatMap(max -> {
+        return this.paths().map(Path::getNameCount).max(Comparator.naturalOrder()).flatMap(max -> {
             for (int x = 1; x <= max; x++) {
                 final int i = x;
-                if (!stream().allMatch(p -> matches.test(p, i))) {
-                    return Optional.of(first.subpath(0, i-1));
+                if (!paths().allMatch(p -> matches.test(p, i))) {
+                    return Optional.of(first.subpath(0, i - 1));
                 }
             }
             return Optional.empty();
         }).map(path -> {
             final Path src = Paths.get("src");
-            for (int i = 0;  i < path.getNameCount(); i++) {
+            for (int i = 0; i < path.getNameCount(); i++) {
                 if (path.getName(i).equals(src)) {
                     return path.subpath(0, i);
                 }
@@ -75,9 +95,9 @@ public interface FilePaths extends Iterable<Path> {
      * Paths based on manifest file.
      */
     @SuppressWarnings("UnstableApiUsage")
-    class Manifest implements FilePaths {
+    class Manifest implements Deps {
         public static final String WRAP = "'";
-        private final Collection<Path> paths;
+        private final Collection<Dep> paths;
 
         public Manifest(File man) {
             this(Files.asCharSource(man, StandardCharsets.UTF_8));
@@ -85,7 +105,7 @@ public interface FilePaths extends Iterable<Path> {
 
         @lombok.SneakyThrows
         public Manifest(CharSource source) {
-            this.paths = source
+            this.paths = Sets.newLinkedHashSet(source
                     .readLines().stream()
                     .map(p -> {
                         String base = p.trim();
@@ -97,13 +117,13 @@ public interface FilePaths extends Iterable<Path> {
                         }
                         return base;
                     })
-                    .map(p -> Paths.get(p))
-                    .collect(Collectors.toSet());
+                    .map(p -> G.fromJson(p, Dep.DepArtifact.class))
+                    .collect(Collectors.toList()));
         }
 
         @Override
         @SuppressWarnings("NullableProblems")
-        public Iterator<Path> iterator() {
+        public Iterator<Dep> iterator() {
             return paths.iterator();
         }
 

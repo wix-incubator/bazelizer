@@ -8,18 +8,18 @@ import java.util.concurrent.ThreadLocalRandom;
 public final class RandomText {
 
     public static String randomFileName(String pref) {
-        return randomStr(pref + "-", 10)  + "-" + Long.toHexString(System.currentTimeMillis());
+        return pref + "-" + randomStr(10)  + "-" + Long.toHexString(System.currentTimeMillis());
     }
 
-    public static String randomStr(String pref) {
-        return randomStr(pref, 10);
+    public static String randomStr() {
+        return randomStr( 10);
     }
 
-    public static String randomStr(String pref, int len) {
+    public static String randomStr(int len) {
         StringBuilder s = new StringBuilder();
         for (int j = 0; j < len; j++) {
             s.append((char) ThreadLocalRandom.current().nextInt('a', 'z'));
         }
-        return pref + s.toString();
+        return s.toString();
     }
 }

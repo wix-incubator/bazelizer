@@ -1,7 +1,6 @@
 package tools.jvm.mvn;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.UnmodifiableIterator;
 import com.google.common.io.ByteSource;
 import lombok.Builder;
 import lombok.Getter;
@@ -11,7 +10,7 @@ import lombok.experimental.Accessors;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Iterator;
+import java.util.List;
 
 @Accessors(fluent = true)
 @Getter
@@ -26,28 +25,22 @@ public final class Project {
     private Path pomParent;
     @Builder.Default
     private Path m2Home = getTmpDirectory();
-    private Iterable<Output> outputs;
+    private List<OutputFile> outputs;
     private Path baseImage;
     private ByteSource pomXmlSrc;
     @Builder.Default
     private Args args = new Args();
     private Path pom;
 
-    PropsView toView() {
-        return new PropsView() {
+    public Path repository() {
+        return this.m2Home().resolve("repository");
+    }
+
+    ProjectView toView() {
+        return new ProjectView() {
             @Override
             public Iterable<Dep> deps() {
-                return () -> new UnmodifiableIterator<Dep>() {
-                    final Iterator<Dep> it = Project.this.deps.iterator();
-                    @Override
-                    public boolean hasNext() {
-                        return it.hasNext();
-                    }
-                    @Override
-                    public Dep next() {
-                        return it.next();
-                    }
-                };
+                return ImmutableList.copyOf(deps);
             }
 
             @Override
@@ -73,7 +66,7 @@ public final class Project {
         };
     }
 
-    interface PropsView {
+    interface ProjectView {
         Iterable<Dep> deps();
         String groupId();
         String artifactId();
@@ -96,7 +89,8 @@ public final class Project {
     private Path syntheticPom() {
         for (int i = 0; i < 1000; i++) {
             final Path pom = this.workDir().resolve(
-                    RandomText.randomStr("pom_synthetic-") + "-" + i + ".xml");
+                    RandomText.randomFileName("pom_synthetic") + "-" + i + ".xml"
+            );
             if (Files.notExists(pom)) {
                 return pom;
             }
