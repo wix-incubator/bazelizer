@@ -137,6 +137,7 @@ _run_mvn_buildpack_attr = _merged_dict(
     _common_attr,
     {
         "deps": attr.label_list(),
+        "runtime_deps": attr.label_list(),
         "srcs": attr.label_list(mandatory = True,allow_files = True),
         "outputs": attr.string_list(),
         "artifactId": attr.string(),
@@ -151,10 +152,10 @@ _run_mvn_buildpack_attr = _merged_dict(
     }
 )
 
-def _create_manifest_file(name, ctx, files_paths):
+def _create_manifest_file(name, ctx, inut_files_defs):
     manifest = ctx.actions.declare_file(name + ".manifest")
     args = ctx.actions.args()
-    for x in files_paths:
+    for x in inut_files_defs:
         args.add(x.to_json())
     ctx.actions.write(manifest, args)
     return manifest
@@ -166,15 +167,16 @@ def _collect_dep(file, **kwargs):
     return _DepInfo(path=file, tags=dict(kwargs))
 
 
-def _collect_deps(dep_targets):
+
+def _collect_deps(dep_targets, ctx_scope, **kwargs):
     # Collect only direct dependencies for each target
-    _direct_deps = []
-    _direct_deps_files = []
+    _direct_deps = ctx_scope.manifests
+    _direct_deps_files = ctx_scope.files
     for dep_target in dep_targets:
 
         if MvnRunArtifactInfo in dep_target:
             mvn_run_out = dep_target[MvnRunArtifactInfo]
-            _direct_deps.append(_collect_dep(mvn_run_out.pkg.path, artifact=True))
+            _direct_deps.append(_collect_dep(mvn_run_out.pkg.path, artifact=True, **kwargs))
             _direct_deps_files.append(mvn_run_out.pkg)
             continue
 
@@ -188,21 +190,23 @@ def _collect_deps(dep_targets):
             # so, we should exclude it
             if d.path.endswith("PlaceHolderClassToCreateEmptyJarForScalaImport.jar"):
                 continue
-            _direct_deps.append(_collect_dep(d.path))
+            _direct_deps.append(_collect_dep(d.path, **kwargs))
             _direct_deps_files.append(d)
 
     print(_direct_deps)
     print(_direct_deps_files)
-    return _direct_deps, _direct_deps_files
 
 
 def _run_mvn_buildpack_impl(ctx):
     if not ctx.attr.buildpack[MvnBuildpackInfo]:
         fail("attr.buildpack must be created by 'create_mvn_buildpack' rule")
 
-    deps_ids, deps = _collect_deps(ctx.attr.deps)
+    deps_struct = struct(manifests=[], files=[])
+    _collect_deps(ctx.attr.deps, deps_struct)
+    _collect_deps(ctx.attr.runtime_deps, deps_struct, scope='provided')
+
     srcs_manifest = _create_manifest_file("srcs--%s" % (ctx.label.name), ctx, [_collect_dep(src.path) for src in ctx.files.srcs])
-    deps_manifest = _create_manifest_file("deps--%s" % (ctx.label.name), ctx, deps_ids)
+    deps_manifest = _create_manifest_file("deps--%s" % (ctx.label.name), ctx, deps_struct.manifests)
     providers = []
     outputs = []
     output_flags = []
@@ -254,7 +258,7 @@ def _run_mvn_buildpack_impl(ctx):
 
     ctx.actions.run(
         inputs = depset([srcs_manifest, deps_manifest],
-                        transitive = [depset(deps)] + [f.files for f in ctx.attr.srcs]),
+                        transitive = [depset(deps_struct.files)] + [f.files for f in ctx.attr.srcs]),
         outputs = outputs,
         arguments = [args],
         executable = ctx.executable.buildpack,

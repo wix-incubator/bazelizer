@@ -13,6 +13,7 @@ import org.apache.commons.io.filefilter.AbstractFileFilter;
 import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.apache.commons.io.filefilter.IOFileFilter;
 import org.cactoos.Text;
+import org.cactoos.func.UncheckedProc;
 import org.cactoos.io.InputOf;
 import org.cactoos.io.OutputTo;
 
@@ -35,10 +36,10 @@ public final class Acts {
         @Override
         @SneakyThrows
         public Project accept(Project project) {
-            Path repo = project.m2Home().resolve("repository");
+            Path repo = project.repository();
 
             project.deps().forEach(dep -> {
-                dep.installTo(project.repository());
+                new UncheckedProc<>(dep.installTo()).exec(repo);
                 log.info("install: {}", dep);
             });
 

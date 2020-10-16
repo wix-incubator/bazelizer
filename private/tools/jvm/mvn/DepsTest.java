@@ -46,8 +46,8 @@ public class DepsTest {
     public void load() {
         Deps col = new Deps.Manifest(CharSource.wrap(
                 "{\"path\": \"/foo/bar/baz/A.java\"}'\n" +
-                        "{\"path\": \"/foo/bar/baz/B.java?scope=provided\"}\n" +
-                        "{\"path\": \"/foo/bar/jazz/C.java?scope=provided\"}\n" +
+                        "{\"path\": \"/foo/bar/baz/B.java\"}\n" +
+                        "{\"path\": \"/foo/bar/jazz/C.java\"}\n" +
                         "{\"path\": \"/foo/bar/roo/X.java\"}")
         );
         final Path path = col.resolveCommonPrefix();
@@ -70,8 +70,8 @@ public class DepsTest {
     private static Deps getPaths(Collection<Path> of) {
         return new Deps() {
             @Override
-            public Iterator<DepArtifact> iterator() {
-                return Iterators.transform(of.iterator(), DepArtifact::new);
+            public Iterator<Dep> iterator() {
+                return Iterators.transform(of.iterator(), Dep.DepArtifact::new);
             }
         };
     }

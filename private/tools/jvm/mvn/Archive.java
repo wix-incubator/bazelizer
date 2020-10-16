@@ -96,7 +96,7 @@ public interface Archive extends Proc<Output> {
     @SneakyThrows
     static void extractTar(Path tar, Path dest) {
 //        final Path dest = project.m2Home().resolve("repository");
-        System.out.println("Extracting " + tar + " to " + dest);
+//        System.out.println("Extracting " + tar + " to " + dest);
         final Closer closer = Closer.create();
 
         final TarArchiveInputStream ais = closer.register(new TarArchiveInputStream(
@@ -117,7 +117,7 @@ public interface Archive extends Proc<Output> {
     @SneakyThrows
     static void mkFile(TarArchiveInputStream ais, File root, TarArchiveEntry tarEntry)  {
         File destPath = new File(root, tarEntry.getName());
-        System.out.println("Write " + destPath + " by " + tarEntry.getName());
+//        System.out.println("Write " + destPath + " by " + tarEntry.getName());
         if (tarEntry.isDirectory()) {
             destPath.mkdirs();
         } else {

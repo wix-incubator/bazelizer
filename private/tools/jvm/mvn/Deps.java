@@ -1,6 +1,7 @@
 package tools.jvm.mvn;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import com.google.common.io.CharSource;
 import com.google.common.io.Files;
@@ -23,7 +24,7 @@ import java.util.stream.Stream;
 /**
  * Collection of a paths.
  */
-public interface Deps extends Iterable<Dep.DepArtifact> {
+public interface Deps extends Iterable<Dep> {
 
     Gson G = new GsonBuilder()
             .setPrettyPrinting()
@@ -39,7 +40,7 @@ public interface Deps extends Iterable<Dep.DepArtifact> {
      */
     @SuppressWarnings("UnstableApiUsage")
     default Stream<Path> paths() {
-        return Streams.stream(this).map(Dep.DepArtifact::getPath);
+        return Streams.stream(this).map(Dep::source);
     }
 
     /**
@@ -48,7 +49,7 @@ public interface Deps extends Iterable<Dep.DepArtifact> {
      * @return stream of paths
      */
     @SuppressWarnings("UnstableApiUsage")
-    default Stream<Dep.DepArtifact> stream() {
+    default Stream<Dep> stream() {
         return Streams.stream(this);
     }
 
@@ -96,7 +97,7 @@ public interface Deps extends Iterable<Dep.DepArtifact> {
     @SuppressWarnings("UnstableApiUsage")
     class Manifest implements Deps {
         public static final String WRAP = "'";
-        private final Collection<Dep.DepArtifact> paths;
+        private final Collection<Dep> paths;
 
         public Manifest(File man) {
             this(Files.asCharSource(man, StandardCharsets.UTF_8));
@@ -104,7 +105,7 @@ public interface Deps extends Iterable<Dep.DepArtifact> {
 
         @lombok.SneakyThrows
         public Manifest(CharSource source) {
-            this.paths = source
+            this.paths = Sets.newLinkedHashSet(source
                     .readLines().stream()
                     .map(p -> {
                         String base = p.trim();
@@ -116,15 +117,13 @@ public interface Deps extends Iterable<Dep.DepArtifact> {
                         }
                         return base;
                     })
-                    .map(p -> {
-                        return G.fromJson(p, Dep.DepArtifact.class);
-                    })
-                    .collect(Collectors.toSet());
+                    .map(p -> G.fromJson(p, Dep.DepArtifact.class))
+                    .collect(Collectors.toList()));
         }
 
         @Override
         @SuppressWarnings("NullableProblems")
-        public Iterator<Dep.DepArtifact> iterator() {
+        public Iterator<Dep> iterator() {
             return paths.iterator();
         }
 

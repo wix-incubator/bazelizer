@@ -10,17 +10,15 @@ import java.util.Collections;
 public class DepTest {
 
     private Dep.DigestCoords getDep(String s) {
-        return new Dep.DigestCoords(new Deps.DepArtifact(Paths.get(s)));
+        return new Dep.DigestCoords(Paths.get(s));
     }
 
     @Test
     public void art() {
-        Path s = Paths.get("com/mavenizer/examples/api/myapi-single/1.0.0-SNAPSHOT/myapi-single-1.0.0-SNAPSHOT.jar");
-        Dep dep = Dep.DependencyOf.fromTarEntry(
-                Collections.emptyMap(), s, "com/mavenizer/examples/api/myapi-single/1.0.0-SNAPSHOT/myapi-single-1.0.0-SNAPSHOT.jar"
+        Dep dep = new Dep.Archived(
+                Paths.get("/tmp/zzz"),
+                "com/mavenizer/examples/api/myapi-single/1.0.0-SNAPSHOT/myapi-single-1.0.0-SNAPSHOT.jar"
         );
-
-
 
         Assert.assertEquals("com.mavenizer.examples.api", dep.groupId());
         Assert.assertEquals("myapi-single", dep.artifactId());
