@@ -4,7 +4,7 @@ _M2_REPO_IMG_EXT = ".tar"
 _BASE_POM_NAME = "base_pom.xml"
 _TOOL = Label("//private/tools/jvm/mvn:mvn")
 _MARKER_SRC_DEFAULT_OUTPUT_JAR = "@@TARGET-JAR-OUTPUT@@"
-_MARKER_TALLY = "@@MVN_ARTIFACT_ALL@@"
+#_MARKER_TALLY = "@@MVN_ARTIFACT_ALL@@"
 
 MvnBuildpackInfo = provider()
 _DepInfo = provider(
@@ -202,27 +202,18 @@ def _run_mvn_buildpack_impl(ctx):
     srcs_manifest = _create_manifest_file("srcs--%s" % (ctx.label.name), ctx, [_collect_dep(src.path) for src in ctx.files.srcs])
     deps_manifest = _create_manifest_file("deps--%s" % (ctx.label.name), ctx, deps_ids)
     providers = []
-    declared_outputs = []
+    outputs = []
     output_flags = []
     output_param_format = "-O{declared_file}={file_in_mvn_target}"
     for o in ctx.attr.outputs:
         declare_file = ctx.actions.declare_file(o)
-        declared_outputs.append(declare_file)
+        outputs.append(declare_file)
         output_flags.append(
             output_param_format.format(
                 declared_file = declare_file.path,
                 file_in_mvn_target = o
             )
         )
-    out_jar = ctx.label.name + ".jar"
-    declared_out_jar = ctx.actions.declare_file(out_jar)
-    declared_outputs.append(declared_out_jar)
-    output_flags.append(
-        output_param_format.format(
-            declared_file = declared_out_jar.path,
-            file_in_mvn_target = _MARKER_SRC_DEFAULT_OUTPUT_JAR
-        )
-    )
 
     args = ctx.actions.args()
     args.add("--srcs", srcs_manifest)
@@ -231,43 +222,64 @@ def _run_mvn_buildpack_impl(ctx):
     if ctx.attr.artifactId: args.add("--artifactId", ctx.attr.artifactId)
     if ctx.attr.groupId: args.add("--groupId", ctx.attr.groupId)
 
+    special_output_flags = []
+    special_output_flags_fmt = "--defOutFlag={flag}={declared_file}"
+
+    def_output_jar = "lib" + ctx.label.name + ".jar"
+    def_output_jar_file = ctx.actions.declare_file(def_output_jar)
+    outputs.append(def_output_jar_file)
+    special_output_flags.append(
+        special_output_flags_fmt.format(flag="@DEF_JAR", declared_file=def_output_jar_file.path)
+    )
+
+    def_output_pkg = "lib" + ctx.label.name + "_pkg.tar"
+    def_output_pkg_file = ctx.actions.declare_file(def_output_pkg)
+    outputs.append(def_output_pkg_file)
+    special_output_flags.append(
+        special_output_flags_fmt.format(flag="@DEF_PKG", declared_file=def_output_pkg_file.path)
+    )
+
     if ctx.attr.install:
-        args.add("--args", " ".join(["install"]))
-        tally = "%s_tally.tar" % (ctx.label.name)
-        tally_file = ctx.actions.declare_file(tally)
-        declared_outputs.append(tally_file)
-        output_flags.append(
-            output_param_format.format(
-                declared_file = tally_file.path,
-                file_in_mvn_target = _MARKER_TALLY
-            )
-        )
-        providers.append(
-            MvnRunArtifactInfo(tar = tally_file)
-        )
+        pass
+#        tally = "%s_tally.tar" % (ctx.label.name)
+#        tally_file = ctx.actions.declare_file(tally)
+#        declared_outputs.append(tally_file)
+#        output_flags.append(
+#            output_param_format.format(
+#                declared_file = tally_file.path,
+#                file_in_mvn_target = _MARKER_TALLY
+#            )
+#        )
+#        providers.append(
+#            MvnRunArtifactInfo(tar = tally_file)
+#        )
 
     args.add_all(output_flags)
+    args.add_all(special_output_flags)
 
     if ctx.attr.log_level:
         # add jvm flags for java_binary
         # wrap via wrapper_script_flag so it have to goes at the end of args line
         args.add("--wrapper_script_flag=--jvm_flag=-Dtools.jvm.mvn.LogLevel=%s" % (ctx.attr.log_level))
 
+    # Name of current target + package
+    args.add("--wrapper_script_flag=--jvm_flag=-Dtools.jvm.mvn.BazelLabelName=%s" % (ctx.label))
+
     ctx.actions.run(
         inputs = depset([srcs_manifest, deps_manifest],
                         transitive = [depset(deps)] + [f.files for f in ctx.attr.srcs]),
-        outputs = declared_outputs,
+        outputs = outputs,
         arguments = [args],
         executable = ctx.executable.buildpack,
         use_default_shell_env = True,
         progress_message = "running maven build... %s" % (ctx.label),
     )
 
-    runfiles = ctx.runfiles(files = declared_outputs).merge(ctx.attr.buildpack[DefaultInfo].default_runfiles)
+    runfiles = ctx.runfiles(files = outputs).merge(ctx.attr.buildpack[DefaultInfo].default_runfiles)
 
     return providers + [
-        DefaultInfo(files = depset(declared_outputs), runfiles = runfiles),
-        JavaInfo(output_jar = declared_out_jar, compile_jar = declared_out_jar)
+        DefaultInfo(files = depset(outputs), runfiles = runfiles),
+        JavaInfo(output_jar = def_output_jar_file, compile_jar = def_output_jar_file)
     ]
 
 

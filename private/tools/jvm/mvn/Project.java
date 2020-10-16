@@ -25,7 +25,7 @@ public final class Project {
     private Path pomParent;
     @Builder.Default
     private Path m2Home = getTmpDirectory();
-    private List<Output> outputs;
+    private List<OutputFile> outputs;
     private Path baseImage;
     private ByteSource pomXmlSrc;
     @Builder.Default

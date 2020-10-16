@@ -40,13 +40,13 @@ public class Cli {
                     .groupId("io.bazelbuild")
                     .artifactId("tmp-" + RandomText.randomStr(6))
                     .workDir(pomXmlTpl.getParent())
-                    .outputs(ImmutableList.of(new Output.TemporaryFileSrc(output)))
+                    .outputs(ImmutableList.of(new OutputFile.TemporaryFileSrc(output)))
                     .pomParent(parent)
                     .build();
 
             new Act.Iterative(
                     new Acts.SettingsXml(),
-                    new Acts.DefineParentPom(),
+                    new Acts.ParentPOM(),
                     new Acts.InstallParentPOM(),
                     new Acts.POM(),
                     new Acts.MvnGoOffline(),
@@ -96,6 +96,9 @@ public class Cli {
                 description = "the output: desired file -> source file in <workspace>/target")
         public Map<String, String> outputs = ImmutableMap.of();
 
+        @CommandLine.Option(names = {"--defOutFlag"}, description = "Rule specific output settings")
+        public Map<String, String> defOutputFlags;
+
         @CommandLine.Option(names = {"-pr", "--parent"}, paramLabel = "P", description = "parent pom path")
         public Path parent;
 
@@ -123,7 +126,7 @@ public class Cli {
                             .map(entry -> {
                                 final String declared = entry.getKey();
                                 final String buildFile = entry.getValue();
-                                return new Output.Default(buildFile, declared, pom.toFile());
+                                return new OutputFile.Simple(buildFile, declared);
                             })
                             .collect(Collectors.toList()))
                     .baseImage(repo)
@@ -133,10 +136,10 @@ public class Cli {
                     new Acts.Repository(),
                     new Acts.SettingsXml(),
                     new Acts.Deps(),
-                    new Acts.DefineParentPom(),
+                    new Acts.ParentPOM(),
                     new Acts.POM(),
                     new Acts.MvnBuild(),
-                    new Acts.ArtifactTar(),
+                    new Acts.ArtifactPredefOutputs(defOutputFlags),
                     new Acts.Outputs()
             ).accept(project);
         }
@@ -153,7 +156,7 @@ public class Cli {
         }
 
         private Path getPomFileDest(Path workDir) {
-            return workDir.resolve(RandomText.randomFileName("pom"));
+            return workDir.resolve(RandomText.randomFileName("pom") + ".xml");
         }
     }
 

@@ -20,10 +20,10 @@ create_mvn_buildpack(
 run_mvn_buildpack(
     name = "jaxb2api",
     deps = [
-        "//tests/integration/lib/src/com/mavenizer/examples/subliby",
         "//tests/integration/mvn-build-lib-one:lib",
+        "//tests/integration/lib/src/com/mavenizer/examples/subliby",
     ],
-    log_level = "INFO",
+    log_level = "DEBUG",
     srcs = [":sources"],
     buildpack = ":app=._buildpack",
     outputs = ["myapi-1.0.0-SNAPSHOT.jar"],

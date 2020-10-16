@@ -4,14 +4,12 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.io.Closer;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.ToString;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.filefilter.FileFilterUtils;
-import org.apache.commons.io.filefilter.IOFileFilter;
-import org.cactoos.BiProc;
 import org.cactoos.Output;
 import org.cactoos.Proc;
 
@@ -20,55 +18,25 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public interface Archive extends Proc<Output> {
 
 
+
     /**
-     *
+     * Tar.
      */
     @SuppressWarnings({"DuplicatedCode", "UnstableApiUsage"})
-    class Tar implements Archive {
+    @AllArgsConstructor
+    class TAR implements Archive {
 
-        private final List<File> files;
-        private final Path root;
-
-
-        /**
-         * Ctor.
-         * @param repository repo
-         * @throws IOException if any
-         */
-        public Tar(Path repository) throws IOException {
-            this(repository, FileFilterUtils.trueFileFilter());
-        }
-
-        /**
-         * Ctro.
-         * @param repository
-         * @param fileFilter
-         * @throws IOException
-         */
-        public Tar(Path repository, IOFileFilter fileFilter) throws IOException {
-            this(Files.walk(repository)
-                    .map(Path::toFile)
-                    .filter(f -> f.isFile() && fileFilter.accept(f))
-                    .collect(Collectors.toList()), repository);
-        }
-
-        /**
-         * Ctro.
-         * @param files
-         * @param root
-         */
-        public Tar(List<File> files, Path root) {
-            this.files = files;
-            this.root = root;
-        }
+        private final Collection<File> files;
+        private final Function<File, Path> tarPath;
 
 
         @Override
@@ -78,8 +46,7 @@ public interface Archive extends Proc<Output> {
             aos.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
             try {
                 for (File file : files) {
-                    final ArchiveEntry entry = aos.createArchiveEntry(file,
-                            root.relativize(file.toPath()).toString());
+                    final ArchiveEntry entry = aos.createArchiveEntry(file, tarPath.apply(file).toString());
                     aos.putArchiveEntry(entry);
                     Files.copy(file.toPath(), aos);
                     aos.closeArchiveEntry();
@@ -91,6 +58,42 @@ public interface Archive extends Proc<Output> {
         }
     }
 
+    /**
+     * Tar all directory.
+     */
+    @SuppressWarnings({"DuplicatedCode"})
+    @ToString
+    class TarDirectory implements Archive {
+
+        private final Archive archive;
+
+        public TarDirectory(Path dir) throws IOException {
+            archive = new Archive.TAR(
+                    Archive.listFiles(dir),
+                    file -> {
+                        System.out.println(file);
+                        return dir.relativize(file.toPath());
+                    }
+            );
+        }
+
+        @Override
+        public void exec(Output out) throws Exception {
+            archive.exec(out);
+        }
+    }
+
+
+    /**
+     * List files in dir and make it relative
+     * @param repository repo
+     * @return relative paths
+     */
+    static Collection<File> listFiles(Path repository) throws IOException {
+        return Files.find(repository, Integer.MAX_VALUE, (x,y) -> y.isRegularFile())
+                .map(Path::toFile)
+                .collect(Collectors.toList());
+    }
 
     @SuppressWarnings("UnstableApiUsage")
     @SneakyThrows
@@ -127,6 +130,7 @@ public interface Archive extends Proc<Output> {
     }
 
     @AllArgsConstructor
+    @Deprecated
     class TarList implements Iterable<TarArchiveEntry> {
         private final TarArchiveInputStream ais;
         private final boolean close;

@@ -2,6 +2,9 @@ package tools.jvm.mvn;
 
 
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.hash.Hashing;
+import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
@@ -9,17 +12,16 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.AbstractFileFilter;
 import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.apache.commons.io.filefilter.IOFileFilter;
+import org.cactoos.Output;
 import org.cactoos.Text;
+import org.cactoos.func.UncheckedProc;
 import org.cactoos.io.InputOf;
 import org.cactoos.io.OutputTo;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 @UtilityClass
 public final class Acts {
@@ -44,7 +46,8 @@ public final class Acts {
                 String pref = dep.artifactId() + "-" + dep.version();
 
                 if (dep.tags().containsKey(Dep.IS_FULL_ARTIFACT_DIST_TAG)) {
-                    Archive.extractTar(dep.source(), project);
+                    //Archive.extractTar(dep.source(), project);
+                    return;
                 } else {
                     Path jarFile = artifactFolder.resolve(pref + ".jar");
                     copyTo(dep, jarFile);
@@ -89,7 +92,7 @@ public final class Acts {
         public Project accept(Project project) {
             project.args()
                     .offline(true)
-                    .append("package");
+                    .append("clean", "install");
 
             new Maven.BazelInvoker().run(project);
             return project;
@@ -105,10 +108,15 @@ public final class Acts {
         public Project accept(Project project) {
             log.info("Eagerly fetch dependencies to go offline...");
             new Maven.BazelInvoker().run(
-                    project.toBuilder().args(new Args().offline(false).append("dependency:go-offline")).build()
-            );
-            new Maven.BazelInvoker().run(
-                    project.toBuilder().args(new Args().offline(false).append("clean", "package")).build()
+                    project.toBuilder().args(new Args().offline(false)
+                            .append("dependency:copy-dependencies")
+                            .append("dependency:resolve")
+                            .append("dependency:resolve-plugins")
+                            .append("dependency:go-offline")
+                            .append("clean")
+                            .append("package")
+                            .append("install")
+                    ).build()
             );
             return project;
         }
@@ -119,30 +127,15 @@ public final class Acts {
      */
     static class Outputs implements Act {
 
+        @SneakyThrows
         @Override
         public Project accept(Project project) {
-            final Path workDir = project.workDir();
-            final Path target = workDir.resolve("target").toAbsolutePath();
-            project.outputs().forEach(name -> {
-                Path src = target.resolve(name.src());
-                Path dest = Paths.get(name.dest());
-                try {
-                    Files.copy(src, dest);
-                } catch (java.nio.file.NoSuchFileException e) {
-                    throw new ToolException("No such file: \n" + src + ",\n within: [\n" + exists(target) + " ...]", e);
-                } catch (IOException e) {
-                    throw new ToolException(e);
-                }
-
-            });
+            for (OutputFile output : project.outputs()) {
+                output.exec(project);
+            }
             return project;
         }
 
-        @SneakyThrows
-        private String exists(Path target)  {
-            return Files.walk(target, 1)
-                    .limit(10).map(Path::toString).collect(Collectors.joining("\n"));
-        }
     }
 
     /**
@@ -228,7 +221,7 @@ public final class Acts {
             final String dest = Iterables.getOnlyElement(project.outputs()).src();
             log.debug("Archive: src={} dest={}", src, dest);
             final File destFile = new File(dest);
-            new Archive.Tar(src).exec(
+            new Archive.TarDirectory(src).exec(
                     new OutputTo(destFile)
             );
             log.info("Repository archive created: {}", FileUtils.byteCountToDisplaySize(destFile.length()));
@@ -239,31 +232,39 @@ public final class Acts {
     /**
      * Resolve relative path to optional parent project.
      */
+    @SuppressWarnings({"UnstableApiUsage", "ResultOfMethodCallIgnored"})
     @Slf4j
-    static class DefineParentPom implements Act {
+    static class ParentPOM implements Act {
 
         @SneakyThrows
         @Override
         public Project accept(Project project) {
             final Path origParent = project.pomParent();
+            final Path parentPomDir = Optional.ofNullable(System.getProperty("tools.jvm.mvn.BazelLabelName"))
+                    .map(name -> {
+                        final String hashedLabel = Hashing.murmur3_32().hashString(name,
+                                StandardCharsets.UTF_8).toString();
+                        final Path workDir = project.workDir();
+                        final Path parentDir = workDir.resolve("_parent_" + hashedLabel);
+                        final File file = parentDir.toFile();
+                        file.mkdir();
+                        return parentDir;
+                    }).orElseGet(() -> {
+                        final Path workDir = project.workDir();
+                        final Path parentDir = workDir.resolve(RandomText.randomFileName("parent"));
+                        final File file = parentDir.toFile();
+                        file.mkdir();
+                        file.deleteOnExit();
+                        return parentDir;
+                    });
             if (origParent != null) {
-                final Path parentDir = createParentProjectTmpDir(project);
-                final Path parentPomFile = parentDir.resolve("pom.xml");
-                Files.copy(origParent, parentPomFile);
+                final Path parentPomFile = parentPomDir.resolve("pom.xml");
+                Files.copy(origParent, parentPomFile, StandardCopyOption.REPLACE_EXISTING);
                 return project.toBuilder().pomParent(parentPomFile).build();
             }
             return project;
         }
 
-        @SuppressWarnings("ResultOfMethodCallIgnored")
-        private Path createParentProjectTmpDir(Project project) {
-            final Path workDir = project.workDir();
-            final Path parentDir = workDir.resolve(RandomText.randomFileName("parent"));
-            final File file = parentDir.toFile();
-            file.mkdir();
-            file.deleteOnExit();
-            return parentDir;
-        }
     }
 
     /**
@@ -271,6 +272,7 @@ public final class Acts {
      */
     @Slf4j
     static class InstallParentPOM implements Act {
+
         @Override
         public Project accept(Project project) {
             final Path origParent = project.pomParent();
@@ -295,57 +297,77 @@ public final class Acts {
      * Archive artifact binaries as is without pom
      */
     @Slf4j
-    static class ArtifactTar implements Act {
+    @AllArgsConstructor
+    static class ArtifactPredefOutputs implements Act {
+
+        public static final String FLAG_DEF_JAR = "@DEF_JAR";
+
+        public static final String FLAG_PKG = "@DEF_PKG";
+
+        public static final String FLAG_MVN_COORDS = "@MVN_COORDS";
+
+        private final Map<String,String> settings;
 
         @SneakyThrows
         @Override
         public Project accept(Project project) {
-            final List<Output> outputs = project.outputs();
-            final Predicate<Output> isMarkerOutput = out -> out.src()
-                    .equalsIgnoreCase(Output.ARTIFACT_DIR_TARGET_OUTPUT_MARKER);
+            final ArrayList<OutputFile> outputs = Lists.newArrayList(project.outputs());
+            final Template.PomPropsBean bean = new Template.PomPropsBeanXPath(
+                    new InputOf(project.pom())
+            ).value();
 
-            final Optional<Output> artifact = outputs.stream()
-                    .filter(isMarkerOutput).findFirst();
+            Map<String,String> settings = this.settings != null ? this.settings : Collections.emptyMap();
 
-            if (artifact.isPresent()) {
-                final Path dest = Paths.get(artifact.get().dest());
-                final Template.PomPropsBean bean = new Template.PomPropsBeanXPath(
-                        new InputOf(project.pom())
-                ).value();
+            final Path repository = project.repository();
+            final Path thisArtifactFolder = new Dep.Simple(null,
+                    bean.getGroupId(),
+                    bean.getArtifactId(),
+                    bean.getVersion()
+            ).relativeTo(repository);
+            final IOFileFilter artifactFilter = FileFilterUtils.and(
+                    new AbstractFileFilter() {
+                        @Override
+                        public boolean accept(File file) {
+                            final Path path = file.toPath();
+                            return path.startsWith(thisArtifactFolder);
+                        }
+                    },
+                    FileFilterUtils.notFileFilter(
+                            FileFilterUtils.suffixFileFilter(".pom") // exclude pom from a pkg
+                    )
+            );
 
-                final Path artifactFolder = new Dep.Simple(null,
-                        bean.getGroupId(),
-                        bean.getArtifactId(),
-                        bean.getVersion()
-                ).relativeTo(project.repository());
+            final Collection<File> files = FileUtils.listFiles(
+                    repository.toFile(), artifactFilter, FileFilterUtils.trueFileFilter()
+            );
 
-                if (!Files.notExists(artifactFolder)) {
-                    final IOFileFilter filter = FileFilterUtils.and(
-                            new AbstractFileFilter() {
-                                @Override
-                                public boolean accept(File file) {
-                                    final Path path = file.toPath();
-                                    return path.startsWith(artifactFolder);
-                                }
-                            },
-                            FileFilterUtils.notFileFilter(
-                                    FileFilterUtils.suffixFileFilter(".pom")
-                            )
-                    );
+            Optional.ofNullable(settings.get(FLAG_PKG)).ifPresent(dest -> {
+                final Archive archive = new Archive.TAR(
+                        files,
+                        aFile -> {
+                            final Path filePath = aFile.toPath();
+                            final Path filePathInRepo = repository.relativize(filePath);
+                            log.info("tar: {} as {}", aFile, filePathInRepo);
+                            return filePathInRepo;
+                        }
+                );
 
-                    log.info("Writing artifact outputs...");
-                    new Archive.Tar(project.repository(), filter).exec(
-                            new OutputTo(dest)
-                    );
-                }
+                outputs.add(
+                        new OutputFile.DeclaredProc(archive, dest)
+                );
+            });
 
-                return project.toBuilder()
-                        .outputs(outputs.stream()
-                                .filter(isMarkerOutput.negate()).collect(Collectors.toList()))
-                        .build();
-            }
+            Optional.ofNullable(settings.get(FLAG_DEF_JAR)).ifPresent(dest -> {
+                final String pomFileJar = String.format("%s-%s.jar", bean.artifactId, bean.version);
+                final Optional<File> installed = files.stream().filter(f -> f.getName().endsWith(pomFileJar)).findFirst();
 
-            return project;
+                outputs.add(
+                        installed.<OutputFile>map(f -> new OutputFile.Declared(f, dest))
+                                .orElseGet(() -> new OutputFile.Simple(pomFileJar, dest))
+                );
+            });
+
+            return project.toBuilder().outputs(outputs).build();
         }
     }
 }

@@ -31,13 +31,40 @@ public interface Deps extends Iterable<Deps.DepArtifact> {
 
     @Data
     @NoArgsConstructor
-    class DepArtifact {
+    class DepArtifact implements Dep {
         private Path path;
         private Map<String, String> tags = Collections.emptyMap();
 
         public DepArtifact(Path p) {
             this.path = p;
         }
+
+        @Override
+        public String groupId() {
+            return null;
+        }
+
+        @Override
+        public String artifactId() {
+            return null;
+        }
+
+        @Override
+        public String version() {
+            return null;
+        }
+
+        @Override
+        public Path source() {
+            return null;
+        }
+
+        private void resolve() {
+            if (tags.containsKey("maven_coordinates")) {
+
+            }
+        }
+
     }
 
     /**
