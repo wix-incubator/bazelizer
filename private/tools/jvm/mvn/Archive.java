@@ -17,10 +17,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -70,10 +70,7 @@ public interface Archive extends Proc<Output> {
         public TarDirectory(Path dir) throws IOException {
             archive = new Archive.TAR(
                     Archive.listFiles(dir),
-                    file -> {
-                        System.out.println(file);
-                        return dir.relativize(file.toPath());
-                    }
+                    file -> dir.relativize(file.toPath())
             );
         }
 
@@ -95,53 +92,56 @@ public interface Archive extends Proc<Output> {
                 .collect(Collectors.toList());
     }
 
-    @SuppressWarnings("UnstableApiUsage")
+    @SuppressWarnings({"UnstableApiUsage"})
     @SneakyThrows
-    static void extractTar(Path tar, Project project) {
-        final Path dest = project.m2Home().resolve("repository");
+    static void extractTar(Path tar, Path dest) {
+//        final Path dest = project.m2Home().resolve("repository");
+        System.out.println("Extracting " + tar + " to " + dest);
         final Closer closer = Closer.create();
-        Consumer<File> defineDirectory = file -> {
-            if (!file.isDirectory() && !file.mkdirs())
-                throw new IllegalStateException("failed to create directory " + file);
-        };
+
         final TarArchiveInputStream ais = closer.register(new TarArchiveInputStream(
                 Files.newInputStream(tar, StandardOpenOption.READ)
         ));
-        Iterable<TarArchiveEntry> iter = new TarList(ais, false);
+        Iterable<TarArchiveEntry> iter = new LSTar(ais, false);
         try {
-            iter.forEach(entry -> {
-                if (!ais.canReadEntryData(entry)) return;
-                File file = dest.resolve(entry.getName()).toFile();
-                if (entry.isDirectory()) {
-                    defineDirectory.accept(file);
-                } else {
-                    defineDirectory.accept((file.getParentFile()));
-                    try {
-                        Files.copy(ais, file.toPath());
-                    } catch (IOException e) {
-                        throw new IllegalStateException(e);
-                    }
-
-                }
+            final File destFile = dest.toFile();
+            iter.forEach(tarEntry -> {
+                mkFile(ais, destFile, tarEntry);
             });
         } finally {
             closer.close();
         }
     }
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    @SneakyThrows
+    static void mkFile(TarArchiveInputStream ais, File root, TarArchiveEntry tarEntry)  {
+        File destPath = new File(root, tarEntry.getName());
+        System.out.println("Write " + destPath + " by " + tarEntry.getName());
+        if (tarEntry.isDirectory()) {
+            destPath.mkdirs();
+        } else {
+            if (!destPath.getParentFile().exists()) {
+                destPath.getParentFile().mkdirs();
+            }
+            destPath.createNewFile();
+            Files.copy(ais, destPath.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    @SuppressWarnings("NullableProblems")
     @AllArgsConstructor
-    @Deprecated
-    class TarList implements Iterable<TarArchiveEntry> {
+    class LSTar implements Iterable<TarArchiveEntry> {
         private final TarArchiveInputStream ais;
         private final boolean close;
 
-        public TarList(Path file) throws IOException {
+        public LSTar(Path file) throws IOException {
             this(new TarArchiveInputStream(Files.newInputStream(file, StandardOpenOption.READ)), true);
         }
 
         @Override
         public Iterator<TarArchiveEntry> iterator() {
-            Iterator<TarArchiveEntry> iter = new AbstractIterator<TarArchiveEntry>() {
+            return new AbstractIterator<TarArchiveEntry>() {
                 @SneakyThrows
                 @Override
                 protected TarArchiveEntry computeNext() {
@@ -156,8 +156,6 @@ public interface Archive extends Proc<Output> {
                     return endOfData();
                 }
             };
-
-            return iter;
         }
     }
 }

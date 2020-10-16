@@ -14,7 +14,7 @@ _DepInfo = provider(
     }
 )
 MvnRunArtifactInfo = provider(fields = {
-    "tar": """Artifact binaries as is. Can be more then one file"""
+    "pkg": """Artifact binaries as is. Can be more then one file"""
 })
 
 
@@ -142,7 +142,6 @@ _run_mvn_buildpack_attr = _merged_dict(
         "artifactId": attr.string(),
         "groupId": attr.string(),
         "args": attr.string_list(),
-        "install": attr.bool(),
         "buildpack": attr.label(
             mandatory = True,
             allow_files = True,
@@ -172,10 +171,11 @@ def _collect_deps(dep_targets):
     _direct_deps = []
     _direct_deps_files = []
     for dep_target in dep_targets:
+
         if MvnRunArtifactInfo in dep_target:
             mvn_run_out = dep_target[MvnRunArtifactInfo]
-            _direct_deps.append(_collect_dep(mvn_run_out.tar.path, artifact=True))
-            _direct_deps_files.append(mvn_run_out.tar)
+            _direct_deps.append(_collect_dep(mvn_run_out.pkg.path, artifact=True))
+            _direct_deps_files.append(mvn_run_out.pkg)
             continue
 
         # Expect only java compatible targets
@@ -191,6 +191,8 @@ def _collect_deps(dep_targets):
             _direct_deps.append(_collect_dep(d.path))
             _direct_deps_files.append(d)
 
+    print(_direct_deps)
+    print(_direct_deps_files)
     return _direct_deps, _direct_deps_files
 
 
@@ -239,21 +241,6 @@ def _run_mvn_buildpack_impl(ctx):
         special_output_flags_fmt.format(flag="@DEF_PKG", declared_file=def_output_pkg_file.path)
     )
 
-    if ctx.attr.install:
-        pass
-#        tally = "%s_tally.tar" % (ctx.label.name)
-#        tally_file = ctx.actions.declare_file(tally)
-#        declared_outputs.append(tally_file)
-#        output_flags.append(
-#            output_param_format.format(
-#                declared_file = tally_file.path,
-#                file_in_mvn_target = _MARKER_TALLY
-#            )
-#        )
-#        providers.append(
-#            MvnRunArtifactInfo(tar = tally_file)
-#        )
-
     args.add_all(output_flags)
     args.add_all(special_output_flags)
 
@@ -278,6 +265,7 @@ def _run_mvn_buildpack_impl(ctx):
     runfiles = ctx.runfiles(files = outputs).merge(ctx.attr.buildpack[DefaultInfo].default_runfiles)
 
     return providers + [
+        MvnRunArtifactInfo(pkg = def_output_pkg_file),
         DefaultInfo(files = depset(outputs), runfiles = runfiles),
         JavaInfo(output_jar = def_output_jar_file, compile_jar = def_output_jar_file)
     ]

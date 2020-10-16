@@ -147,7 +147,6 @@ public class Cli {
         private Set<Dep> getDeps() {
             return new Deps.Manifest(deps)
                     .stream()
-                    .map(Dep.DependencyOf::new)
                     .collect(Collectors.toSet());
         }
 

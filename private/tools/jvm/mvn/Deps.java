@@ -4,14 +4,18 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.Streams;
 import com.google.common.io.CharSource;
 import com.google.common.io.Files;
-import com.google.gson.*;
-import lombok.*;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializer;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.Optional;
 import java.util.function.BiPredicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -19,7 +23,7 @@ import java.util.stream.Stream;
 /**
  * Collection of a paths.
  */
-public interface Deps extends Iterable<Deps.DepArtifact> {
+public interface Deps extends Iterable<Dep.DepArtifact> {
 
     Gson G = new GsonBuilder()
             .setPrettyPrinting()
@@ -28,45 +32,6 @@ public interface Deps extends Iterable<Deps.DepArtifact> {
                 return Paths.get(asString);
             }).create();
 
-
-    @Data
-    @NoArgsConstructor
-    class DepArtifact implements Dep {
-        private Path path;
-        private Map<String, String> tags = Collections.emptyMap();
-
-        public DepArtifact(Path p) {
-            this.path = p;
-        }
-
-        @Override
-        public String groupId() {
-            return null;
-        }
-
-        @Override
-        public String artifactId() {
-            return null;
-        }
-
-        @Override
-        public String version() {
-            return null;
-        }
-
-        @Override
-        public Path source() {
-            return null;
-        }
-
-        private void resolve() {
-            if (tags.containsKey("maven_coordinates")) {
-
-            }
-        }
-
-    }
-
     /**
      * New stream of paths
      *
@@ -74,7 +39,7 @@ public interface Deps extends Iterable<Deps.DepArtifact> {
      */
     @SuppressWarnings("UnstableApiUsage")
     default Stream<Path> paths() {
-        return Streams.stream(this).map(DepArtifact::getPath);
+        return Streams.stream(this).map(Dep.DepArtifact::getPath);
     }
 
     /**
@@ -83,7 +48,7 @@ public interface Deps extends Iterable<Deps.DepArtifact> {
      * @return stream of paths
      */
     @SuppressWarnings("UnstableApiUsage")
-    default Stream<DepArtifact> stream() {
+    default Stream<Dep.DepArtifact> stream() {
         return Streams.stream(this);
     }
 
@@ -131,7 +96,7 @@ public interface Deps extends Iterable<Deps.DepArtifact> {
     @SuppressWarnings("UnstableApiUsage")
     class Manifest implements Deps {
         public static final String WRAP = "'";
-        private final Collection<DepArtifact> paths;
+        private final Collection<Dep.DepArtifact> paths;
 
         public Manifest(File man) {
             this(Files.asCharSource(man, StandardCharsets.UTF_8));
@@ -152,14 +117,14 @@ public interface Deps extends Iterable<Deps.DepArtifact> {
                         return base;
                     })
                     .map(p -> {
-                        return G.fromJson(p, DepArtifact.class);
+                        return G.fromJson(p, Dep.DepArtifact.class);
                     })
                     .collect(Collectors.toSet());
         }
 
         @Override
         @SuppressWarnings("NullableProblems")
-        public Iterator<DepArtifact> iterator() {
+        public Iterator<Dep.DepArtifact> iterator() {
             return paths.iterator();
         }
 
