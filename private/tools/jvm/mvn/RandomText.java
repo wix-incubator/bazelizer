@@ -8,14 +8,14 @@ import java.util.concurrent.ThreadLocalRandom;
 public final class RandomText {
 
     public static String randomFileName(String pref) {
-        return pref + "-" + randomStr(10)  + "-" + Long.toHexString(System.currentTimeMillis());
+        return pref + "-" + randomLetters(10)  + "-" + Long.toHexString(System.currentTimeMillis());
     }
 
-    public static String randomStr() {
-        return randomStr( 10);
+    public static String randomLetters() {
+        return randomLetters( 10);
     }
 
-    public static String randomStr(int len) {
+    public static String randomLetters(int len) {
         StringBuilder s = new StringBuilder();
         for (int j = 0; j < len; j++) {
             s.append((char) ThreadLocalRandom.current().nextInt('a', 'z'));
