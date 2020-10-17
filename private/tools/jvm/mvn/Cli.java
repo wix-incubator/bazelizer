@@ -22,6 +22,13 @@ import java.util.stream.Stream;
 @Slf4j
 public class Cli {
 
+    public static class Local {
+
+        @CommandLine.Option(names = {"--localRepo"}, paramLabel = "PATH", description = "the local repo path")
+        public Path pomFile;
+    }
+
+
     @SuppressWarnings({"UnstableApiUsage", "unused"})
     @CommandLine.Command(name = "repository")
     public static class Repository implements Runnable {

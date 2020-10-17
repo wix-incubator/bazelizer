@@ -1,5 +1,9 @@
 load("//maven:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
 
+alias(
+    name = "mvn-build-lib-one",
+    actual = ":lib",
+)
 
 filegroup(
     name = "sources",

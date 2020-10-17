@@ -16,7 +16,7 @@ sh_library(
 sh_test(
     name = "MavenImageTest",
     srcs = ["test_files_exist.sh"],
-    args = ["tests/integration/mvn-build-lib/app=._buildpack_img.tar", "tests/integration/mvn-build-lib/pom.xml"],
+    args = ["tests/integration/mvn-build-lib/repository_for_app=._buildpack_img.tar", "tests/integration/mvn-build-lib/pom.xml"],
     data = [_buildpack],
     deps = [":MavenImageDummy"]
 )
@@ -24,7 +24,7 @@ sh_test(
 sh_test(
     name = "MavenImageTarTest",
     srcs = ["test_tar_repo.sh"],
-    args = ["tests/integration/mvn-build-lib/app=._buildpack_img.tar"],
+    args = ["tests/integration/mvn-build-lib/repository_for_app=._buildpack_img.tar"],
     data = [_buildpack],
     deps = [":MavenImageDummy"]
 )
