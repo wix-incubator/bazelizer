@@ -2,12 +2,7 @@
 
 
 def new_repository_impl(repository_ctx):
-
-    _bin = repository_ctx.path(repository_ctx.attr._tool.package)
-    # print(_bin)
-    # repository_ctx.execute([_bin, "-h"])
-    x = repository_ctx.execute(["echo", "h"])
-    print(x)
+    pass
 
 
 maven_repository = repository_rule(
