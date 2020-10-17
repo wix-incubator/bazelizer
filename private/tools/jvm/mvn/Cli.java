@@ -3,8 +3,10 @@ package tools.jvm.mvn;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 
@@ -21,42 +23,56 @@ import java.util.stream.Stream;
 public class Cli {
 
     @SuppressWarnings({"UnstableApiUsage", "unused"})
-    @CommandLine.Command(name = "repo2tar")
-    public static class Snapshot implements Runnable {
+    @CommandLine.Command(name = "repository")
+    public static class Repository implements Runnable {
 
-        @CommandLine.Option(names = {"-pt", "--pom"}, paramLabel = "POM", description = "the pom xml template file")
-        public Path pomXmlTpl;
+        public static final String GROUP_ID = "io.bazelbuild";
+        @CommandLine.Option(names = {"-pt", "--pomFile"}, paramLabel = "POM", description = "the pom xml template file")
+        public Path pomFile;
 
-        @CommandLine.Option(names = {"-o", "--output"}, paramLabel = "PATH", description = "desired output for repo snapshot")
-        public Path output;
+        @CommandLine.Option(names = {"-wi", "--writeImg"}, paramLabel = "PATH", description = "desired output for repo snapshot")
+        public Path writeImg;
 
-        @CommandLine.Option(names = {"-pr", "--parent"}, paramLabel = "P", description = "parent pom path")
-        public Path parent;
+        @CommandLine.Option(names = {"-ppf", "--parentPomFile"}, paramLabel = "P", description = "parent pom path")
+        public Path parentPomFile;
 
+        @CommandLine.Option(names = {"-ppi", "--parentPomImg"}, paramLabel = "P", description = "parent pom path")
+        public Path parentPomImg;
+
+        @SneakyThrows
         @Override
         public void run() {
             final Project project = Project.builder()
                     .pomXmlSrc(getPomXmlSrc())
-                    .groupId("io.bazelbuild")
-                    .artifactId("tmp-" + RandomText.randomStr(6))
-                    .workDir(pomXmlTpl.getParent())
-                    .outputs(ImmutableList.of(new OutputFile.TemporaryFileSrc(output)))
-                    .pomParent(parent)
+                    .groupId(GROUP_ID)
+                    .artifactId("id-" + RandomText.randomLetters(6))
+                    .workDir(pomFile.getParent())
+                    .outputs(Lists.newArrayList())
+                    .pomParent(parentPomFile)
                     .build();
+
+            project.outputs().add(new OutputFile.DeclaredProc(
+                    new Archive.TarDirectory(project.repository()),
+                    writeImg.toString()
+            ));
 
             new Act.Iterative(
                     new Acts.SettingsXml(),
+                    new Acts.Repository(
+                            parentPomImg
+                    ),
                     new Acts.ParentPOM(),
                     new Acts.InstallParentPOM(),
                     new Acts.POM(),
-                    new Acts.MvnGoOffline(),
-                    new Acts.RepositoryArchiver(),
+                    new Acts.MvnGoOffline(
+                            new Maven.BazelInvoker()
+                    ),
                     new Acts.Outputs()
             ).accept(project);
         }
 
         private ByteSource getPomXmlSrc() {
-            return Files.asByteSource(pomXmlTpl.toFile());
+            return Files.asByteSource(pomFile.toFile());
         }
     }
 
@@ -71,7 +87,7 @@ public class Cli {
 
         @CommandLine.Option(names = {"-r", "--repo"}, required = true,
                 paramLabel = "REPO", description = "the repository tar")
-        public Path repo;
+        public Path repoTar;
 
         @CommandLine.Option(names = {"-dp", "--deps"}, paramLabel = "DEPS", description = "the deps manifest")
         public File deps;
@@ -129,16 +145,19 @@ public class Cli {
                                 return new OutputFile.Simple(buildFile, declared);
                             })
                             .collect(Collectors.toList()))
-                    .baseImage(repo)
                     .build();
 
             new Act.Iterative(
-                    new Acts.Repository(),
+                    new Acts.Repository(
+                            repoTar
+                    ),
                     new Acts.SettingsXml(),
                     new Acts.Deps(),
                     new Acts.ParentPOM(),
                     new Acts.POM(),
-                    new Acts.MvnBuild(),
+                    new Acts.MvnBuild(
+                            new Maven.BazelInvoker()
+                    ),
                     new Acts.ArtifactPredefOutputs(defOutputFlags),
                     new Acts.Outputs()
             ).accept(project);
@@ -160,8 +179,8 @@ public class Cli {
     }
 
     @CommandLine.Command(subcommands = {
-            Snapshot.class,
-            Build.class
+            Build.class,
+            Repository.class
     })
     public static class Tool {
     }

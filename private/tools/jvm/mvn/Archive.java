@@ -68,10 +68,10 @@ public interface Archive extends Proc<Output> {
         private final Archive archive;
 
         public TarDirectory(Path dir) throws IOException {
-            archive = new Archive.TAR(
+            archive = in -> new Archive.TAR(
                     Archive.listFiles(dir),
                     file -> dir.relativize(file.toPath())
-            );
+            ).exec(in);
         }
 
         @Override

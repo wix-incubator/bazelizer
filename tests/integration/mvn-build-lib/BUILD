@@ -11,11 +11,10 @@ filegroup(
 create_mvn_buildpack(
     name = "app=._buildpack",
     pom_file = "pom.xml",
-    pom_parent = "//tests/integration/mvn-parent-pom:sources",
+    pom_parent = "//tests/integration/mvn-parent-pom:parent",
     visibility = ["//visibility:public"],
     log_level = "INFO"
 )
-
 
 run_mvn_buildpack(
     name = "jaxb2api",

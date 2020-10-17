@@ -52,7 +52,9 @@ public final class Acts {
     /**
      * Maven build. Turn off online resolving dependencies.
      */
+    @AllArgsConstructor
     static class MvnBuild implements Act {
+        private final Maven maven;
 
         @Override
         public Project accept(Project project) {
@@ -60,7 +62,7 @@ public final class Acts {
                     .offline(true)
                     .append("clean", "install");
 
-            new Maven.BazelInvoker().run(project);
+            maven.run(project);
             return project;
         }
     }
@@ -69,19 +71,18 @@ public final class Acts {
      * Run maven build. Allow to fetch dependencies from the web.
      */
     @Slf4j
+    @AllArgsConstructor
     static class MvnGoOffline implements Act {
+        private final Maven maven;
+
         @Override
         public Project accept(Project project) {
             log.info("Eagerly fetch dependencies to go offline...");
-            new Maven.BazelInvoker().run(
+
+            maven.run(
                     project.toBuilder().args(new Args().offline(false)
-                            .append("dependency:copy-dependencies")
-                            .append("dependency:resolve")
-                            .append("dependency:resolve-plugins")
-                            .append("dependency:go-offline")
-                            .append("clean")
-                            .append("package")
-                            .append("install")
+                            .append("de.qaware.maven:go-offline-maven-plugin:resolve-dependencies")
+                            .append("compile") // should add it because of https://github.com/qaware/go-offline-maven-plugin#usage
                     ).build()
             );
             return project;
@@ -162,13 +163,25 @@ public final class Acts {
     /**
      * Unarchive repository snapshot into M2_HOME.
      */
+    @AllArgsConstructor
+    @Slf4j
     static class Repository implements Act {
+
+        private final Path image;
 
         @Override
         @lombok.SneakyThrows
         public Project accept(Project project) {
-            final Path tar = project.baseImage();
-            Archive.extractTar(tar, project.repository());
+            final Path repository = project.repository();
+            if (image != null)
+                Archive.extractTar(image, repository);
+            if (log.isDebugEnabled()) {
+                log.debug("Repository state:");
+                Files.find(repository, 30, (f,attr) -> !attr.isDirectory()).forEach(file -> {
+                    log.debug(" {}", repository.relativize(file) );
+                });
+            }
+
             return project;
         }
     }
@@ -177,6 +190,7 @@ public final class Acts {
      * Create snapshot from the repository.
      */
     @Slf4j
+    @Deprecated
     static class RepositoryArchiver implements Act {
 
         @Override
