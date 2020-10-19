@@ -1,7 +1,5 @@
 
 
-_M2_REPO_IMG_EXT = ".tar"
-_BASE_POM_NAME = "base_pom.xml"
 _TOOL = Label("//private/tools/jvm/mvn:mvn")
 _MARKER_SRC_DEFAULT_OUTPUT_JAR = "@@TARGET-JAR-OUTPUT@@"
 #_MARKER_TALLY = "@@MVN_ARTIFACT_ALL@@"

@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -34,28 +35,36 @@ public class Cli {
     public static class Repository implements Runnable {
 
         public static final String GROUP_ID = "io.bazelbuild";
-        @CommandLine.Option(names = {"-pt", "--pomFile"}, paramLabel = "POM", description = "the pom xml template file")
-        public Path pomFile;
 
-        @CommandLine.Option(names = {"-wi", "--writeImg"}, paramLabel = "PATH", description = "desired output for repo snapshot")
+        @CommandLine.Option(names = {"-pt", "--pomFile"}, required = true,
+                paramLabel = "POM", description = "the pom xml template file")
+        public Path runPom;
+
+        @CommandLine.Option(names = {"-wi", "--writeImg"}, required = true,
+                paramLabel = "PATH", description = "desired output for repo snapshot")
         public Path writeImg;
 
-        @CommandLine.Option(names = {"-ppf", "--parentPomFile"}, paramLabel = "P", description = "parent pom path")
-        public Path parentPomFile;
+        @CommandLine.Option(names = {"-ai", "--groupId"}, defaultValue = "groupId",
+                paramLabel = "ID", description = "the maven groupId")
+        public String groupId;
 
-        @CommandLine.Option(names = {"-ppi", "--parentPomImg"}, paramLabel = "P", description = "parent pom path")
-        public Path parentPomImg;
+        @CommandLine.Option(names = {"-gi", "--artifactId"}, defaultValue = "artifactId",
+                paramLabel = "ID", description = "the maven artifactId")
+        public String artifactId;
+
+        @CommandLine.Option(names = {"--pomDef"}, description = "Rule specific output settings")
+        public Map<String, String> pomDeclarations;
 
         @SneakyThrows
         @Override
         public void run() {
             final Project project = Project.builder()
                     .pomXmlSrc(getPomXmlSrc())
-                    .groupId(GROUP_ID)
-                    .artifactId("id-" + RandomText.randomLetters(6))
-                    .workDir(pomFile.getParent())
+                    .groupId(Optional.ofNullable(groupId).orElse(GROUP_ID))
+                    .artifactId(Optional.ofNullable(artifactId).orElseGet(() -> "id-" + RandomText.randomLetters(6)))
+                    .workDir(runPom.getParent())
                     .outputs(Lists.newArrayList())
-                    .pomParent(parentPomFile)
+//                    .pomParent(parentPomFile)
                     .build();
 
             project.outputs().add(new OutputFile.DeclaredProc(
@@ -65,9 +74,9 @@ public class Cli {
 
             new Act.Iterative(
                     new Acts.SettingsXml(),
-                    new Acts.Repository(
-                            parentPomImg
-                    ),
+//                    new Acts.Repository(
+//                            parentPomImg
+//                    ),
                     new Acts.ParentPOM(),
                     new Acts.InstallParentPOM(),
                     new Acts.POM(),
@@ -79,7 +88,7 @@ public class Cli {
         }
 
         private ByteSource getPomXmlSrc() {
-            return Files.asByteSource(pomFile.toFile());
+            return Files.asByteSource(runPom.toFile());
         }
     }
 
