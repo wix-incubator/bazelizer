@@ -42,7 +42,7 @@ public class Cli {
         }
     }
 
-    @SuppressWarnings({"UnstableApiUsage", "unused"})
+    @SuppressWarnings({"unused"})
     @CommandLine.Command(name = "build-repository")
     public static class MkRepository implements Runnable {
 
@@ -75,7 +75,7 @@ public class Cli {
 
             new Act.Iterative(
                     new Acts.SettingsXml(),
-                    new Projects(
+                    new ActProjects(
                             pomDeclarations,
                             new Act.Iterative(
                                     new Acts.ParentPOM(),

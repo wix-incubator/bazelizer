@@ -1,26 +1,29 @@
 package tools.jvm.mvn;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.MoreObjects;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Streams;
 import com.google.gson.annotations.SerializedName;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.ToString;
-import org.cactoos.iterable.Filtered;
+import lombok.experimental.Delegate;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public interface Builds extends Iterable<Builds.BuildNode> {
 
 
-
+    /**
+     * Pom definition.
+     */
     @Data
     class DefPom {
         @SerializedName("file")
@@ -56,52 +59,62 @@ public interface Builds extends Iterable<Builds.BuildNode> {
         private List<BuildNode> children = Lists.newArrayList();
         private BuildNode parent;
     }
-    
-    class JsonManifestOf implements Builds {
 
-        /**
-         * Ctor
-         * @param pomDeclarations manifest path
-         */
+
+    /**
+     * Source of pom definitions
+     */
+    class PomDefs implements Iterable<DefPom> {
+        @Delegate
+        private final Iterable<DefPom> iter;
+
         @SuppressWarnings("StaticPseudoFunctionalStyleMethod")
-        public JsonManifestOf(Path pomDeclarations) {
-            lazy = Suppliers.memoize(() -> {
-                final List<DefPom> defFiles = Lists.newArrayList(
-                        Iterables.transform(
-                                new ManifestFile(pomDeclarations), DefPom::deserialize
-                        )
-                );
-                Map<String, BuildNode> lookup = Maps.newHashMap();
-                defFiles.forEach(def -> lookup.put(def.id(), new BuildNode(def)));
-                for (DefPom defFile : defFiles) {
-                    final BuildNode thisNode = lookup.computeIfAbsent(defFile.id(), i -> new BuildNode(defFile));
-                    if (thisNode.self.parentFile != null) {
-                        lookup.computeIfPresent(thisNode.self.parentId(), (k, parent) -> {
-                            parent.children.add(thisNode);
-                            thisNode.parent = parent;
-                            return parent;
-                        });
-                    }
-                }
-                return new Filtered<>(lookup.values(), v -> v.parent == null);
-            });
+        public PomDefs(Path pomDefFile) {
+            this.iter = Lists.newArrayList(
+                    Iterables.transform(
+                            new ManifestFile(pomDefFile), DefPom::deserialize
+                    )
+            );
         }
+    }
 
-        /**
-         * Lazy computed nodes.
-         */
-        private final Supplier<Iterable<BuildNode>> lazy;
 
+    /**
+     * Pre order traversal of a graph.
+     */
+    @AllArgsConstructor
+    class PreOrderGraph implements Iterable<BuildNode> {
+
+        private final Iterable<DefPom> defPoms;
+
+        @SuppressWarnings("NullableProblems")
         @Override
         public Iterator<BuildNode> iterator() {
-            return lazy.get().iterator();
+            return preOrder().iterator();
         }
 
-        @Override
-        public String toString() {
-            final MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper(this);
-            helper.add("parents=", Joiner.on(", ").join(this));
-            return helper.toString();
+        private List<BuildNode> preOrder() {
+            final ArrayList<DefPom> defFiles = Lists.newArrayList(this.defPoms);
+            Map<String, BuildNode> lookup = Maps.newHashMap();
+            defFiles.forEach(def -> lookup.put(def.id(), new BuildNode(def)));
+            for (DefPom defFile : defFiles) {
+                final BuildNode thisNode = lookup.computeIfAbsent(defFile.id(), i -> new BuildNode(defFile));
+                if (thisNode.self.parentFile != null) {
+                    lookup.computeIfPresent(thisNode.self.parentId(), (k, parent) -> {
+                        parent.children.add(thisNode);
+                        thisNode.parent = parent;
+                        return parent;
+                    });
+                }
+            }
+
+            return lookup.values().stream().filter(node -> node.getParent() == null)
+                    .flatMap(node ->
+                            Streams.concat(
+                                Stream.of(node),
+                                node.getChildren().stream()
+                        )
+                    ).collect(Collectors.toList());
         }
     }
     
