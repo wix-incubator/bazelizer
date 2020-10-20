@@ -75,13 +75,14 @@ public final class Acts {
     @Slf4j
     @Accessors(chain = true, fluent = true)
     static class MvnGoOffline implements Act {
+        public static final String GO_OFFLINE_PLUGIN = "de.qaware.maven:go-offline-maven-plugin:resolve-dependencies";
 
         private final Maven maven;
 
-        // should add it because of https://github.com/qaware/go-offline-maven-plugin#usage
+        // can be useful to trigger
+        // because of https://github.com/qaware/go-offline-maven-plugin#usage
         @Setter
         private boolean compile = false;
-
         @Setter
         private boolean install = false;
 
@@ -93,13 +94,11 @@ public final class Acts {
         @Override
         public Project accept(Project project) {
             log.info("Eagerly fetch dependencies to go offline...");
-
-            final Args args = new Args().offline(false)
-                    .append("de.qaware.maven:go-offline-maven-plugin:resolve-dependencies");
-
+            final Args args = new Args(project.args())
+                    .offline(false)
+                    .append(GO_OFFLINE_PLUGIN);
             if (compile) args.append("compile");
             if (install) args.append("install");
-
             maven.run(
                     project.toBuilder().args(args).build()
             );
