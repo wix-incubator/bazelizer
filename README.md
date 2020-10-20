@@ -32,20 +32,28 @@ Use bazel deps, depends on bazel target and event doing it efficiently.
 ## Usage
 
 ```
-RULES_MAVENOZER_TAG = ...
-RULES_MAVENOZER_URL = ...
-RULES_MAVENOZER_SHA = ...
+# in your WORKSPACE
+
+RULES_TAG = "0.2.3"
+RULES_TAG_SHA = "e1ff5910ac034aed69e682e9e5cfb52450c27396a85edac8cdec79f50679ad6b"
+NAME = "wix_incubator_bazelizer"
 
 http_archive(
-    name = "bazelizer",
-    strip_prefix = "mavenizer-%s" % RULES_MAVENOZER_TAG,
-    sha256 = RULES_MAVENOZER_SHA,
-    url = RULES_MAVENOZER_URL,
+    name = NAME,
+    url = "https://github.com/wix-incubator/bazelizer/archive/%s.zip" % RULES_TAG,
+    type = "zip",
+    strip_prefix = "bazelizer-%s" % RULES_TAG,
+    sha256 = RULES_TAG_SHA,
 )
 
-load("@bazelizer//:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
+load("@wix_incubator_bazelizer//third_party:rules_repository.bzl", "install")
+install()
 
-# usage ....
+# in your BUILD files
+
+load("@wix_incubator_bazelizer//maven:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
+
+
 ```
 
 
