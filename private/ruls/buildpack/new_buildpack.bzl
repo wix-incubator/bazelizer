@@ -305,7 +305,6 @@ def _run_mvn_buildpack_impl(ctx):
     # if ctx.attr.args: args.add("--args", " ".join(ctx.attr.args))
     if ctx.attr.artifactId: args.add("--artifactId", ctx.attr.artifactId)
     if ctx.attr.groupId: args.add("--groupId", ctx.attr.groupId)
-    if ctx.attr.mvn_args: args.add("--args", ctx.attr.mvn_args)
 
     special_output_flags = []
     special_output_flags_fmt = "--defOutFlag={flag}={declared_file}"
