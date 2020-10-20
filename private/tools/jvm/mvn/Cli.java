@@ -124,7 +124,7 @@ public class Cli {
                     new Acts.POM(),
                     new Acts.MvnGoOffline(
                             new Maven.BazelInvoker()
-                    ),
+                    ).compile(true),
                     new Acts.Outputs()
             ).accept(project);
         }
