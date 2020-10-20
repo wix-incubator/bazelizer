@@ -29,7 +29,7 @@ public final class Project {
     @Builder.Default
     private List<OutputFile> outputs = Lists.newArrayList();
     private Path baseImage;
-    private ByteSource pomTpl;
+    private ByteSource pomTemplate;
     @Builder.Default
     private Args args = new Args();
     private Path pom;

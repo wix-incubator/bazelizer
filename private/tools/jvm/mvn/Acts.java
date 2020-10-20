@@ -135,7 +135,7 @@ public final class Acts {
             final Project.ProjectView props = project.toView();
             final Path syntheticPom = project.pom();
             final Text renderedTpl = new Template.Mustache(
-                    project.pomTpl(),
+                    project.pomTemplate(),
                     props
             ).eval();
 

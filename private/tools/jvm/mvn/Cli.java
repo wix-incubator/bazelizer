@@ -2,6 +2,7 @@ package tools.jvm.mvn;
 
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import lombok.SneakyThrows;
@@ -28,8 +29,8 @@ public class Cli {
 
 
     @SuppressWarnings({"UnstableApiUsage", "unused"})
-    @CommandLine.Command(name = "repository")
-    public static class Repository implements Runnable {
+    @CommandLine.Command(name = "build-repository")
+    public static class MkRepository implements Runnable {
 
         public static final String GROUP_ID = "io.bazelbuild";
 
@@ -78,6 +79,61 @@ public class Cli {
             return Files.asByteSource(runPom.toFile());
         }
     }
+
+    @SuppressWarnings({"UnstableApiUsage", "unused"})
+    @CommandLine.Command(name = "repository")
+    public static class Repository implements Runnable {
+
+        public static final String GROUP_ID = "io.bazelbuild";
+        @CommandLine.Option(names = {"-pt", "--pomFile"}, paramLabel = "POM", description = "the pom xml template file")
+        public Path pomFile;
+
+        @CommandLine.Option(names = {"-wi", "--writeImg"}, paramLabel = "PATH", description = "desired output for repo snapshot")
+        public Path writeImg;
+
+        @CommandLine.Option(names = {"-ppf", "--parentPomFile"}, paramLabel = "P", description = "parent pom path")
+        public Path parentPomFile;
+
+        @CommandLine.Option(names = {"-ppi", "--parentPomImg"}, paramLabel = "P", description = "parent pom path")
+        public Path parentPomImg;
+
+        @SneakyThrows
+        @Override
+        public void run() {
+            final Project project = Project.builder()
+                    .pomTemplate(getPomXmlSrc())
+                    .groupId(GROUP_ID)
+                    .artifactId("id-" + RandomText.randomLetters(6))
+                    .workDir(pomFile.getParent())
+                    .outputs(Lists.newArrayList())
+                    .pomParent(parentPomFile)
+                    .build();
+
+            project.outputs().add(new OutputFile.DeclaredProc(
+                    new Archive.TarDirectory(project.repository()),
+                    writeImg.toString()
+            ));
+
+            new Act.Iterative(
+                    new Acts.SettingsXml(),
+                    new Acts.Repository(
+                            parentPomImg
+                    ),
+                    new Acts.ParentPOM(),
+                    new Acts.InstallParentPOM(),
+                    new Acts.POM(),
+                    new Acts.MvnGoOffline(
+                            new Maven.BazelInvoker()
+                    ),
+                    new Acts.Outputs()
+            ).accept(project);
+        }
+
+        private ByteSource getPomXmlSrc() {
+            return Files.asByteSource(pomFile.toFile());
+        }
+    }
+
 
 
     @SuppressWarnings({"unused", "UnstableApiUsage"})
@@ -139,7 +195,7 @@ public class Cli {
                     .args(args)
                     .deps(getDeps())
                     .workDir(workDir)
-                    .pomTpl(Files.asByteSource(pomXmlTpl.toFile()))
+                    .pomTemplate(Files.asByteSource(pomXmlTpl.toFile()))
                     .outputs(outputs.entrySet()
                             .stream()
                             .map(entry -> {

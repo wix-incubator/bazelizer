@@ -40,7 +40,7 @@ public class Projects implements Act {
 
         final Project build = Project.builder()
                 .workDir(parent)
-                .pomTpl(asByteSource(pomFile.toAbsolutePath().toFile()))
+                .pomTemplate(asByteSource(pomFile.toAbsolutePath().toFile()))
                 .pomParent(pom.getParentFile() != null ? pom.getParentFile().toAbsolutePath() : null)
                 .build();
 

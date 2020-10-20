@@ -66,7 +66,7 @@ def _maven_repository_impl(ctx):
     )
 
     args = ctx.actions.args()
-    args.add('repository')
+    args.add('build-repository')
     args.add('--def', build_def.path)
     args.add('--writeImg', tar.path)
 
