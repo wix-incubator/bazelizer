@@ -64,9 +64,9 @@ public interface Maven {
                     Properties properties = request.getProperties();
                     if (properties == null) {
                         properties = new Properties();
-                        request.setProperties(properties);
                     }
                     properties.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "WARN");
+                    request.setProperties(properties);
                     break;
                 case INFO:
                 case DEBUG: break;
