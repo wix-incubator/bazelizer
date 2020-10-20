@@ -36,6 +36,8 @@ _common_attr = {
     "mvn_flags": attr.string_list(),
 }
 
+_common_attr_whitelist = _common_attr.keys()
+
 
 _new_mvn_repository_outputs = {
     "image": "%{name}_img.tar",
@@ -204,7 +206,7 @@ def new_create_mvn_buildpack(name, **kwargs):
         **kwargs
     )
 
-    keys = ["log_level", "visibility", "mvn_args"]
+    keys = _common_attr_whitelist + ["visibility"]
     kwargs_bypass = { key:value for (key,value) in kwargs.items() if key in keys}
 
     create_mvn_buildpack_executable(
