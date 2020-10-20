@@ -16,17 +16,24 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Slf4j
 public class Cli {
 
-    public static class Local {
 
-        @CommandLine.Option(names = {"--localRepo"}, paramLabel = "PATH", description = "the local repo path")
-        public Path pomFile;
+    static class ExtraFlags {
+
+        @CommandLine.Option(names = {"-a", "--args"}, paramLabel = "ARGS", description = "the maven cli args")
+        public String argsLine;
+
+        Args newArgs() {
+            final Args args = new Args();
+            if (this.argsLine != null) {
+                args.parseCommandLine(argsLine);
+            }
+            return args;
+        }
     }
-
 
     @SuppressWarnings({"UnstableApiUsage", "unused"})
     @CommandLine.Command(name = "build-repository")
@@ -84,6 +91,9 @@ public class Cli {
     @CommandLine.Command(name = "repository")
     public static class Repository implements Runnable {
 
+        @CommandLine.Mixin
+        public ExtraFlags extraFlags = new ExtraFlags();
+
         public static final String GROUP_ID = "io.bazelbuild";
         @CommandLine.Option(names = {"-pt", "--pomFile"}, paramLabel = "POM", description = "the pom xml template file")
         public Path pomFile;
@@ -107,6 +117,7 @@ public class Cli {
                     .workDir(pomFile.getParent())
                     .outputs(Lists.newArrayList())
                     .pomParent(parentPomFile)
+                    .args(extraFlags.newArgs())
                     .build();
 
             project.outputs().add(new OutputFile.DeclaredProc(
@@ -140,6 +151,9 @@ public class Cli {
     @CommandLine.Command(name = "build")
     public static class Build implements Runnable {
 
+        @CommandLine.Mixin
+        public ExtraFlags extraFlags = new ExtraFlags();
+
         @CommandLine.Option(names = {"-pt", "--pom"}, required = true,
                 paramLabel = "POM", description = "the pom xml template file")
         public Path pomXmlTpl;
@@ -155,9 +169,6 @@ public class Cli {
                 required = true,
                 description = "the srcs manifest")
         public File srcs;
-
-        @CommandLine.Option(names = {"-a", "--args"}, paramLabel = "ARGS", description = "the maven cli args")
-        public String args;
 
         @CommandLine.Option(names = {"-ai", "--groupId"}, defaultValue = "groupId",
                 paramLabel = "ID", description = "the maven groupId")
@@ -182,10 +193,7 @@ public class Cli {
         public void run() {
             final Path workDir = getWorkDir();
             final Path pom = Project.syntheticPomFile(workDir);
-            final Args args = new Args();
-            if (this.args != null) {
-                Stream.of(this.args.split(" ")).forEach(args::append);
-            }
+            final Args args = extraFlags.newArgs();
 
             final Project project = Project.builder()
                     .artifactId(artifactId)

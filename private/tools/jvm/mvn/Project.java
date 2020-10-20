@@ -20,8 +20,10 @@ import java.util.List;
 public final class Project {
     private String artifactId;
     private String groupId;
+
     @Builder.Default
     private Iterable<Dep> deps = ImmutableList.of();
+
     private Path workDir;
     private Path pomParent;
     @Builder.Default

@@ -29,4 +29,10 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>xyz</id>
+        </profile>
+    </profiles>
 </project>

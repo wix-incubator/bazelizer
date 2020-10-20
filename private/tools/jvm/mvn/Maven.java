@@ -6,6 +6,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.shared.invoker.DefaultInvocationRequest;
 import org.apache.maven.shared.invoker.DefaultInvoker;
+import org.apache.maven.shared.invoker.InvocationRequest;
 
 import java.io.File;
 import java.util.Arrays;
@@ -33,28 +34,29 @@ public interface Maven {
         public void run(Project build) {
             final String ws = System.getProperty("maven.bin.workspace");
             Runfiles runfiles = Runfiles.create();
-            String mavenBinRunfileDir = runfiles.rlocation(ws );
+            String mavenBinRunfileDir = runfiles.rlocation(ws);
 
             DefaultInvoker invoker = new DefaultInvoker();
             invoker.setMavenHome(new File(mavenBinRunfileDir));
             invoker.setWorkingDirectory(build.workDir().toFile());
-            final DefaultInvocationRequest request = new DefaultInvocationRequest();
+
+            log.info("execute: {}", build.args());
+
+            final InvocationRequest request = build.args().toInvocationRequest();
             request.setPomFile(build.pom().toFile());
             request.setJavaHome(new File(System.getProperty("java.home")));
-            final List<String> args = Arrays.asList(build.args().toArray());
-            log.info("execute: {}", args);
-            request.setGoals(args);
             request.setLocalRepositoryDirectory(build.repository().toFile());
             request.setBatchMode(true);
 
             if (build.args().offline()) {
                 request.setOffline(true);
             }
+
             setLogLevel(request);
             invoker.execute(request);
         }
 
-        private static void setLogLevel(DefaultInvocationRequest request) {
+        private static void setLogLevel(InvocationRequest request) {
             switch (SLF4JConfigurer.getLogLevel()) {
                 case OFF:
                     Properties properties = request.getProperties();

@@ -32,7 +32,8 @@ def _rlocation(ctx, file):
 
 
 _common_attr = {
-    "log_level": attr.string(doc="specify log level for the tool")
+    "log_level": attr.string(doc="specify log level for the tool"),
+    "mvn_flags": attr.string_list(),
 }
 
 
@@ -49,6 +50,17 @@ _new_mvn_repository_attr = _merged_dict(
     }
 )
 
+_mvn_args_join_str = " "
+
+def _mvn_args(args, ctx):
+    if ctx.attr.mvn_flags and len(ctx.attr.mvn_flags) > 0:
+        args.add("--args", _mvn_args_join_str.join(ctx.attr.mvn_flags))
+
+def _mvn_args_as_list(ctx):
+    if ctx.attr.mvn_flags and len(ctx.attr.mvn_flags) > 0:
+        return ["--args='%s'" % (_mvn_args_join_str.join(ctx.attr.mvn_flags))]
+    else: return []
+
 def _new_mvn_repository_impl(ctx):
     optional_transitive_inputs = []
     args = ctx.actions.args()
@@ -64,6 +76,8 @@ def _new_mvn_repository_impl(ctx):
     args.add("repository")
     args.add("--writeImg", archive.path)
     args.add("--pomFile", pom_file_input.path)
+
+    _mvn_args(args, ctx)
 
     if ctx.attr.pom_parent:
         parent_info = ctx.attr.pom_parent[MvnRepositoryInfo]
@@ -138,7 +152,7 @@ def _create_mvn_repository_impl(ctx):
         "--pom={}".format(runfiles_relative_pom_path),
         "--repo={}".format(runfiles_relative_image_path),
         "--parent={}".format(runfiles_relative_parent_pom_path) if has_parent else ""
-    ])
+    ] + _mvn_args_as_list(ctx))
 
     executable = ctx.outputs.executable
     ctx.actions.write(
@@ -190,7 +204,7 @@ def new_create_mvn_buildpack(name, **kwargs):
         **kwargs
     )
 
-    keys = ["log_level", "visibility"]
+    keys = ["log_level", "visibility", "mvn_args"]
     kwargs_bypass = { key:value for (key,value) in kwargs.items() if key in keys}
 
     create_mvn_buildpack_executable(
@@ -213,7 +227,6 @@ _run_mvn_buildpack_attr = _merged_dict(
         "outputs": attr.string_list(),
         "artifactId": attr.string(),
         "groupId": attr.string(),
-        "args": attr.string_list(),
         "buildpack": attr.label(
             mandatory = True,
             allow_files = True,
@@ -292,6 +305,7 @@ def _run_mvn_buildpack_impl(ctx):
     # if ctx.attr.args: args.add("--args", " ".join(ctx.attr.args))
     if ctx.attr.artifactId: args.add("--artifactId", ctx.attr.artifactId)
     if ctx.attr.groupId: args.add("--groupId", ctx.attr.groupId)
+    if ctx.attr.mvn_args: args.add("--args", ctx.attr.mvn_args)
 
     special_output_flags = []
     special_output_flags_fmt = "--defOutFlag={flag}={declared_file}"

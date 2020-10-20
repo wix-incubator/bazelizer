@@ -17,7 +17,7 @@ filegroup(
 create_mvn_buildpack(
     name = "buildpack",
     pom_file = "pom.xml",
-    visibility = ["//visibility:public"]
+    visibility = ["//visibility:public"],
 )
 
 run_mvn_buildpack(
