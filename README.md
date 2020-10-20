@@ -43,7 +43,7 @@ http_archive(
     url = RULES_MAVENOZER_URL,
 )
 
-load("@bazelizer//:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
+load("@bazelizer//:paths.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
 
 # usage ....
 ```
