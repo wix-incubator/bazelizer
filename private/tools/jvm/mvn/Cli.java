@@ -236,7 +236,8 @@ public class Cli {
 
     @CommandLine.Command(subcommands = {
             Build.class,
-            Repository.class
+            Repository.class,
+            MkRepository.class
     })
     public static class Tool {
     }

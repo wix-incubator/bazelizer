@@ -4,6 +4,7 @@ import com.google.common.io.CharSource;
 import lombok.SneakyThrows;
 import org.cactoos.Scalar;
 import org.cactoos.io.InputOf;
+import org.cactoos.scalar.UncheckedScalar;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -27,9 +28,8 @@ public class TemplateTest {
                     valueOf(new Pom.XPath((new InputOf(pom)))));
         }
 
-        @SneakyThrows
         private static Pom.Props valueOf(Scalar<Pom.Props> xmlIn) {
-            return xmlIn.value();
+            return new UncheckedScalar<>(xmlIn).value();
         }
     }
 
