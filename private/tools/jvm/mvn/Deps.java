@@ -26,7 +26,7 @@ import java.util.stream.Stream;
  */
 public interface Deps extends Iterable<Dep> {
 
-    Gson G = new GsonBuilder()
+    Gson GSON = new GsonBuilder()
             .setPrettyPrinting()
             .registerTypeAdapter(Path.class, (JsonDeserializer<Path>) (json, typeOfT, context) -> {
                 final String asString = json.getAsString();
@@ -105,7 +105,7 @@ public interface Deps extends Iterable<Dep> {
 
         @lombok.SneakyThrows
         public Manifest(CharSource source) {
-            this.paths = Sets.newLinkedHashSet(source
+            this.paths = source
                     .readLines().stream()
                     .map(p -> {
                         String base = p.trim();
@@ -117,8 +117,8 @@ public interface Deps extends Iterable<Dep> {
                         }
                         return base;
                     })
-                    .map(p -> G.fromJson(p, Dep.DepArtifact.class))
-                    .collect(Collectors.toList()));
+                    .map(p -> GSON.fromJson(p, Dep.DepArtifact.class))
+                    .collect(Collectors.toCollection(Sets::newLinkedHashSet));
         }
 
         @Override

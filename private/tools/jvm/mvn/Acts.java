@@ -5,7 +5,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import lombok.AllArgsConstructor;
+import lombok.Setter;
 import lombok.SneakyThrows;
+import lombok.experimental.Accessors;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
@@ -71,19 +73,35 @@ public final class Acts {
      * Run maven build. Allow to fetch dependencies from the web.
      */
     @Slf4j
-    @AllArgsConstructor
+    @Accessors(chain = true, fluent = true)
     static class MvnGoOffline implements Act {
+
         private final Maven maven;
+
+        // should add it because of https://github.com/qaware/go-offline-maven-plugin#usage
+        @Setter
+        private boolean compile = false;
+
+        @Setter
+        private boolean install = false;
+
+
+        MvnGoOffline(Maven maven) {
+            this.maven = maven;
+        }
 
         @Override
         public Project accept(Project project) {
             log.info("Eagerly fetch dependencies to go offline...");
 
+            final Args args = new Args().offline(false)
+                    .append("de.qaware.maven:go-offline-maven-plugin:resolve-dependencies");
+
+            if (compile) args.append("compile");
+            if (install) args.append("install");
+
             maven.run(
-                    project.toBuilder().args(new Args().offline(false)
-                            .append("de.qaware.maven:go-offline-maven-plugin:resolve-dependencies")
-                            .append("compile") // should add it because of https://github.com/qaware/go-offline-maven-plugin#usage
-                    ).build()
+                    project.toBuilder().args(args).build()
             );
             return project;
         }
@@ -117,7 +135,7 @@ public final class Acts {
             final Project.ProjectView props = project.toView();
             final Path syntheticPom = project.pom();
             final Text renderedTpl = new Template.Mustache(
-                    project.pomXmlSrc(),
+                    project.pomTpl(),
                     props
             ).eval();
 
@@ -145,7 +163,7 @@ public final class Acts {
             Files.createDirectories(repository);
             String xml = "<settings xsi:schemaLocation=\"http://maven.apache.org/SETTINGS/1.1.0 http://maven.apache.org/xsd/settings-1.1.0.xsd\" " +
                     "xmlns=\"http://maven.apache.org/SETTINGS/1.1.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n" +
-                            "<localRepository>" + repository + "</localRepository>\n" +
+                            "   <localRepository>" + repository + "</localRepository>\n" +
                             "</settings>";
 
             save(settingsXml, xml);
@@ -292,7 +310,7 @@ public final class Acts {
         @Override
         public Project accept(Project project) {
             final ArrayList<OutputFile> outputs = Lists.newArrayList(project.outputs());
-            final Template.PomPropsBean bean = new Template.PomPropsBeanXPath(
+            final Pom.Props bean = new Pom.XPath(
                     new InputOf(project.pom())
             ).value();
 

@@ -1,9 +1,7 @@
 package tools.jvm.mvn;
 
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import lombok.SneakyThrows;
@@ -15,7 +13,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -36,55 +33,45 @@ public class Cli {
 
         public static final String GROUP_ID = "io.bazelbuild";
 
-        @CommandLine.Option(names = {"-pt", "--pomFile"}, required = true,
+        @CommandLine.Option(names = {"-pt", "--pomFile"}, required = false,
                 paramLabel = "POM", description = "the pom xml template file")
         public Path runPom;
 
-        @CommandLine.Option(names = {"-wi", "--writeImg"}, required = true,
+        @CommandLine.Option(names = {"-wi", "--writeImg"}, required = false,
                 paramLabel = "PATH", description = "desired output for repo snapshot")
         public Path writeImg;
 
-        @CommandLine.Option(names = {"-ai", "--groupId"}, defaultValue = "groupId",
-                paramLabel = "ID", description = "the maven groupId")
-        public String groupId;
-
-        @CommandLine.Option(names = {"-gi", "--artifactId"}, defaultValue = "artifactId",
-                paramLabel = "ID", description = "the maven artifactId")
-        public String artifactId;
-
-        @CommandLine.Option(names = {"--pomDef"}, description = "Rule specific output settings")
-        public Map<String, String> pomDeclarations;
+        @CommandLine.Option(names = {"--def"}, description = "Rule specific output settings")
+        public Path pomDeclarations;
 
         @SneakyThrows
         @Override
         public void run() {
-            final Project project = Project.builder()
-                    .pomXmlSrc(getPomXmlSrc())
-                    .groupId(Optional.ofNullable(groupId).orElse(GROUP_ID))
-                    .artifactId(Optional.ofNullable(artifactId).orElseGet(() -> "id-" + RandomText.randomLetters(6)))
-                    .workDir(runPom.getParent())
-                    .outputs(Lists.newArrayList())
-//                    .pomParent(parentPomFile)
-                    .build();
+            final Maven maven = new Maven.BazelInvoker();
 
-            project.outputs().add(new OutputFile.DeclaredProc(
-                    new Archive.TarDirectory(project.repository()),
-                    writeImg.toString()
-            ));
+            final Project simple = Project.builder().build();
+
+            simple.outputs().add(
+                    new OutputFile.DeclaredTarDir(
+                            simple.repository(),
+                            writeImg.toString()
+                    )
+            );
 
             new Act.Iterative(
                     new Acts.SettingsXml(),
-//                    new Acts.Repository(
-//                            parentPomImg
-//                    ),
-                    new Acts.ParentPOM(),
-                    new Acts.InstallParentPOM(),
-                    new Acts.POM(),
-                    new Acts.MvnGoOffline(
-                            new Maven.BazelInvoker()
+                    new Projects(
+                            pomDeclarations,
+                            new Act.Iterative(
+                                    new Acts.ParentPOM(),
+                                    new Acts.POM(),
+                                    new Acts.MvnGoOffline(
+                                            maven
+                                    )
+                            )
                     ),
                     new Acts.Outputs()
-            ).accept(project);
+            ).accept(simple);
         }
 
         private ByteSource getPomXmlSrc() {
@@ -138,7 +125,7 @@ public class Cli {
         @lombok.SneakyThrows
         public void run() {
             final Path workDir = getWorkDir();
-            final Path pom = getPomFileDest(workDir);
+            final Path pom = Project.syntheticPomFile(workDir);
             final Args args = new Args();
             if (this.args != null) {
                 Stream.of(this.args.split(" ")).forEach(args::append);
@@ -152,7 +139,7 @@ public class Cli {
                     .args(args)
                     .deps(getDeps())
                     .workDir(workDir)
-                    .pomXmlSrc(Files.asByteSource(pomXmlTpl.toFile()))
+                    .pomTpl(Files.asByteSource(pomXmlTpl.toFile()))
                     .outputs(outputs.entrySet()
                             .stream()
                             .map(entry -> {
@@ -189,9 +176,6 @@ public class Cli {
             return new Deps.Manifest(srcs).resolveCommonPrefix();
         }
 
-        private Path getPomFileDest(Path workDir) {
-            return workDir.resolve(RandomText.randomFileName("pom") + ".xml");
-        }
     }
 
     @CommandLine.Command(subcommands = {

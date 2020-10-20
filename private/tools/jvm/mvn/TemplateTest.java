@@ -1,11 +1,38 @@
 package tools.jvm.mvn;
 
+import com.google.common.io.CharSource;
+import lombok.SneakyThrows;
+import org.cactoos.Scalar;
+import org.cactoos.io.InputOf;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 public class TemplateTest {
+
+
+    @SuppressWarnings("UnstableApiUsage")
+    static class PomXPath extends Template.Mustache implements Template {
+
+        public PomXPath(String source, File pom) {
+            super(CharSource.wrap(source).asByteSource(StandardCharsets.UTF_8),
+                    valueOf(new Pom.XPath(new InputOf(pom))));
+        }
+
+        public PomXPath(String source, String pom) {
+            super(CharSource.wrap(source).asByteSource(StandardCharsets.UTF_8),
+                    valueOf(new Pom.XPath((new InputOf(pom)))));
+        }
+
+        @SneakyThrows
+        private static Pom.Props valueOf(Scalar<Pom.Props> xmlIn) {
+            return xmlIn.value();
+        }
+    }
+
 
     @Test
     public void xpath() throws IOException {
@@ -18,7 +45,7 @@ public class TemplateTest {
                 "    <packaging>container-plugin</packaging>\n" +
                 "</project>";
 
-        String s = new Template.PomXPath(
+        String s = new PomXPath(
                 "{{groupId}}-{{artifactId}}", pom
         ).eval().asString();
 
@@ -51,7 +78,7 @@ public class TemplateTest {
                 "    </properties>" +
                 "</project>";
 
-        String s = new Template.PomXPath(
+        String s = new PomXPath(
                 "{{groupId}}-{{artifactId}}", pom
         ).eval().asString();
 

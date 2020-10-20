@@ -1,6 +1,5 @@
-load("//private/ruls/maven:pom.bzl", "declare_pom")
+load("//private/ruls/maven:repository.bzl", "declare_pom")
 load("//private/ruls/maven:repository.bzl", "maven_repository")
-
 
 
 declare_pom(
@@ -18,7 +17,7 @@ declare_pom(
 
 maven_repository(
     name = "repo",
-    deps = [
+    modules = [
         "pom=._mvn-build-lib-one",
         "pom=._mvn-parent-pom"
     ]

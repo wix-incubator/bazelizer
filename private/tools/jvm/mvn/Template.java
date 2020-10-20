@@ -34,55 +34,6 @@ public interface Template {
         final String version;
     }
 
-    @AllArgsConstructor
-    class PomPropsBeanXPath implements Scalar<PomPropsBean> {
-
-        private final Input xmlIn;
-
-        @Override
-        public PomPropsBean value() throws Exception {
-            try (InputStream src = xmlIn.stream()) {
-                XML xml = new XMLDocument(src).registerNs("pom", "http://maven.apache.org/POM/4.0.0");
-                final List<String> namespaces = xml.xpath("/*/namespace::*[name()='']");
-                if (!namespaces.isEmpty()) {
-                    String gid =  xml.xpath("/pom:project/pom:groupId/text()").get(0);
-                    String aid =  xml.xpath("/pom:project/pom:artifactId/text()").get(0);
-                    String v =  xml.xpath("/pom:project/pom:version/text()").get(0);
-                    return new PomPropsBean(gid, aid, v);
-                } else {
-                    String gid =  xml.xpath("/project/groupId/text()").get(0);
-                    String aid =  xml.xpath("/project/artifactId/text()").get(0);
-                    String v =  xml.xpath("/project/version/text()").get(0);
-                    return new PomPropsBean(gid, aid, v);
-                }
-            }
-        }
-    }
-
-
-    /**
-     * Mustache template with data resolved from pom.xml
-     */
-    @SuppressWarnings("UnstableApiUsage")
-    class PomXPath extends Mustache implements Template {
-
-        public PomXPath(String source, File pom) {
-            super(CharSource.wrap(source).asByteSource(StandardCharsets.UTF_8),
-                    valueOf(new PomPropsBeanXPath(new InputOf(pom))));
-        }
-
-        public PomXPath(String source, String pom) {
-            super(CharSource.wrap(source).asByteSource(StandardCharsets.UTF_8),
-                    valueOf(new PomPropsBeanXPath(new InputOf(pom))));
-        }
-
-        @SneakyThrows
-        private static PomPropsBean valueOf(Scalar<PomPropsBean> xmlIn) {
-            return xmlIn.value();
-        }
-    }
-
-
     /**
      * Template envelope via mustache.
      */

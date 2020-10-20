@@ -140,6 +140,22 @@ public interface OutputFile {
         }
     }
 
+    /**
+     * Declared tar of the dir.
+     */
+    class DeclaredTarDir extends DeclaredProc implements OutputFile {
+
+        /**
+         * Ctor.
+         * @param src dir to archive
+         * @param dest dest of archive
+         */
+        public DeclaredTarDir(Path src, String dest) {
+            super(new Archive.TarDirectory(src), dest);
+        }
+    }
+
+
     @ToString
     class TemporaryFileSrc implements OutputFile {
         private final Path dest;

@@ -1,6 +1,7 @@
 package tools.jvm.mvn;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.io.ByteSource;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,9 +26,10 @@ public final class Project {
     private Path pomParent;
     @Builder.Default
     private Path m2Home = getTmpDirectory();
-    private List<OutputFile> outputs;
+    @Builder.Default
+    private List<OutputFile> outputs = Lists.newArrayList();
     private Path baseImage;
-    private ByteSource pomXmlSrc;
+    private ByteSource pomTpl;
     @Builder.Default
     private Args args = new Args();
     private Path pom;
@@ -76,20 +78,37 @@ public final class Project {
 
     public Path pom() {
         if (pom == null) {
-            pom = syntheticPom();
+            pom = syntheticPomFile(workDir);
         }
         return pom;
     }
+
+    static enum POM {
+        INSTANCE;
+
+        private Path syntheticPom(Path workDir) {
+            for (int i = 0; i < 1000; i++) {
+                final Path pom = workDir.resolve(
+                        RandomText.randomFileName("pom-synthetic") + "-" + i + ".xml"
+                );
+                if (Files.notExists(pom)) {
+                    return pom;
+                }
+            }
+            throw new IllegalStateException();
+        }
+    }
+
 
     @SneakyThrows
     private static Path getTmpDirectory() {
         return Files.createTempDirectory("M2_HOME@");
     }
 
-    private Path syntheticPom() {
+    public static Path syntheticPomFile(Path workDir) {
         for (int i = 0; i < 1000; i++) {
-            final Path pom = this.workDir().resolve(
-                    RandomText.randomFileName("pom_synthetic") + "-" + i + ".xml"
+            final Path pom = workDir.resolve(
+                    RandomText.randomFileName("pom-synthetic") + "-" + i + ".xml"
             );
             if (Files.notExists(pom)) {
                 return pom;
