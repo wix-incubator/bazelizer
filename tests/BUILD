@@ -50,16 +50,16 @@ sh_test(
 )
 
 
-#sh_library(
-#    name = "MavenRunDummyLin",
-#    srcs = ["dummy.sh"],
-#    data = ["//tests/integration/mvn-build-lib-one:lib"],
-#)
-#
-#sh_test(
-#    name = "MavenRunLibTest",
-#    srcs = ["test_jar.sh"],
-#    args = ["tests/integration/mvn-build-lib/myapi-1.0.0-SNAPSHOT.jar", "com/mavenizer/examples/jaxbapi/API.class"],
-#    data = [":MavenRunDummyLin"],
-#    deps = [":MavenRunDummyLin"]
-#)
+sh_library(
+    name = "Maven__mvn-build-lib-two",
+    srcs = ["dummy.sh"],
+    data = ["//tests/integration/mvn-build-lib-two"],
+)
+
+sh_test(
+    name = "Maven__mvn-build-lib-two__HasJarTest",
+    srcs = ["test_jar.sh"],
+    args = ["tests/integration/mvn-build-lib-two/libmvn-build-lib-two.jar"],
+    data = [":Maven__mvn-build-lib-two"],
+    deps = [":Maven__mvn-build-lib-two"]
+)

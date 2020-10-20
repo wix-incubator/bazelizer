@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.shared.invoker.DefaultInvocationRequest;
 import org.apache.maven.shared.invoker.DefaultInvoker;
 import org.apache.maven.shared.invoker.InvocationRequest;
+import org.apache.maven.shared.invoker.InvocationResult;
+import org.apache.maven.shared.utils.cli.CommandLineException;
 
 import java.io.File;
 import java.util.Arrays;
@@ -52,8 +54,12 @@ public interface Maven {
                 request.setOffline(true);
             }
 
-            setLogLevel(request);
-            invoker.execute(request);
+            //setLogLevel(request);
+
+            final InvocationResult result = invoker.execute(request);
+            if (result.getExitCode() != 0) {
+                throw new ToolMavenInvocationException(result);
+            }
         }
 
         private static void setLogLevel(InvocationRequest request) {

@@ -56,12 +56,13 @@ _mvn_args_join_str = " "
 
 def _mvn_args(args, ctx):
     if ctx.attr.mvn_flags and len(ctx.attr.mvn_flags) > 0:
-        args.add("--args", _mvn_args_join_str.join(ctx.attr.mvn_flags))
+        args.add("--args", "%s" % _mvn_args_join_str.join(ctx.attr.mvn_flags))
 
 def _mvn_args_as_list(ctx):
     if ctx.attr.mvn_flags and len(ctx.attr.mvn_flags) > 0:
         return ["--args='%s'" % (_mvn_args_join_str.join(ctx.attr.mvn_flags))]
-    else: return []
+    else:
+        return []
 
 def _new_mvn_repository_impl(ctx):
     optional_transitive_inputs = []

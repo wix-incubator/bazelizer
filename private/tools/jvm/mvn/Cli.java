@@ -24,12 +24,19 @@ public class Cli {
     static class ExtraFlags {
 
         @CommandLine.Option(names = {"-a", "--args"}, paramLabel = "ARGS", description = "the maven cli args")
-        public String argsLine;
+        private String argsLine;
 
         Args newArgs() {
             final Args args = new Args();
             if (this.argsLine != null) {
-                args.parseCommandLine(argsLine);
+                String line = argsLine;
+                if (line.startsWith("'") || line.startsWith("\"")) {
+                    line = line.substring(1);
+                }
+                if (line.endsWith("'") || line.endsWith("\"")) {
+                    line = line.substring(0, line.length() - 1);
+                }
+                args.parseCommandLine(line);
             }
             return args;
         }

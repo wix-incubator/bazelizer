@@ -15,6 +15,7 @@ public class ToolOutputNotFoundException extends RuntimeException {
 
     @SneakyThrows
     private static String exists(Path target)  {
+        if (Files.notExists(target)) return "";
         return Files.walk(target, 1)
                 .limit(10).map(Path::toString).collect(Collectors.joining("\n"));
     }
