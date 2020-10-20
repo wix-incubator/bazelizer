@@ -42,7 +42,7 @@ public class ActsTest {
                 .artifactId("AAAA")
                 .groupId("BBBB")
                 .workDir(tmpWorkDir)
-                .pomXmlSrc(ByteSource.wrap(pom.getBytes()))
+                .pomTemplate(ByteSource.wrap(pom.getBytes()))
                 .deps(Lists.newArrayList(new Dep.Simple(null, "xyz", "xyz-aaa", "1.0")))
                 .build();
 

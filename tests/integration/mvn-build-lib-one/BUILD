@@ -1,5 +1,8 @@
 load("//maven:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
 
+exports_files(["pom.xml"])
+
+
 alias(
     name = "mvn-build-lib-one",
     actual = ":lib",
@@ -14,7 +17,7 @@ filegroup(
 create_mvn_buildpack(
     name = "buildpack",
     pom_file = "pom.xml",
-    visibility = ["//visibility:public"]
+    visibility = ["//visibility:public"],
 )
 
 run_mvn_buildpack(

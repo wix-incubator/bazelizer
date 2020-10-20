@@ -1,7 +1,5 @@
 
 
-_M2_REPO_IMG_EXT = ".tar"
-_BASE_POM_NAME = "base_pom.xml"
 _TOOL = Label("//private/tools/jvm/mvn:mvn")
 _MARKER_SRC_DEFAULT_OUTPUT_JAR = "@@TARGET-JAR-OUTPUT@@"
 #_MARKER_TALLY = "@@MVN_ARTIFACT_ALL@@"
@@ -34,8 +32,11 @@ def _rlocation(ctx, file):
 
 
 _common_attr = {
-    "log_level": attr.string(doc="specify log level for the tool")
+    "log_level": attr.string(doc="specify log level for the tool"),
+    "mvn_flags": attr.string_list(),
 }
+
+_common_attr_whitelist = _common_attr.keys()
 
 
 _new_mvn_repository_outputs = {
@@ -50,6 +51,17 @@ _new_mvn_repository_attr = _merged_dict(
         "_tool": attr.label(default = _TOOL, allow_files = True, executable = True, cfg = "host")
     }
 )
+
+_mvn_args_join_str = " "
+
+def _mvn_args(args, ctx):
+    if ctx.attr.mvn_flags and len(ctx.attr.mvn_flags) > 0:
+        args.add("--args", _mvn_args_join_str.join(ctx.attr.mvn_flags))
+
+def _mvn_args_as_list(ctx):
+    if ctx.attr.mvn_flags and len(ctx.attr.mvn_flags) > 0:
+        return ["--args='%s'" % (_mvn_args_join_str.join(ctx.attr.mvn_flags))]
+    else: return []
 
 def _new_mvn_repository_impl(ctx):
     optional_transitive_inputs = []
@@ -66,6 +78,8 @@ def _new_mvn_repository_impl(ctx):
     args.add("repository")
     args.add("--writeImg", archive.path)
     args.add("--pomFile", pom_file_input.path)
+
+    _mvn_args(args, ctx)
 
     if ctx.attr.pom_parent:
         parent_info = ctx.attr.pom_parent[MvnRepositoryInfo]
@@ -140,7 +154,7 @@ def _create_mvn_repository_impl(ctx):
         "--pom={}".format(runfiles_relative_pom_path),
         "--repo={}".format(runfiles_relative_image_path),
         "--parent={}".format(runfiles_relative_parent_pom_path) if has_parent else ""
-    ])
+    ] + _mvn_args_as_list(ctx))
 
     executable = ctx.outputs.executable
     ctx.actions.write(
@@ -192,7 +206,7 @@ def new_create_mvn_buildpack(name, **kwargs):
         **kwargs
     )
 
-    keys = ["log_level", "visibility"]
+    keys = _common_attr_whitelist + ["visibility"]
     kwargs_bypass = { key:value for (key,value) in kwargs.items() if key in keys}
 
     create_mvn_buildpack_executable(
@@ -215,7 +229,6 @@ _run_mvn_buildpack_attr = _merged_dict(
         "outputs": attr.string_list(),
         "artifactId": attr.string(),
         "groupId": attr.string(),
-        "args": attr.string_list(),
         "buildpack": attr.label(
             mandatory = True,
             allow_files = True,

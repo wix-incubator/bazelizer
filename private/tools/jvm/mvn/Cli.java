@@ -1,7 +1,6 @@
 package tools.jvm.mvn;
 
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.ByteSource;
@@ -17,21 +16,83 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Slf4j
 public class Cli {
 
-    public static class Local {
 
-        @CommandLine.Option(names = {"--localRepo"}, paramLabel = "PATH", description = "the local repo path")
-        public Path pomFile;
+    static class ExtraFlags {
+
+        @CommandLine.Option(names = {"-a", "--args"}, paramLabel = "ARGS", description = "the maven cli args")
+        public String argsLine;
+
+        Args newArgs() {
+            final Args args = new Args();
+            if (this.argsLine != null) {
+                args.parseCommandLine(argsLine);
+            }
+            return args;
+        }
     }
 
+    @SuppressWarnings({"UnstableApiUsage", "unused"})
+    @CommandLine.Command(name = "build-repository")
+    public static class MkRepository implements Runnable {
+
+        public static final String GROUP_ID = "io.bazelbuild";
+
+        @CommandLine.Option(names = {"-pt", "--pomFile"}, required = false,
+                paramLabel = "POM", description = "the pom xml template file")
+        public Path runPom;
+
+        @CommandLine.Option(names = {"-wi", "--writeImg"}, required = false,
+                paramLabel = "PATH", description = "desired output for repo snapshot")
+        public Path writeImg;
+
+        @CommandLine.Option(names = {"--def"}, description = "Rule specific output settings")
+        public Path pomDeclarations;
+
+        @SneakyThrows
+        @Override
+        public void run() {
+            final Maven maven = new Maven.BazelInvoker();
+
+            final Project simple = Project.builder().build();
+
+            simple.outputs().add(
+                    new OutputFile.DeclaredTarDir(
+                            simple.repository(),
+                            writeImg.toString()
+                    )
+            );
+
+            new Act.Iterative(
+                    new Acts.SettingsXml(),
+                    new Projects(
+                            pomDeclarations,
+                            new Act.Iterative(
+                                    new Acts.ParentPOM(),
+                                    new Acts.POM(),
+                                    new Acts.MvnGoOffline(
+                                            maven
+                                    )
+                            )
+                    ),
+                    new Acts.Outputs()
+            ).accept(simple);
+        }
+
+        private ByteSource getPomXmlSrc() {
+            return Files.asByteSource(runPom.toFile());
+        }
+    }
 
     @SuppressWarnings({"UnstableApiUsage", "unused"})
     @CommandLine.Command(name = "repository")
     public static class Repository implements Runnable {
+
+        @CommandLine.Mixin
+        public ExtraFlags extraFlags = new ExtraFlags();
 
         public static final String GROUP_ID = "io.bazelbuild";
         @CommandLine.Option(names = {"-pt", "--pomFile"}, paramLabel = "POM", description = "the pom xml template file")
@@ -50,12 +111,13 @@ public class Cli {
         @Override
         public void run() {
             final Project project = Project.builder()
-                    .pomXmlSrc(getPomXmlSrc())
+                    .pomTemplate(getPomXmlSrc())
                     .groupId(GROUP_ID)
                     .artifactId("id-" + RandomText.randomLetters(6))
                     .workDir(pomFile.getParent())
                     .outputs(Lists.newArrayList())
                     .pomParent(parentPomFile)
+                    .args(extraFlags.newArgs())
                     .build();
 
             project.outputs().add(new OutputFile.DeclaredProc(
@@ -73,7 +135,7 @@ public class Cli {
                     new Acts.POM(),
                     new Acts.MvnGoOffline(
                             new Maven.BazelInvoker()
-                    ),
+                    ).compile(true),
                     new Acts.Outputs()
             ).accept(project);
         }
@@ -84,9 +146,13 @@ public class Cli {
     }
 
 
+
     @SuppressWarnings({"unused", "UnstableApiUsage"})
     @CommandLine.Command(name = "build")
     public static class Build implements Runnable {
+
+        @CommandLine.Mixin
+        public ExtraFlags extraFlags = new ExtraFlags();
 
         @CommandLine.Option(names = {"-pt", "--pom"}, required = true,
                 paramLabel = "POM", description = "the pom xml template file")
@@ -103,9 +169,6 @@ public class Cli {
                 required = true,
                 description = "the srcs manifest")
         public File srcs;
-
-        @CommandLine.Option(names = {"-a", "--args"}, paramLabel = "ARGS", description = "the maven cli args")
-        public String args;
 
         @CommandLine.Option(names = {"-ai", "--groupId"}, defaultValue = "groupId",
                 paramLabel = "ID", description = "the maven groupId")
@@ -129,11 +192,8 @@ public class Cli {
         @lombok.SneakyThrows
         public void run() {
             final Path workDir = getWorkDir();
-            final Path pom = getPomFileDest(workDir);
-            final Args args = new Args();
-            if (this.args != null) {
-                Stream.of(this.args.split(" ")).forEach(args::append);
-            }
+            final Path pom = Project.syntheticPomFile(workDir);
+            final Args args = extraFlags.newArgs();
 
             final Project project = Project.builder()
                     .artifactId(artifactId)
@@ -143,7 +203,7 @@ public class Cli {
                     .args(args)
                     .deps(getDeps())
                     .workDir(workDir)
-                    .pomXmlSrc(Files.asByteSource(pomXmlTpl.toFile()))
+                    .pomTemplate(Files.asByteSource(pomXmlTpl.toFile()))
                     .outputs(outputs.entrySet()
                             .stream()
                             .map(entry -> {
@@ -180,14 +240,12 @@ public class Cli {
             return new Deps.Manifest(srcs).resolveCommonPrefix();
         }
 
-        private Path getPomFileDest(Path workDir) {
-            return workDir.resolve(RandomText.randomFileName("pom") + ".xml");
-        }
     }
 
     @CommandLine.Command(subcommands = {
             Build.class,
-            Repository.class
+            Repository.class,
+            MkRepository.class
     })
     public static class Tool {
     }

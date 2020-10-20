@@ -67,7 +67,7 @@ public interface Archive extends Proc<Output> {
 
         private final Archive archive;
 
-        public TarDirectory(Path dir) throws IOException {
+        public TarDirectory(Path dir)  {
             archive = in -> new Archive.TAR(
                     Archive.listFiles(dir),
                     file -> dir.relativize(file.toPath())

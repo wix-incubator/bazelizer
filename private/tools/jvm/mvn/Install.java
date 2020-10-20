@@ -8,6 +8,8 @@ import org.cactoos.Proc;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 
 public interface Install extends Proc<Path> {
 
@@ -68,7 +70,7 @@ public interface Install extends Proc<Path> {
         @Override
         public void exec(Path repo) throws Exception {
             Path jarFile = dep.artifactFolder(repo).resolve(dep.artifactId() + "-" + dep.version() + ".jar");
-            Files.copy(dep.source(), jarFile);
+            Files.copy(dep.source(), jarFile, StandardCopyOption.REPLACE_EXISTING);
         }
     }
 

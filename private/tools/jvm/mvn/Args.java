@@ -1,24 +1,36 @@
 package tools.jvm.mvn;
 
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import lombok.AccessLevel;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import lombok.experimental.Accessors;
+import org.apache.maven.shared.invoker.DefaultInvocationRequest;
+import org.apache.maven.shared.invoker.InvocationRequest;
+import picocli.CommandLine;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Args.
  */
 @Accessors(fluent = true)
-public class Args implements Iterable<String>  {
-    private final ArrayDeque<String> args = new ArrayDeque<>();
+public class Args  {
+    private final List<String> goals = Lists.newArrayList();
+    private final List<String> profiles = Lists.newArrayList();
+
+
+    private static class CmdFlags {
+        @CommandLine.Option(names = {"-P", "--active-profiles"}, split = ",")
+        public List<String> profiles = Lists.newArrayList();
+
+        @CommandLine.Option(names = {"-go", "--goals"}, split = ",")
+        public List<String> goals = Lists.newArrayList();
+    }
 
     @Setter
     @Getter
@@ -31,48 +43,50 @@ public class Args implements Iterable<String>  {
      */
     @SuppressWarnings("UnusedReturnValue")
     public Args append(String...s) {
-        for (String ss : s) {
-            args.addLast(ss);
-        }
-        args.addAll(Arrays.asList(s));
+        goals.addAll(Arrays.asList(s));
         return this;
     }
 
     /**
-     * Add args to set.
-     * @param s args
-     * @return this
+     * Append from command line string.
+     * @param cmdLine line
+     * @return args
      */
     @SuppressWarnings("UnusedReturnValue")
-    public Args prepend(String...s) {
-        for (String ss : s) {
-            args.addFirst(ss);
-        }
+    public Args parseCommandLine(String cmdLine) {
+        final String[] flags = cmdLine.split(" ");
+        final CmdFlags params = resolve(flags);
+
+        this.goals.addAll(params.goals);
+        this.profiles.addAll(params.profiles);
         return this;
     }
 
-    /**
-     * Print args as array.
-     * @return array
-     */
-    public String[] toArray() {
-        int i = 0;
-        final LinkedHashSet<String> args = Sets.newLinkedHashSet(this.args);
-        final String[] arr = new String[args.size()];
-        for (String arg : args) {
-            arr[i++] = arg;
+    private CmdFlags resolve(String[] flags) {
+        final CmdFlags params;
+        try {
+            params = new CmdFlags();
+            final CommandLine.ParseResult result = new CommandLine(params).parseArgs(flags);
+            Preconditions.checkState(!result.isUsageHelpRequested());
+            Preconditions.checkState(!result.isVersionHelpRequested());
+        } catch (CommandLine.ParameterException e) {
+            throw new IllegalStateException("Args: flags not valid: " + e.getMessage() + ". " + Arrays.toString(flags));
         }
-        return arr;
+        return params;
+    }
+
+    public InvocationRequest toInvocationRequest() {
+        final DefaultInvocationRequest request = new DefaultInvocationRequest();
+        request.setGoals(Lists.newArrayList(Sets.newLinkedHashSet(goals)));
+        request.setProfiles(Lists.newArrayList(Sets.newLinkedHashSet(profiles)));
+        return request;
     }
 
     @Override
     public String toString() {
-        return Joiner.on(" ").join(this);
-    }
+        return "Args{"
+                + goals.stream().map(s -> "--goals=" + s).collect(Collectors.joining(" ")) + " "
+                + profiles.stream().map(s -> "--active-profiles=" + s).collect(Collectors.joining(" ")) + "}";
 
-
-    @Override
-    public Iterator<String> iterator() {
-        return Sets.newLinkedHashSet(args).iterator();
     }
 }
