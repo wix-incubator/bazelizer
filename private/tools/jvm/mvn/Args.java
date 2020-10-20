@@ -25,6 +25,13 @@ public class Args  {
     private final List<String> goals = Lists.newArrayList();
     private final List<String> profiles = Lists.newArrayList();
 
+    public Args() {
+    }
+
+    public Args(Args args) {
+        this.goals.addAll(args.goals);
+        this.profiles.addAll(args.profiles);
+    }
 
     @CommandLine.Command(name = "")
     private static class CmdFlags {
@@ -73,10 +80,6 @@ public class Args  {
             Preconditions.checkState(!result.isUsageHelpRequested());
             Preconditions.checkState(!result.isVersionHelpRequested());
         } catch (CommandLine.ParameterException e) {
-            final StringWriter out = new StringWriter();
-            e.getCommandLine().getHelp().fullSynopsis();
-            e.getCommandLine().usage(new PrintWriter(out));
-
             throw new ToolException("[Args] flags " +Arrays.toString(flags)   + " not valid: "
                     + e.getMessage() + "\n correct flags: "
                     + e.getCommandLine().getHelp().synopsis(0)
