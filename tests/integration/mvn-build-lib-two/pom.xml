@@ -1,9 +1,13 @@
 <project>
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.mavenizer.examples-single.lib</groupId>
-    <artifactId>myapi-single</artifactId>
+    <artifactId>myapi-single-v2</artifactId>
     <version>1.0.0</version>
 
+    <properties>
+        <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
+        <java-version>1.6</java-version>
+    </properties>
 
     <dependencies>
         {{#deps}}
@@ -22,11 +26,22 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
+                    <source>${java-version}</source>
+                    <target>${java-version}</target>
                 </configuration>
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>my_profile</id>
+
+            <properties>
+                <java-version>1.8</java-version>
+            </properties>
+        </profile>
+    </profiles>
 </project>

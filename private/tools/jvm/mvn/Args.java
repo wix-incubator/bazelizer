@@ -12,6 +12,8 @@ import org.apache.maven.shared.invoker.DefaultInvocationRequest;
 import org.apache.maven.shared.invoker.InvocationRequest;
 import picocli.CommandLine;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -24,11 +26,12 @@ public class Args  {
     private final List<String> profiles = Lists.newArrayList();
 
 
+    @CommandLine.Command(name = "")
     private static class CmdFlags {
         @CommandLine.Option(names = {"-P", "--active-profiles"}, split = ",")
         public List<String> profiles = Lists.newArrayList();
 
-        @CommandLine.Option(names = {"-go", "--goals"}, split = ",")
+        @CommandLine.Option(names = {"--goals"}, split = ",")
         public List<String> goals = Lists.newArrayList();
     }
 
@@ -70,7 +73,14 @@ public class Args  {
             Preconditions.checkState(!result.isUsageHelpRequested());
             Preconditions.checkState(!result.isVersionHelpRequested());
         } catch (CommandLine.ParameterException e) {
-            throw new IllegalStateException("Args: flags not valid: " + e.getMessage() + ". " + Arrays.toString(flags));
+            final StringWriter out = new StringWriter();
+            e.getCommandLine().getHelp().fullSynopsis();
+            e.getCommandLine().usage(new PrintWriter(out));
+
+            throw new ToolException("[Args] flags " +Arrays.toString(flags)   + " not valid: "
+                    + e.getMessage() + "\n correct flags: "
+                    + e.getCommandLine().getHelp().synopsis(0)
+            );
         }
         return params;
     }
