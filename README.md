@@ -75,14 +75,14 @@ Usage
 ```
 create_mvn_buildpack(
     name = "MyMavenImage",
-    pom_file_init_src = "pom.xml"
+    pom_file = "pom.xml"
 )
 ```
   
 | attr name  | description  |
 |---|---|
 | name  | Name; required. A unique name for this target.  |
-| pom_file_init_src  | File; Reference to an skeleton pom.     |
+| pom_file  | File; Reference to an skeleton pom.     |
 
 
 **Important to know**: this rule execute dry run of a build by empty project directory + given pom.
