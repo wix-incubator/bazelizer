@@ -92,6 +92,10 @@ public class Args  {
         final DefaultInvocationRequest request = new DefaultInvocationRequest();
         request.setGoals(Lists.newArrayList(Sets.newLinkedHashSet(goals)));
         request.setProfiles(Lists.newArrayList(Sets.newLinkedHashSet(profiles)));
+
+        if (offline)
+            request.setOffline(true);
+
         return request;
     }
 

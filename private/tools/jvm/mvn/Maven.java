@@ -50,11 +50,7 @@ public interface Maven {
             request.setLocalRepositoryDirectory(build.repository().toFile());
             request.setBatchMode(true);
 
-            if (build.args().offline()) {
-                request.setOffline(true);
-            }
-
-            //setLogLevel(request);
+            setLogLevel(request);
 
             final InvocationResult result = invoker.execute(request);
             if (result.getExitCode() != 0) {
@@ -68,11 +64,9 @@ public interface Maven {
                     Properties properties = request.getProperties();
                     if (properties == null) {
                         properties = new Properties();
-                        request.setProperties(properties);
                     }
-                    final Properties props = new Properties();
-                    props.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "WARN");
-                    request.setProperties(props);
+                    properties.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "WARN");
+                    request.setProperties(properties);
                     break;
                 case INFO:
                 case DEBUG: break;

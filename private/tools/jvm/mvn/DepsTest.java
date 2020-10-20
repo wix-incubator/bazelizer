@@ -51,8 +51,8 @@ public class DepsTest {
                         "{\"path\": \"/foo/bar/roo/X.java\"}")
         );
         final Path path = col.resolveCommonPrefix();
-        Assert.assertEquals("col="+col, Paths.get("foo/bar"), path);
-        Assert.assertEquals("col="+col, Paths.get("/foo/bar/baz/A.java"), col.paths().findFirst().get());
+        Assert.assertEquals(Paths.get("foo/bar"), path);
+        Assert.assertEquals(Paths.get("/foo/bar/baz/A.java"), col.paths().findFirst().get());
     }
 
 
@@ -63,7 +63,7 @@ public class DepsTest {
                 "{\"path\": \"bazel-out/darwin-fastbuild/bin/tests/integration/lib/src/com/mavenizer/examples/subliby/libsubliby.jar\"}"
         ));
 
-        Assert.assertEquals("col="+col, Paths.get(
+        Assert.assertEquals( Paths.get(
                 "bazel-out/darwin-fastbuild/bin/tests/integration/lib/src/com/mavenizer/examples/subliby/libsubliby.jar"), col.paths().findFirst().get());
     }
 

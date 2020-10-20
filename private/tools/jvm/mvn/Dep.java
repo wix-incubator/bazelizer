@@ -1,6 +1,7 @@
 package tools.jvm.mvn;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Streams;
@@ -69,7 +70,6 @@ public interface Dep {
 
 
     @SuppressWarnings("unused")
-    @Data
     @NoArgsConstructor
     @EqualsAndHashCode(of = {"path", "tags"})
     class DepArtifact implements Dep {
@@ -123,7 +123,6 @@ public interface Dep {
             return tags.getOrDefault("scope", "compile");
         }
 
-        @SuppressWarnings("UnstableApiUsage")
         @SneakyThrows
         private Dep original() {
             final String extension = FilenameUtils.getExtension(path.getFileName().toString());
@@ -145,6 +144,17 @@ public interface Dep {
             throw new IllegalStateException("not supported extension for " + path);
         }
 
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(DepArtifact.class)
+                    .add("groupId", cached.get().groupId())
+                    .add("artifactId", cached.get().artifactId())
+                    .add("version", cached.get().version())
+                    .add("scope", cached.get().scope())
+                    .add("source", cached.get().source())
+                    .add("tags", cached.get().tags())
+                    .toString();
+        }
     }
 
 
@@ -200,16 +210,14 @@ public interface Dep {
         private final Map<String,String> tags;
 
         @SuppressWarnings("Guava")
-        private Supplier<Path> cachedArtifactFolder;
+        private Path cachedArtifactFolder;
 
         @Override
         public Path artifactFolder(Path repo) {
             if (cachedArtifactFolder == null) {
-                cachedArtifactFolder = Suppliers.memoize(() -> {
-                    return Dep.super.artifactFolder(repo);
-                });
+                cachedArtifactFolder = Dep.super.artifactFolder(repo);
             }
-            return cachedArtifactFolder.get();
+            return cachedArtifactFolder;
         }
 
         public Simple(File file, String gid, String aid, String v, Map<String, String> tags) {
