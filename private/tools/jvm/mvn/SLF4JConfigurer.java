@@ -83,12 +83,6 @@ public class SLF4JConfigurer extends ContextAwareBase implements Configurator {
         setLoggers(logLevel, rootLog);
     }
 
-    private static void setLoggers(ToolLogLevel logLevel) {
-        final LoggerContext logCtx = (LoggerContext) LoggerFactory.getILoggerFactory();
-        Logger rootLog = logCtx.getLogger(Logger.ROOT_LOGGER_NAME);
-        setLoggers(logLevel, rootLog);
-    }
-
     private static void setLoggers(ToolLogLevel logLevel, Logger toolLog) {
         switch (logLevel) {
             case OFF:
