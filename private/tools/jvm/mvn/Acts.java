@@ -17,7 +17,6 @@ import org.apache.commons.io.filefilter.IOFileFilter;
 import org.cactoos.Text;
 import org.cactoos.func.UncheckedProc;
 import org.cactoos.io.InputOf;
-import org.cactoos.io.OutputTo;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -194,61 +193,37 @@ public final class Acts {
                 Archive.extractTar(image, repository);
             if (log.isDebugEnabled()) {
                 log.debug("Repository state:");
-                Files.find(repository, 30, (f,attr) -> !attr.isDirectory()).forEach(file -> {
-                    log.debug(" {}", repository.relativize(file) );
-                });
+                Files.find(repository, 30, (f,attr) -> !attr.isDirectory()).forEach(file ->
+                        log.debug(" {}", repository.relativize(file) ));
             }
 
             return project;
         }
     }
 
-    /**
-     * Create snapshot from the repository.
-     */
-    @Slf4j
-    @Deprecated
-    static class RepositoryArchiver implements Act {
-
-        @Override
-        @lombok.SneakyThrows
-        public Project accept(Project project) {
-            final Path m2Home = project.m2Home();
-            final Path src = m2Home.resolve("repository");
-            final String dest = Iterables.getOnlyElement(project.outputs()).src();
-            log.debug("Archive: src={} dest={}", src, dest);
-            final File destFile = new File(dest);
-            new Archive.TarDirectory(src).exec(
-                    new OutputTo(destFile)
-            );
-            log.info("Repository archive created: {}", FileUtils.byteCountToDisplaySize(destFile.length()));
-            return project;
-        }
-    }
 
     /**
      * Resolve relative path to optional parent project.
      */
-    @SuppressWarnings({"UnstableApiUsage", "ResultOfMethodCallIgnored"})
+    @SuppressWarnings({"ResultOfMethodCallIgnored"})
     @Slf4j
-    static class ParentPOM implements Act {
+    static class CopyParentPOM implements Act {
 
         @SneakyThrows
         @Override
         public Project accept(Project project) {
             final Path origParent = project.pomParent();
-            final Path parentPomDir = Optional.ofNullable(System.getProperty("tools.jvm.mvn.BazelLabelName"))
-                    .map(name -> {
-                        final String hashedLabel = Hashing.murmur3_32().hashString(name,
-                                StandardCharsets.UTF_8).toString();
+            final Path parentPomDir = SysProps.labelHex()
+                    .map(hashedLabel -> {
                         final Path workDir = project.workDir();
                         final Path parentDir = workDir.resolve("_parent_" + hashedLabel);
                         final File file = parentDir.toFile();
                         file.mkdir();
+                        file.deleteOnExit();
                         return parentDir;
                     }).orElseGet(() -> {
                         final Path workDir = project.workDir();
-                        final Path parentDir = workDir.resolve(RandomText.randomFileName("parent"));
+                        final Path parentDir = workDir.resolve(RandomText.randomFileName("_parent_"));
                         final File file = parentDir.toFile();
                         file.mkdir();
                         file.deleteOnExit();
@@ -300,8 +275,6 @@ public final class Acts {
         public static final String FLAG_DEF_JAR = "@DEF_JAR";
 
         public static final String FLAG_PKG = "@DEF_PKG";
-
-        public static final String FLAG_MVN_COORDS = "@MVN_COORDS";
 
         private final Map<String,String> settings;
 

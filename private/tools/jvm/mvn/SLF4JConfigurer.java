@@ -10,8 +10,10 @@ import ch.qos.logback.core.*;
 import ch.qos.logback.core.spi.ContextAwareBase;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import java.util.Optional;
+import java.util.function.Supplier;
 
 public class SLF4JConfigurer extends ContextAwareBase implements Configurator {
     private static ToolLogLevel root = ToolLogLevel.OFF;
@@ -22,6 +24,30 @@ public class SLF4JConfigurer extends ContextAwareBase implements Configurator {
 
     private synchronized static void setLogLevel(ToolLogLevel l) {
         root = l;
+    }
+
+
+    /**
+     * MDC log.
+     * @param act act
+     */
+    @SuppressWarnings("UnusedReturnValue")
+    public static <V> V withMDC(Supplier<V> act) {
+        try (MDC.MDCCloseable c = MDC.putCloseable("id", SysProps.label().orElse(""))) {
+            return act.get();
+        }
+    }
+
+    /**
+     * MDC log.
+     * @param act act
+     */
+    @SuppressWarnings("unused")
+    public static void withMDC(Runnable act) {
+        withMDC(() -> {
+            act.run();
+            return null;
+        });
     }
 
     enum ToolLogLevel {
@@ -58,7 +84,7 @@ public class SLF4JConfigurer extends ContextAwareBase implements Configurator {
 
     @Override
     public void configure(LoggerContext logCtx) {
-        String logLvl = System.getProperty("tools.jvm.mvn.LogLevel");
+        String logLvl = SysProps.logLevel().orElse("OFF");
         ToolLogLevel logLevel = ToolLogLevel.find(logLvl).orElse(ToolLogLevel.OFF);
         System.out.println("tools.jvm.mvn.LogLevel=" + logLevel);
         setLogLevel(logLevel);
@@ -68,7 +94,7 @@ public class SLF4JConfigurer extends ContextAwareBase implements Configurator {
     private void initLoggers(LoggerContext logCtx, ToolLogLevel logLevel) {
         PatternLayoutEncoder logEncoder = new PatternLayoutEncoder();
         logEncoder.setContext(logCtx);
-        logEncoder.setPattern("%d{HH:mm:ss.SSS} %-5level [class=%logger{0}] - %msg%n");
+        logEncoder.setPattern("%-5level %X{id} [class=%logger{0}] - %msg%n");
         logEncoder.start();
 
         ConsoleAppender<ILoggingEvent> logConsoleAppender = new ConsoleAppender<>();

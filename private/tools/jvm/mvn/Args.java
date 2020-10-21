@@ -1,6 +1,7 @@
 package tools.jvm.mvn;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -101,9 +102,10 @@ public class Args  {
 
     @Override
     public String toString() {
-        return "Args{"
-                + goals.stream().map(s -> "--goals=" + s).collect(Collectors.joining(" ")) + " "
-                + profiles.stream().map(s -> "--active-profiles=" + s).collect(Collectors.joining(" ")) + "}";
-
+        return Joiner.on(" ").join(
+                offline ? "--offline" : "",
+                Optional.of(profiles).filter(d -> !d.isEmpty()).map(d -> "-P " + String.join(",", d)).orElse(""),
+                String.join(" ", goals)
+        ).trim();
     }
 }

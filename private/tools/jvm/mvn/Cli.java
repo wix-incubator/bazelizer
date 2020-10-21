@@ -7,6 +7,7 @@ import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FileUtils;
 import picocli.CommandLine;
 
 import java.io.File;
@@ -21,7 +22,7 @@ import java.util.stream.Collectors;
 public class Cli {
 
 
-    static class ExtraFlags {
+    static class ArgsFactory {
 
         @CommandLine.Option(names = {"-a", "--args"}, paramLabel = "ARGS", description = "the maven cli args")
         private String argsLine;
@@ -63,7 +64,6 @@ public class Cli {
         @Override
         public void run() {
             final Maven maven = new Maven.BazelInvoker();
-
             final Project simple = Project.builder().build();
 
             simple.outputs().add(
@@ -75,10 +75,10 @@ public class Cli {
 
             new Act.Iterative(
                     new Acts.SettingsXml(),
-                    new ActProjects(
-                            pomDeclarations,
+                    new ActAssemble(
+                            new Builds.PomDefsManifest(pomDeclarations),
                             new Act.Iterative(
-                                    new Acts.ParentPOM(),
+                                    new Acts.CopyParentPOM(),
                                     new Acts.POM(),
                                     new Acts.MvnGoOffline(
                                             maven
@@ -87,8 +87,12 @@ public class Cli {
                     ),
                     new Acts.Outputs()
             ).accept(simple);
+
+            log.info("Consolidated repository archived: "
+                    + FileUtils.byteCountToDisplaySize(writeImg.toFile().length()));
         }
 
+        @SuppressWarnings("UnstableApiUsage")
         private ByteSource getPomXmlSrc() {
             return Files.asByteSource(runPom.toFile());
         }
@@ -99,7 +103,7 @@ public class Cli {
     public static class Repository implements Runnable {
 
         @CommandLine.Mixin
-        public ExtraFlags extraFlags = new ExtraFlags();
+        public ArgsFactory argsFactory = new ArgsFactory();
 
         public static final String GROUP_ID = "io.bazelbuild";
         @CommandLine.Option(names = {"-pt", "--pomFile"}, paramLabel = "POM", description = "the pom xml template file")
@@ -124,7 +128,7 @@ public class Cli {
                     .workDir(pomFile.getParent())
                     .outputs(Lists.newArrayList())
                     .pomParent(parentPomFile)
-                    .args(extraFlags.newArgs())
+                    .args(argsFactory.newArgs())
                     .build();
 
             project.outputs().add(new OutputFile.DeclaredProc(
@@ -137,7 +141,7 @@ public class Cli {
                     new Acts.Repository(
                             parentPomImg
                     ),
-                    new Acts.ParentPOM(),
+                    new Acts.CopyParentPOM(),
                     new Acts.InstallParentPOM(),
                     new Acts.POM(),
                     new Acts.MvnGoOffline(
@@ -159,7 +163,7 @@ public class Cli {
     public static class Build implements Runnable {
 
         @CommandLine.Mixin
-        public ExtraFlags extraFlags = new ExtraFlags();
+        public ArgsFactory argsFactory = new ArgsFactory();
 
         @CommandLine.Option(names = {"-pt", "--pom"}, required = true,
                 paramLabel = "POM", description = "the pom xml template file")
@@ -200,7 +204,7 @@ public class Cli {
         public void run() {
             final Path workDir = getWorkDir();
             final Path pom = Project.syntheticPomFile(workDir);
-            final Args args = extraFlags.newArgs();
+            final Args args = argsFactory.newArgs();
 
             final Project project = Project.builder()
                     .artifactId(artifactId)
@@ -227,7 +231,7 @@ public class Cli {
                     ),
                     new Acts.SettingsXml(),
                     new Acts.Deps(),
-                    new Acts.ParentPOM(),
+                    new Acts.CopyParentPOM(),
                     new Acts.POM(),
                     new Acts.MvnBuild(
                             new Maven.BazelInvoker()

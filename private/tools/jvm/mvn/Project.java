@@ -85,26 +85,10 @@ public final class Project {
         return pom;
     }
 
-    static enum POM {
-        INSTANCE;
-
-        private Path syntheticPom(Path workDir) {
-            for (int i = 0; i < 1000; i++) {
-                final Path pom = workDir.resolve(
-                        RandomText.randomFileName("pom-synthetic") + "-" + i + ".xml"
-                );
-                if (Files.notExists(pom)) {
-                    return pom;
-                }
-            }
-            throw new IllegalStateException();
-        }
-    }
-
-
     @SneakyThrows
     private static Path getTmpDirectory() {
-        return Files.createTempDirectory("M2_HOME@");
+        final String dirName = SysProps.labelHex().map(n -> n + "__M2_HOME@").orElse("M2_HOME@");
+        return Files.createTempDirectory(dirName);
     }
 
     public static Path syntheticPomFile(Path workDir) {
@@ -117,5 +101,9 @@ public final class Project {
             }
         }
         throw new IllegalStateException();
+    }
+
+    public static String name(Path pom) {
+        return SysProps.labelHex().orElse("");
     }
 }
