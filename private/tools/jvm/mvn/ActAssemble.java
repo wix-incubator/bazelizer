@@ -14,6 +14,7 @@ import static com.google.common.io.Files.asByteSource;
 
 @AllArgsConstructor
 @Slf4j
+@SuppressWarnings({"UnstableApiUsage", "RedundantSuppression"})
 public class ActAssemble implements Act {
 
     /**
@@ -31,20 +32,21 @@ public class ActAssemble implements Act {
     public Project accept(Project simple) {
         final Iterable<Builds.BuildNode> builds = new Builds.PreOrderGraph(def);
 
+        log.info("Evaluate:\n{}", builds);
+
         for (Builds.BuildNode node : builds) {
             final Builds.DefPom pom = node.getSelf();
             final Path pomFile = pom.getFile();
             final Path parent = pomFile.getParent();
 
             try (MDC.MDCCloseable m = MDC.putCloseable("id", mdc(pomFile))) {
-                @SuppressWarnings("UnstableApiUsage")
                 final Project build = Project.builder()
                         .workDir(parent)
                         .pomTemplate(asByteSource(pomFile.toAbsolutePath().toFile()))
                         .pomParent(pom.getParentFile() != null ? pom.getParentFile().toAbsolutePath() : null)
                         .build();
 
-                log.info("Evaluate build {}", node);
+                log.info("running build {}", node);
 
                 act.accept(
                         build.toBuilder().m2Home(simple.m2Home()).build()
@@ -60,7 +62,6 @@ public class ActAssemble implements Act {
         String s;
         if (count > 3) {
             s = "../" + pomFile.subpath(count - 2, count);
-            return s;
         } else {
             s = pomFile.toString();
         }

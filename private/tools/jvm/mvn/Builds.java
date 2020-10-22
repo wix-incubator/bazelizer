@@ -1,22 +1,21 @@
 package tools.jvm.mvn;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.*;
 import com.google.gson.annotations.SerializedName;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.ToString;
 import lombok.experimental.Delegate;
-import org.cactoos.Text;
-import org.cactoos.text.UncheckedText;
+import lombok.var;
 
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public interface Builds extends Iterable<Builds.BuildNode> {
@@ -77,17 +76,25 @@ public interface Builds extends Iterable<Builds.BuildNode> {
     /**
      * Source of pom definitions
      */
-    class PomDefsManifest implements Iterable<DefPom> {
+    class DefPomIterable implements Iterable<DefPom> {
 
         @Delegate
         private final Iterable<DefPom> iter;
 
         @SuppressWarnings("StaticPseudoFunctionalStyleMethod")
-        public PomDefsManifest(Path pomDefFile) {
-            this.iter = () -> Iterables.transform(
-                    new ManifestFile(pomDefFile),
-                    DefPom::deserialize
-            ).iterator();
+        public DefPomIterable(Path pomDefFile) {
+            this.iter = new Iterable<DefPom>() {
+
+                @SuppressWarnings("Guava")
+                final Supplier<Iterable<String>> mem = Suppliers.memoize(() ->
+                        Lists.newArrayList(new ManifestFile(pomDefFile)));
+
+                @SuppressWarnings("NullableProblems")
+                @Override
+                public Iterator<DefPom> iterator() {
+                    return Iterables.transform(mem.get(), DefPom::deserialize).iterator();
+                }
+            };
         }
     }
 

@@ -8,8 +8,6 @@ import java.util.function.Supplier;
 
 public class SysProps {
 
-
-
     @SuppressWarnings("UnstableApiUsage")
     public static Optional<String> labelHex() {
         return Optional.ofNullable(System.getProperty("tools.jvm.mvn.BazelLabelName"))

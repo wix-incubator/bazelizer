@@ -44,7 +44,7 @@ public interface OutputFile {
 
 
     /**
-     * Write declired output for a project.
+     * Write declared output for the project.
      * @param project project
      */
     default void exec(Project project)  {
@@ -88,6 +88,7 @@ public interface OutputFile {
     @AllArgsConstructor
     @ToString
     class Declared implements OutputFile {
+
         private final File src;
         private final String dest;
 

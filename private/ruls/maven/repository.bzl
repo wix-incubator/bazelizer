@@ -2,6 +2,7 @@
 PomDeclarationInfo = provider(fields = {
     "file": "",
     "parent_file": "",
+    "flags": "",
     "deps": "",
 })
 
@@ -21,6 +22,7 @@ def _declare_pom_impl(ctx):
         PomDeclarationInfo(
             file = pom_file,
             parent_file = parent_file,
+            flags = ctx.attr.mvn_flags,
             deps = depset(direct=[pom_file], transitive = transitive_deps)
         )
     ]
@@ -35,6 +37,11 @@ declare_pom = rule(
     }
 )
 
+RepositoryInfo = provider(fields={
+    "img": """
+Consolidated M2 repository for all registered modules
+"""
+})
 
 _BuildDef = provider(fields={
     "file": "pom file",

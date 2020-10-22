@@ -3,7 +3,6 @@ package tools.jvm.mvn;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.hash.Hashing;
 import lombok.AllArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
@@ -207,7 +206,7 @@ public final class Acts {
      */
     @SuppressWarnings({"ResultOfMethodCallIgnored"})
     @Slf4j
-    static class CopyParentPOM implements Act {
+    static class ParentPOM implements Act {
 
         @SneakyThrows
         @Override
@@ -264,12 +263,87 @@ public final class Acts {
         }
     }
 
+    /**
+     * Write default outputs of maven build: jar file and installed data.
+     */
+    @AllArgsConstructor
+    @Slf4j
+    static class AppendDefaultOutputs implements Act {
+
+        /**
+         * Declared jar path
+         */
+        private final Path jar;
+
+        /**
+         * Declared tar archive.
+         */
+        private final Path artifact;
+
+        @Override
+        public Project accept(Project project) {
+            final List<OutputFile> newOutputFiles = Lists.newArrayListWithCapacity(2);
+            final Pom.Props bean = project.getPomProps();
+
+            final IOFileFilter artifactFilter = FileFilterUtils.and(
+                    new AbstractFileFilter() {
+                        @Override
+                        public boolean accept(File file) {
+                            final Path path = file.toPath();
+                            return path.startsWith(project.getArtifactFolder());
+                        }
+                    },
+                    FileFilterUtils.notFileFilter(
+                            FileFilterUtils.suffixFileFilter(".pom") // exclude pom from a pkg
+                    )
+            );
+
+            final Collection<File> files = FileUtils.listFiles(
+                    project.repository().toFile(),
+                    artifactFilter,
+                    FileFilterUtils.trueFileFilter()
+            );
+
+            final String pomFileJar = String.format("%s-%s.jar", bean.artifactId, bean.version);
+            final Optional<File> installedJar = files.stream().filter(f -> f.getName().endsWith(pomFileJar)).findFirst();
+
+            if (jar != null) {
+                newOutputFiles.add(
+                        installedJar.<OutputFile>map(f -> new OutputFile.Declared(f, jar.toAbsolutePath().toString()))
+                        .orElseGet(() -> new OutputFile.Simple(pomFileJar, jar.toAbsolutePath().toString()))
+                );
+            }
+
+            if (artifact != null) {
+
+                final Archive archive = new Archive.TAR(
+                        files,
+                        aFile -> {
+                            final Path filePath = aFile.toPath();
+                            final Path filePathInRepo = project.repository().relativize(filePath);
+                            log.debug("tar: {} as {}", aFile, filePathInRepo);
+                            return filePathInRepo;
+                        }
+                );
+
+                newOutputFiles.add(
+                        new OutputFile.DeclaredProc(archive, artifact.toAbsolutePath().toString())
+                );
+            }
+
+            final List<OutputFile> outputs = project.outputs();
+            return project.toBuilder().outputs(
+                    Lists.newArrayList(Iterables.concat(outputs, newOutputFiles))
+            ).build();
+        }
+    }
 
     /**
      * Archive artifact binaries as is without pom
      */
     @Slf4j
     @AllArgsConstructor
+    @Deprecated
     static class ArtifactPredefOutputs implements Act {
 
         public static final String FLAG_DEF_JAR = "@DEF_JAR";

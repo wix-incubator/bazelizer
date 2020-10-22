@@ -8,10 +8,14 @@ import ch.qos.logback.classic.spi.Configurator;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.*;
 import ch.qos.logback.core.spi.ContextAwareBase;
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -94,7 +98,7 @@ public class SLF4JConfigurer extends ContextAwareBase implements Configurator {
     private void initLoggers(LoggerContext logCtx, ToolLogLevel logLevel) {
         PatternLayoutEncoder logEncoder = new PatternLayoutEncoder();
         logEncoder.setContext(logCtx);
-        logEncoder.setPattern("%-5level %X{id} [class=%logger{0}] - %msg%n");
+        logEncoder.setPattern("[%-5level] %X{id} [class=%logger{0}] - %msg%n");
         logEncoder.start();
 
         ConsoleAppender<ILoggingEvent> logConsoleAppender = new ConsoleAppender<>();
