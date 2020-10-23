@@ -32,14 +32,16 @@ public class ActAssemble implements Act {
     public Project accept(Project simple) {
         final Iterable<Builds.BuildNode> builds = new Builds.PreOrderGraph(def);
 
-        log.info("Evaluate:\n{}", builds);
+        log.info("Evaluate build graph:\n{}", builds);
 
         for (Builds.BuildNode node : builds) {
             final Builds.DefPom pom = node.getSelf();
             final Path pomFile = pom.getFile();
             final Path parent = pomFile.getParent();
 
-            try (MDC.MDCCloseable m = MDC.putCloseable("id", mdc(pomFile))) {
+            final String id = SLF4JConfigurer.shortPath(pomFile);
+            SLF4JConfigurer.withMDC(id, () -> {
+
                 final Project build = Project.builder()
                         .workDir(parent)
                         .pomTemplate(asByteSource(pomFile.toAbsolutePath().toFile()))
@@ -51,7 +53,7 @@ public class ActAssemble implements Act {
                 act.accept(
                         build.toBuilder().m2Home(simple.m2Home()).build()
                 );
-            }
+            });
         }
 
         return simple;

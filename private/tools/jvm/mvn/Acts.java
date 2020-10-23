@@ -91,7 +91,6 @@ public final class Acts {
 
         @Override
         public Project accept(Project project) {
-            log.info("Eagerly fetch dependencies to go offline...");
             final Args args = new Args(project.args())
                     .offline(false)
                     .append(GO_OFFLINE_PLUGIN);
@@ -358,7 +357,7 @@ public final class Acts {
             final ArrayList<OutputFile> outputs = Lists.newArrayList(project.outputs());
             final Pom.Props bean = new Pom.XPath(
                     new InputOf(project.pom())
-            ).value();
+            ).props();
 
             Map<String,String> settings = this.settings != null ? this.settings : Collections.emptyMap();
 
@@ -367,7 +366,7 @@ public final class Acts {
                     bean.getGroupId(),
                     bean.getArtifactId(),
                     bean.getVersion()
-            ).relativeTo(repository);
+            ).artifactFolder(repository);
             final IOFileFilter artifactFilter = FileFilterUtils.and(
                     new AbstractFileFilter() {
                         @Override

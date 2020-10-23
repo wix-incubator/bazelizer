@@ -12,7 +12,7 @@ filegroup(
 create_mvn_buildpack(
     name = "app=._buildpack",
     pom_file = "pom.xml",
-    pom_parent = "//tests/integration/mvn-parent-pom:parent",
+    pom_parent = "//tests/e2e/mvn-parent-pom:parent",
     visibility = ["//visibility:public"],
     # log_level = "INFO"
 )
@@ -20,8 +20,8 @@ create_mvn_buildpack(
 run_mvn_buildpack(
     name = "jaxb2api",
     deps = [
-        "//tests/integration/mvn-build-lib-one:lib",
-        "//tests/integration/lib/src/com/mavenizer/examples/subliby",
+        "//tests/e2e/mvn-build-lib-one:lib",
+        "//tests/e2e/lib/src/com/mavenizer/examples/subliby",
     ],
     log_level = "OFF",
     srcs = [":sources"],

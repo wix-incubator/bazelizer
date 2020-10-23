@@ -1,14 +1,13 @@
 package tools.jvm.mvn;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.*;
 import com.google.gson.annotations.SerializedName;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.ToString;
 import lombok.experimental.Delegate;
-import lombok.var;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -65,11 +64,17 @@ public interface Builds extends Iterable<Builds.BuildNode> {
      *  Build execution node
      */
     @Data
-    @ToString(of = {"self"})
     class BuildNode {
         private final DefPom self;
         private List<BuildNode> children = Lists.newArrayList();
         private BuildNode parent;
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper("BuildNode")
+                    .add("file", self.file)
+                    .add("parent", self.parentFile)
+                    .toString();
+        }
     }
 
 
@@ -113,7 +118,7 @@ public interface Builds extends Iterable<Builds.BuildNode> {
             return preOrder().iterator();
         }
 
-        @SuppressWarnings("UnstableApiUsage")
+        @SuppressWarnings({"UnstableApiUsage", "RedundantSuppression"})
         private List<BuildNode> preOrder() {
             final ArrayList<DefPom> defFiles = Lists.newArrayList(this.defPoms);
             Map<String, BuildNode> lookup = Maps.newHashMap();
@@ -152,7 +157,7 @@ public interface Builds extends Iterable<Builds.BuildNode> {
                     b.append("\t");
                 }
                 if (tab > 0) {
-                    b.append("+- ");
+                    b.append("+-");
                 } else {
                     b.append("|");
                 }

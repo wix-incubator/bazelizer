@@ -19,27 +19,39 @@ public interface Pom {
         final String version;
     }
 
+
+    /**
+     * Pom as XMP
+     * @return xml
+     * @throws Exception if any error
+     */
+    XML xml() throws Exception ;
+
     @AllArgsConstructor
-    class XPath implements Scalar<Props>, Pom {
+    class XPath implements Pom {
 
         private final Input data;
 
         @Override
-        public Props value() throws Exception {
+        public XML xml() throws Exception {
             try (InputStream src = data.stream()) {
-                XML xml = new XMLDocument(src).registerNs("pom", "http://maven.apache.org/POM/4.0.0");
-                final List<String> namespaces = xml.xpath("/*/namespace::*[name()='']");
-                if (!namespaces.isEmpty()) {
-                    String gid =  xml.xpath("/pom:project/pom:groupId/text()").get(0);
-                    String aid =  xml.xpath("/pom:project/pom:artifactId/text()").get(0);
-                    String v =  xml.xpath("/pom:project/pom:version/text()").get(0);
-                    return new Props(gid, aid, v);
-                } else {
-                    String gid =  xml.xpath("/project/groupId/text()").get(0);
-                    String aid =  xml.xpath("/project/artifactId/text()").get(0);
-                    String v =  xml.xpath("/project/version/text()").get(0);
-                    return new Props(gid, aid, v);
-                }
+                return new XMLDocument(src).registerNs("pom", "http://maven.apache.org/POM/4.0.0");
+            }
+        }
+
+        public Props props() throws Exception {
+            XML xml = xml();
+            final List<String> namespaces = xml.xpath("/*/namespace::*[name()='']");
+            if (!namespaces.isEmpty()) {
+                String gid =  xml.xpath("/pom:project/pom:groupId/text()").get(0);
+                String aid =  xml.xpath("/pom:project/pom:artifactId/text()").get(0);
+                String v =  xml.xpath("/pom:project/pom:version/text()").get(0);
+                return new Props(gid, aid, v);
+            } else {
+                String gid =  xml.xpath("/project/groupId/text()").get(0);
+                String aid =  xml.xpath("/project/artifactId/text()").get(0);
+                String v =  xml.xpath("/project/version/text()").get(0);
+                return new Props(gid, aid, v);
             }
         }
     }

@@ -1,22 +1,19 @@
 package tools.jvm.mvn;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString;
 import lombok.experimental.Accessors;
 import org.apache.maven.shared.invoker.DefaultInvocationRequest;
 import org.apache.maven.shared.invoker.InvocationRequest;
 import picocli.CommandLine;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Args.
@@ -32,6 +29,7 @@ public class Args  {
     public Args(Args args) {
         this.goals.addAll(args.goals);
         this.profiles.addAll(args.profiles);
+        this.offline = args.offline;
     }
 
     @CommandLine.Command(name = "")

@@ -11,6 +11,7 @@ import org.apache.maven.shared.invoker.InvocationResult;
 import org.apache.maven.shared.utils.cli.CommandLineException;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
@@ -45,14 +46,19 @@ public interface Maven {
             log.info("execute: {}", build.args());
 
             final InvocationRequest request = build.args().toInvocationRequest();
-            request.setPomFile(build.pom().toFile());
+            final Path pomFilePath = build.pom();
+            request.setPomFile(pomFilePath.toFile());
             request.setJavaHome(new File(System.getProperty("java.home")));
             request.setLocalRepositoryDirectory(build.repository().toFile());
             request.setBatchMode(true);
 
             setLogLevel(request);
 
-            final InvocationResult result = invoker.execute(request);
+            final String id = SLF4JConfigurer.shortPath(pomFilePath);
+
+            final InvocationResult result = SLF4JConfigurer.withMDC(id, () ->
+                    invoker.execute(request));
+
             if (result.getExitCode() != 0) {
                 throw new ToolMavenInvocationException(result);
             }

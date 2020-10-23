@@ -19,11 +19,11 @@ public class BuildsTest {
                 )
         );
 
-        String s = "\t| Builds.BuildNode(self=Builds.DefPom(file=/x, parentFile=null))\n" +
-                "\t\t+-  Builds.BuildNode(self=Builds.DefPom(file=/x/y, parentFile=/x))\n" +
-                "\t\t+-  Builds.BuildNode(self=Builds.DefPom(file=/x/z, parentFile=/x))\n" +
-                "\t\t\t+-  Builds.BuildNode(self=Builds.DefPom(file=/x/z/a1, parentFile=/x/z))\n" +
-                "\t| Builds.BuildNode(self=Builds.DefPom(file=/y, parentFile=null))\n";
+        String s = "\t| BuildNode{file=/x, parent=null}\n" +
+                "\t\t+- BuildNode{file=/x/y, parent=/x}\n" +
+                "\t\t+- BuildNode{file=/x/z, parent=/x}\n" +
+                "\t\t\t+- BuildNode{file=/x/z/a1, parent=/x/z}\n" +
+                "\t| BuildNode{file=/y, parent=null}\n";
         Assert.assertEquals(s, graph.toString());
     }
 }

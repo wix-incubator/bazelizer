@@ -1,12 +1,5 @@
 load("//maven:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
 
-exports_files(["pom.xml"])
-
-
-alias(
-    name = "mvn-build-lib-one",
-    actual = ":lib",
-)
 
 filegroup(
     name = "sources",
@@ -18,12 +11,14 @@ create_mvn_buildpack(
     name = "buildpack",
     pom_file = "pom.xml",
     visibility = ["//visibility:public"],
+    # log_level = 'INFO',
+    mvn_flags = [ "--active-profiles=my_profile"]
 )
 
 run_mvn_buildpack(
-    name = "lib",
-    log_level = "OFF",
+    name = "mvn-build-lib-with-profile",
+    # log_level = 'INFO',
     srcs = [":sources"],
     buildpack = ":buildpack",
-    visibility = ["//visibility:public"]
+    visibility = ["//visibility:public"],
 )

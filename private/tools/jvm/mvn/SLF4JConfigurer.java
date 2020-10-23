@@ -3,21 +3,20 @@ package tools.jvm.mvn;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.classic.encoder.*;
+import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.Configurator;
 import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.*;
+import ch.qos.logback.core.ConsoleAppender;
 import ch.qos.logback.core.spi.ContextAwareBase;
-import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import org.slf4j.ILoggerFactory;
-import org.slf4j.LoggerFactory;
+import lombok.SneakyThrows;
+import org.cactoos.Scalar;
 import org.slf4j.MDC;
 
+import java.io.Closeable;
 import java.nio.file.Path;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 public class SLF4JConfigurer extends ContextAwareBase implements Configurator {
     private static ToolLogLevel root = ToolLogLevel.OFF;
@@ -36,9 +35,11 @@ public class SLF4JConfigurer extends ContextAwareBase implements Configurator {
      * @param act act
      */
     @SuppressWarnings("UnusedReturnValue")
-    public static <V> V withMDC(Supplier<V> act) {
-        try (MDC.MDCCloseable c = MDC.putCloseable("id", SysProps.label().orElse(""))) {
-            return act.get();
+    @SneakyThrows
+    public static <V> V withMDC(String id, Scalar<V> act) {
+        try (Closeable ignored = Optional.ofNullable(id).<Closeable>map(d ->
+                MDC.putCloseable("id", d)).orElse(() -> {})) {
+            return act.value();
         }
     }
 
@@ -47,12 +48,36 @@ public class SLF4JConfigurer extends ContextAwareBase implements Configurator {
      * @param act act
      */
     @SuppressWarnings("unused")
-    public static void withMDC(Runnable act) {
-        withMDC(() -> {
+    public static void withMDC(String id, Runnable act) {
+        withMDC(id, () -> {
             act.run();
             return null;
         });
     }
+
+    public static String shortPath(Path p) {
+        try {
+            int len = 26;
+            final List<String> list = Lists.newArrayList();
+            for (int i = 0; i < p.getNameCount() - 1; i++) {
+                String name = p.getName(i).toString();
+                int cap = name.length() - 1;
+                if (len > 0) {
+                    int rmLen = len - cap;
+                    int j = name.length() - rmLen;
+                    len -= j;
+                    list.add(name.substring(0, Math.min(Math.max(1, j), name.length())));
+                } else {
+                    list.add(name);
+                }
+            }
+            list.add(p.getName(p.getNameCount() - 1).toString());
+            return "[" + String.join("/", list) + "]";
+        } catch (StringIndexOutOfBoundsException e) {
+            return null;
+        }
+    }
+
 
     enum ToolLogLevel {
         OFF("off"),

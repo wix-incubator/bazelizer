@@ -25,6 +25,7 @@ public class Cli {
 
     static class ArgsFactory {
 
+        @SuppressWarnings("unused")
         @CommandLine.Option(names = {"-a", "--args"}, paramLabel = "ARGS", description = "the maven cli args")
         private String argsLine;
 
@@ -93,7 +94,6 @@ public class Cli {
                     + FileUtils.byteCountToDisplaySize(writeImg.toFile().length()));
         }
 
-        @SuppressWarnings("UnstableApiUsage")
         private ByteSource getPomXmlSrc() {
             return Files.asByteSource(runPom.toFile());
         }

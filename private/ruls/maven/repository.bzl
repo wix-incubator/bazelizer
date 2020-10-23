@@ -33,7 +33,7 @@ declare_pom = rule(
     attrs = {
         "pom_file": attr.label(allow_single_file=True, mandatory = True),
         "parent": attr.label(),
-        "mvn_flags": attr.string(),
+        "mvn_flags": attr.string_list(),
     }
 )
 
@@ -82,12 +82,16 @@ def _maven_repository_impl(ctx):
         inputs = depset([build_def], transitive = [d.deps for d in pom_providers]),
         outputs = [ctx.outputs.img],
         arguments = [args],
-        executable = ctx.executable._tool
+        executable = ctx.executable._tool,
+        mnemonic = "MavenRepositoryMaker"
     )
 
     return [
         DefaultInfo(
             files= depset([tar])
+        ),
+        RepositoryInfo(
+           img =  tar
         )
     ]
 
