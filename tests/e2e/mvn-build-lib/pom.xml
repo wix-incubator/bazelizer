@@ -38,22 +38,18 @@
         <dependency>
             <groupId>javax.xml.bind</groupId>
             <artifactId>jaxb-api</artifactId>
-<!--            <version>2.3.0</version>-->
         </dependency>
         <dependency>
             <groupId>com.sun.xml.bind</groupId>
             <artifactId>jaxb-core</artifactId>
-<!--            <version>2.3.0</version>-->
         </dependency>
         <dependency>
             <groupId>com.sun.xml.bind</groupId>
             <artifactId>jaxb-impl</artifactId>
-<!--            <version>2.3.0</version>-->
         </dependency>
         <dependency>
             <groupId>org.jvnet.jaxb2_commons</groupId>
             <artifactId>jaxb2-basics-runtime</artifactId>
-<!--            <version>1.11.1</version>-->
         </dependency>
 
         <dependency>
@@ -62,10 +58,42 @@
             <version>4.13.1</version>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
+
+
     <build>
         <plugins>
+
+            <plugin>
+                <groupId>de.qaware.maven</groupId>
+                <artifactId>go-offline-maven-plugin</artifactId>
+                <version>1.2.7</version>
+                <configuration>
+                    <dynamicDependencies>
+                        <DynamicDependency>
+                            <groupId>org.jvnet.jaxb2.maven2</groupId>
+                            <artifactId>maven-jaxb2-plugin</artifactId>
+                            <version>0.14.0</version>
+                            <repositoryType>PLUGIN</repositoryType>
+                        </DynamicDependency>
+
+                        <DynamicDependency>
+                            <groupId>net.java.dev.jaxb2-commons</groupId>
+                            <artifactId>jaxb-fluent-api</artifactId>
+                            <version>2.1.8</version>
+                            <repositoryType>PLUGIN</repositoryType>
+                        </DynamicDependency>
+
+                        <DynamicDependency>
+                            <groupId>org.jvnet.jaxb2_commons</groupId>
+                            <artifactId>jaxb2-basics</artifactId>
+                            <version>1.11.1</version>
+                            <repositoryType>PLUGIN</repositoryType>
+                        </DynamicDependency>
+                    </dynamicDependencies>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <groupId>org.jvnet.jaxb2.maven2</groupId>
                 <artifactId>maven-jaxb2-plugin</artifactId>

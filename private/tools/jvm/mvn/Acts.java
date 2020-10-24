@@ -75,21 +75,27 @@ public final class Acts {
     @Slf4j
     @Accessors(chain = true, fluent = true)
     static class MvnGoOffline implements Act {
-        public static final String GO_OFFLINE_PLUGIN = "de.qaware.maven:go-offline-maven-plugin:resolve-dependencies";
+
+        /**
+         * Go offline plugin.
+         */
+        public static final String GO_OFFLINE_PLUGIN =
+                "de.qaware.maven:go-offline-maven-plugin:resolve-dependencies";
 
         private final Maven maven;
 
-        MvnGoOffline(Maven maven) {
+        private final List<String> profiles;
+
+        MvnGoOffline(Maven maven, String...goals) {
             this.maven = maven;
+            this.profiles = Lists.newArrayList(goals);
         }
 
         @Override
         public Project accept(Project project) {
-            final Args args = new Args(project.args())
-                    .offline(false).append(GO_OFFLINE_PLUGIN);
-            maven.run(
-                    project.toBuilder().args(args).build()
-            );
+            final Args args = new Args(project.args()).offline(false).append(GO_OFFLINE_PLUGIN);
+            profiles.forEach(args::append);
+            maven.run(project.toBuilder().args(args).build());
             return project;
         }
     }
@@ -153,10 +159,16 @@ public final class Acts {
             }
         }
 
+        /**
+         * Offline mode.
+         */
         @SuppressWarnings("unused")
         @Setter
         private boolean offline = false;
 
+        /**
+         * Repositories.
+         */
         @Getter
         private final List<Repositories.Repository> repositories = Lists.newArrayList();
 
@@ -238,7 +250,7 @@ public final class Acts {
         @SneakyThrows
         @Override
         public Project accept(Project project) {
-            final Path origParent = project.pomParent();
+            final Path origParent = project.parentPom();
             final Path parentPomDir = SysProps.labelHex()
                     .map(hashedLabel -> {
                         final Path workDir = project.workDir();
@@ -259,7 +271,7 @@ public final class Acts {
             if (origParent != null) {
                 final Path parentPomFile = parentPomDir.resolve("pom.xml");
                 Files.copy(origParent, parentPomFile, StandardCopyOption.REPLACE_EXISTING);
-                return project.toBuilder().pomParent(parentPomFile).build();
+                return project.toBuilder().parentPom(parentPomFile).build();
             }
             return project;
         }
@@ -270,22 +282,25 @@ public final class Acts {
      * Install parent project.
      */
     @Slf4j
+    @AllArgsConstructor
     static class InstallParentPOM implements Act {
+
+        private final Maven maven;
 
         @Override
         public Project accept(Project project) {
-            final Path origParent = project.pomParent();
-            if (origParent != null) {
-                final Path parentPomFile = origParent.toAbsolutePath();
+            final Path parent = project.parentPom();
+            if (parent != null) {
+                final Path parentPomFile = parent.toAbsolutePath();
                 Path parentDir = parentPomFile.getParent().normalize();
-                log.info("Install parent project into repository...");
+                log.info("Install parent pom file..");
                 final Project parentProject = project.toBuilder()
                         .pom(parentPomFile)
                         .workDir(parentDir)
-                        .args(new Args().append("install"))
+                        .args(new Args(project.args()).append("install"))
                         .build();
 
-                new Maven.BazelInvoker().run(parentProject);
+                maven.run(parentProject);
             }
             return project;
         }

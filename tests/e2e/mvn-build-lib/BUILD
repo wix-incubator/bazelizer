@@ -1,6 +1,6 @@
-load("//maven:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
+load("//maven:defs.bzl", "declare_pom")
 
-exports_files(["pom.xml"])
+load("@maven_e2e//:execute_build.bzl", "execute_build")
 
 filegroup(
     name = "sources",
@@ -9,23 +9,21 @@ filegroup(
 )
 
 
-create_mvn_buildpack(
-    name = "app=._buildpack",
-    pom_file = "pom.xml",
-    pom_parent = "//tests/e2e/mvn-parent-pom:parent",
-    visibility = ["//visibility:public"],
-    # log_level = "INFO"
+declare_pom(
+    name = "declared_pom",
+    pom_file = ":pom.xml",
+    parent = "//tests/e2e/mvn-parent-pom:declared_pom",
+    visibility = ["//visibility:public"]
 )
 
-run_mvn_buildpack(
-    name = "jaxb2api",
+execute_build(
+    name = "mvn-build-lib",
+    pom_def = ":declared_pom",
+    srcs = [":sources"],
+    visibility = ["//visibility:public"],
     deps = [
-        # "//tests/e2e/mvn-build-lib-one:lib",
+         "//tests/e2e/mvn-build-lib-one",
         "//tests/e2e/lib/src/com/mavenizer/examples/subliby",
     ],
-    log_level = "OFF",
-    srcs = [":sources"],
-    buildpack = ":app=._buildpack",
     outputs = ["myapi-1.0.0-SNAPSHOT.jar"],
-    visibility = ["//visibility:public"]
 )

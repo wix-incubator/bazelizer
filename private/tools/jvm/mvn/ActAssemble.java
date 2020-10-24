@@ -1,14 +1,9 @@
 package tools.jvm.mvn;
 
-import com.google.common.collect.Lists;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.MDC;
 
-import java.io.File;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 
 import static com.google.common.io.Files.asByteSource;
 
@@ -49,7 +44,7 @@ public class ActAssemble implements Act {
                         )
                         .workDir(parent)
                         .pomTemplate(asByteSource(pomFile.toAbsolutePath().toFile()))
-                        .pomParent(pom.getParentFile() != null ? pom.getParentFile().toAbsolutePath() : null)
+                        .parentPom(pom.getParentFile() != null ? pom.getParentFile().toAbsolutePath() : null)
                         .build();
 
                 log.info("running build {}", node);

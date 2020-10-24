@@ -1,16 +1,4 @@
-load("//maven:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
-
-load("//private/ruls/maven:repository.bzl", "declare_pom")
-
-exports_files(["pom.xml"])
-
-create_mvn_buildpack(
-    name = "parent",
-    pom_file = "pom.xml",
-    visibility = ["//visibility:public"],
-    # log_level = "INFO",
-)
-
+load("//maven:defs.bzl", "declare_pom")
 
 #
 # API 2.0

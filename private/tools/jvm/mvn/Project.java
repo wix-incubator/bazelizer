@@ -76,7 +76,7 @@ public final class Project {
      * Parent pom file.
      * Not templating supported so far/
      */
-    private Path pomParent;
+    private Path parentPom;
 
 
     @Getter(AccessLevel.PRIVATE)
@@ -108,9 +108,9 @@ public final class Project {
 
             @Override
             public String parent() {
-                if (pomParent != null) {
+                if (parentPom != null) {
                     final Path pom = pom();
-                    final Path relativize = pom.relativize(pomParent);
+                    final Path relativize = pom.relativize(parentPom);
                     return relativize.toString();
                 }
                 return null;

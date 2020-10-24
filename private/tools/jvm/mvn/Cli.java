@@ -94,6 +94,9 @@ public class Cli {
                     new ActAssemble(
                             new Builds.DefPomIterable(pomDeclarations),
                             new Act.Iterative(
+                                    new Acts.InstallParentPOM(
+                                            maven
+                                    ),
                                     new Acts.ParentPOM(),
                                     new Acts.POM(),
                                     new Acts.MvnGoOffline(
@@ -170,7 +173,7 @@ public class Cli {
                     .collect(Collectors.toList());
 
             final Project project = Project.builder()
-                    .pomParent(parentPom)
+                    .parentPom(parentPom)
                     .pom(pom)
                     .args(args)
                     .deps(getDeps())
@@ -246,7 +249,7 @@ public class Cli {
                     .artifactId("id-" + Texts.randomLetters(6))
                     .workDir(pomFile.getParent())
                     .outputs(Lists.newArrayList())
-                    .pomParent(parentPomFile)
+                    .parentPom(parentPomFile)
                     .args(argsFactory.newArgs())
                     .build();
 
@@ -261,7 +264,7 @@ public class Cli {
                             parentPomImg
                     ),
                     new Acts.ParentPOM(),
-                    new Acts.InstallParentPOM(),
+                    new Acts.InstallParentPOM(new Maven.BazelInvoker()),
                     new Acts.POM(),
                     new Acts.MvnGoOffline(
                             new Maven.BazelInvoker()
@@ -329,7 +332,7 @@ public class Cli {
             final Project project = Project.builder()
                     .artifactId(artifactId)
                     .groupId(groupId)
-                    .pomParent(parent)
+                    .parentPom(parent)
                     .pom(pom)
                     .args(args)
                     .deps(getDeps())
