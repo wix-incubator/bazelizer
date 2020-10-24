@@ -20,7 +20,7 @@ create_mvn_buildpack(
 run_mvn_buildpack(
     name = "jaxb2api",
     deps = [
-        "//tests/e2e/mvn-build-lib-one:lib",
+        # "//tests/e2e/mvn-build-lib-one:lib",
         "//tests/e2e/lib/src/com/mavenizer/examples/subliby",
     ],
     log_level = "OFF",

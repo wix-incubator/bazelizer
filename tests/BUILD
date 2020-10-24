@@ -57,7 +57,7 @@ sh_library(
 )
 
 sh_test(
-    name = "mvn-build-lib-with-profile__has_har_test",
+    name = "mvn-build-lib-with-profile__HasJarTest",
     srcs = ["test_jar.sh"],
     args = ["tests/e2e/mvn-build-lib-with-profile/libmvn-build-lib-with-profile.jar"],
     data = [":mvn-build-lib-with-profile__maven"],

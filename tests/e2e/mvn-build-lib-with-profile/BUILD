@@ -1,4 +1,5 @@
-load("//maven:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
+load("//maven:defs.bzl", "declare_pom")
+load("@maven_e2e//:execute_build.bzl", "execute_build")
 
 
 filegroup(
@@ -7,18 +8,16 @@ filegroup(
     visibility = ["//visibility:public"]
 )
 
-create_mvn_buildpack(
-    name = "buildpack",
-    pom_file = "pom.xml",
+declare_pom(
+    name = "declared_pom",
+    pom_file = ":pom.xml",
     visibility = ["//visibility:public"],
-    # log_level = 'INFO',
-    mvn_flags = [ "--active-profiles=my_profile"]
+    mvn_flags = [ "-P my_profile" ]
 )
 
-run_mvn_buildpack(
+execute_build(
     name = "mvn-build-lib-with-profile",
-    # log_level = 'INFO',
+    pom_def = ":declared_pom",
     srcs = [":sources"],
-    buildpack = ":buildpack",
-    visibility = ["//visibility:public"],
+    visibility = ["//visibility:public"]
 )

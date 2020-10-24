@@ -71,7 +71,6 @@ public class Cli {
         @SneakyThrows
         @Override
         public void run() {
-            SLF4JConfigurer.setLogLevel(SLF4JConfigurer.ToolLogLevel.INFO);
 
             final Maven maven = new Maven.BazelInvoker();
             final Args args = argsFactory.newArgs();
@@ -154,7 +153,6 @@ public class Cli {
         @Override
         @lombok.SneakyThrows
         public void run() {
-            SLF4JConfigurer.setLogLevel(SLF4JConfigurer.ToolLogLevel.INFO);
 
             final Path workDir = getWorkDir();
             final Path pom = Project.syntheticPomFile(workDir);
