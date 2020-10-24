@@ -35,7 +35,7 @@ public class ActAssemble implements Act {
         log.info("Evaluate build graph:\n{}", builds);
 
         for (Builds.BuildNode node : builds) {
-            final Builds.DefPom pom = node.getSelf();
+            final Builds.DefPom pom = node.self();
             final Path pomFile = pom.getFile();
             final Path parent = pomFile.getParent();
 
@@ -43,7 +43,10 @@ public class ActAssemble implements Act {
             SLF4JConfigurer.withMDC(id, () -> {
 
                 final Project build = Project.builder()
-                        .args(new Args(simple.args()))
+                        .args(
+                                new Args(simple.args())
+                                        .merge(node.self().args())
+                        )
                         .workDir(parent)
                         .pomTemplate(asByteSource(pomFile.toAbsolutePath().toFile()))
                         .pomParent(pom.getParentFile() != null ? pom.getParentFile().toAbsolutePath() : null)

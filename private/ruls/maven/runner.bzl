@@ -7,6 +7,9 @@ Represent archived maven artifact content as is from the local repository.
     """
 })
 
+def _foramt_flags_as_escape_str(flags_list):
+        return "'{}'".format(" ".join(flags_list))
+
 
 def _create_manifest_file(name, ctx, dep_info_items):
     manifest = ctx.actions.declare_file(name + ".manifest")
@@ -106,8 +109,8 @@ def _run_mvn_impl(ctx):
     if pom_def_info.parent_file:
         args.add("--parent-pom", pom_def_info.parent_file.path)
         input_files.append(pom_def_info.parent_file)
-    if pom_def_info.flags:
-        args.add("--args", "'{}'".format(" ".join(pom_def_info.flags)))
+    if pom_def_info.flags_line:
+        args.add("--args", _foramt_flags_as_escape_str(pom_def_info.flags_line))
 
     for out in ctx.attr.outputs:
         file = ctx.actions.declare_file(out)

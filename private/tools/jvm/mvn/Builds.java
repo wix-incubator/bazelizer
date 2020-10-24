@@ -7,6 +7,7 @@ import com.google.common.collect.*;
 import com.google.gson.annotations.SerializedName;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.experimental.Accessors;
 import lombok.experimental.Delegate;
 
 import java.io.PrintWriter;
@@ -29,9 +30,13 @@ public interface Builds extends Iterable<Builds.BuildNode> {
         private Path file;
         @SerializedName("parent_file")
         private Path parentFile;
+        @SerializedName("flags_line")
+        private List<String> flags;
 
         @SuppressWarnings("unused")
-        public DefPom() {}
+        public DefPom() {
+            super();
+        }
 
         public DefPom(Path path, Path parentFile) {
             this.file = path;
@@ -39,15 +44,37 @@ public interface Builds extends Iterable<Builds.BuildNode> {
         }
 
         public DefPom(String path, String parentFile) {
-            this(Paths.get(path), Optional.ofNullable(parentFile).map(Paths::get).orElse(null));
+            this(Paths.get(path), Optional
+                    .ofNullable(parentFile).map(Paths::get).orElse(null));
         }
 
+        /**
+         * Current id
+         * @return id
+         */
         public String id() {
             return file.toString();
         }
 
+        /**
+         * id of parent node
+         * @return id
+         */
         public String parentId() {
             return parentFile != null ? parentFile.toString() : null;
+        }
+
+        /**
+         * Command line args, specific for current build execution
+         * @return args
+         */
+        public Args args() {
+            return Optional.ofNullable(flags)
+                    .filter(d -> !d.isEmpty())
+                    .map(flags -> {
+                        final String line = String.join(" ", flags);
+                        return new Args().parseCommandLine(line);
+                    }).orElse(new Args());
         }
 
         /**
@@ -64,6 +91,7 @@ public interface Builds extends Iterable<Builds.BuildNode> {
      *  Build execution node
      */
     @Data
+    @Accessors(fluent = true)
     class BuildNode {
         private final DefPom self;
         private List<BuildNode> children = Lists.newArrayList();
@@ -134,9 +162,9 @@ public interface Builds extends Iterable<Builds.BuildNode> {
                 }
             }
 
-            return lookup.values().stream().filter(node -> node.getParent() == null)
+            return lookup.values().stream().filter(node -> node.parent() == null)
                     .flatMap(node ->
-                            Streams.concat(Stream.of(node), node.getChildren().stream()
+                            Streams.concat(Stream.of(node), node.children().stream()
                         )
                     ).collect(Collectors.toList());
         }
@@ -144,7 +172,7 @@ public interface Builds extends Iterable<Builds.BuildNode> {
         @SuppressWarnings("ConstantConditions")
         @Override
         public String toString() {
-            final Iterator<BuildNode> iterator = Iterators.filter(this.iterator(), v -> v.getParent() == null);
+            final Iterator<BuildNode> iterator = Iterators.filter(this.iterator(), v -> v.parent() == null);
             final StringWriter out = new StringWriter();
             print(iterator, 0, new PrintWriter(out));
             return out.toString();
@@ -164,8 +192,8 @@ public interface Builds extends Iterable<Builds.BuildNode> {
                 b.append(" ");
                 b.println(next.toString());
 
-                if (!next.getChildren().isEmpty()) {
-                    final Iterator<BuildNode> nextIt = next.getChildren().iterator();
+                if (!next.children().isEmpty()) {
+                    final Iterator<BuildNode> nextIt = next.children().iterator();
                     while (nextIt.hasNext()) {
                         print(nextIt, tab+1, b);
                     }

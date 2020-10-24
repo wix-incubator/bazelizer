@@ -48,14 +48,13 @@ _maven_repository_registry_attrs = {
 def _maven_repository_registry_impl(repository_ctx):
     use_unsafe_local_cache = repository_ctx.attr.use_unsafe_local_cache
     visibility = "public"
+    data = []
     repository_name = repository_ctx.name
     maven_repository_target_name = "pinned_maven_repository"
+    properties = dict()
     modules = ",".join([
         '"@%s%s"' % (d.workspace_name, d) for d in repository_ctx.attr.modules
     ])
-
-    properties = dict()
-    data = []
 
     user_mvn_repo = repository_ctx.path(repository_ctx.os.environ["HOME"] + "/.m2/repository/")
     if use_unsafe_local_cache and user_mvn_repo.exists:

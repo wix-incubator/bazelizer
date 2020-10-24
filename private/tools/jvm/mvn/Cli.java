@@ -49,6 +49,7 @@ public class Cli {
     @SuppressWarnings({"unused"})
     @CommandLine.Command(name = "build-repository")
     public static class MkRepository implements Runnable {
+
         @CommandLine.Mixin
         public ArgsFactory argsFactory = new ArgsFactory();
 

@@ -2,9 +2,10 @@
 PomDeclarationInfo = provider(fields = {
     "file": "",
     "parent_file": "",
-    "flags": "",
+    "flags_line": "mvn flags, specific for each execution",
     "deps": "",
 })
+
 
 
 def _declare_pom_impl(ctx):
@@ -22,7 +23,7 @@ def _declare_pom_impl(ctx):
         PomDeclarationInfo(
             file = pom_file,
             parent_file = parent_file,
-            flags = ctx.attr.mvn_flags,
+            flags_line = ctx.attr.mvn_flags,
             deps = depset(direct=[pom_file], transitive = transitive_deps)
         )
     ]
@@ -46,10 +47,11 @@ Consolidated M2 repository for all registered modules
 _BuildDef = provider(fields={
     "file": "pom file",
     "parent_file": "pom file",
+    "flags_line": "mvn flags, specific for each execution"
 })
 
-def _maven_repository_impl(ctx):
 
+def _maven_repository_impl(ctx):
     tar_name = ctx.label.name + ".tar"
     tar = ctx.actions.declare_file(tar_name)
 
@@ -59,10 +61,10 @@ def _maven_repository_impl(ctx):
         reposiotry_def_args.add(
             _BuildDef(
                 file = pom_provider.file.path,
-                parent_file = pom_provider.parent_file.path if pom_provider.parent_file else None
+                parent_file = pom_provider.parent_file.path if pom_provider.parent_file else None,
+                flags_line = pom_provider.flags_line
             ).to_json()
         )
-
 
     build_def = ctx.actions.declare_file('reposiotry_def_args.json')
     ctx.actions.write(
@@ -80,6 +82,7 @@ def _maven_repository_impl(ctx):
     args.add('--def', build_def.path)
     args.add('--writeImg', tar.path)
     args.add('--local-cache', ctx.attr.unsafe_local_cache)
+
 
     ctx.actions.run(
         inputs = depset([build_def], transitive = [depset(ctx.files.data)] + [d.deps for d in pom_providers]),

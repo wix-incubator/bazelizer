@@ -28,11 +28,12 @@ public class Args  {
     private final List<String> profiles = Lists.newArrayList();
     private final Map<SettingsKey, Object> ctx = Maps.newHashMap();
 
+
+
     enum SettingsKey {
         SETTINGS_XML,
-        LOCAL_REPOSITORY
+        LOCAL_REPOSITORY;
     }
-
 
     public Args() {
     }
@@ -46,13 +47,13 @@ public class Args  {
 
     @CommandLine.Command(name = "")
     private static class CmdFlags {
+
         @CommandLine.Option(names = {"-P", "--active-profiles"}, split = ",")
         public List<String> profiles = Lists.newArrayList();
-
         @CommandLine.Option(names = {"--goals"}, split = ",")
         public List<String> goals = Lists.newArrayList();
-    }
 
+    }
     @Setter
     @Getter
     private boolean offline;
@@ -66,6 +67,24 @@ public class Args  {
     public Args append(String...s) {
         goals.addAll(Arrays.asList(s));
         return this;
+    }
+
+    /**
+     * Union arguments.
+     * @param other other args
+     * @return combined.
+     */
+    public Args merge(Args other) {
+        final Args argsNew = new Args();
+        argsNew.goals.addAll(Sets.newHashSet(
+                Iterables.concat(this.goals, other.goals)
+        ));
+        argsNew.profiles.addAll(Sets.newHashSet(
+                Iterables.concat(this.profiles, other.profiles)
+        ));
+        argsNew.ctx.putAll(this.ctx);
+        argsNew.ctx.putAll(other.ctx);
+        return argsNew;
     }
 
     /**
