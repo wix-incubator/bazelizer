@@ -9,6 +9,6 @@ public class ArgsTest {
     public void createFromCmd() {
         final Args args = new Args().parseCommandLine("--active-profiles=vespa_6,bazel --goals=compile");
         final String s = args.toString();
-        Assert.assertEquals("-P vespa_6,bazel compile", s);
+        Assert.assertEquals("Args{goals=[compile], profiles=[vespa_6, bazel], ctx={}}", s);
     }
 }

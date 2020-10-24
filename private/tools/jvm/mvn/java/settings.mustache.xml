@@ -37,11 +37,9 @@
         {{/profiles}}
     </profiles>
 
-
     {{#activeProfile}}
     <activeProfiles>
         <activeProfile>{{activeProfile}}</activeProfile>
     </activeProfiles>
     {{/activeProfile}}
-
 </settings>
