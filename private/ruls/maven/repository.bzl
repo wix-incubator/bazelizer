@@ -73,13 +73,16 @@ def _maven_repository_impl(ctx):
     args = ctx.actions.args()
     # jfm flags
     args.add("--jvm_flag=-Dtools.jvm.mvn.BazelLabelName=%s" % (ctx.label))
+    args.add("--jvm_flag=-Dtools.jvm.mvn.Ws=%s" % (ctx.workspace_name))
+
     # cli options
     args.add('build-repository')
     args.add('--def', build_def.path)
     args.add('--writeImg', tar.path)
+    args.add('--local-cache', ctx.attr.unsafe_local_cache)
 
     ctx.actions.run(
-        inputs = depset([build_def], transitive = [d.deps for d in pom_providers]),
+        inputs = depset([build_def], transitive = [depset(ctx.files.data)] + [d.deps for d in pom_providers]),
         outputs = [ctx.outputs.img],
         arguments = [args],
         executable = ctx.executable._tool,
@@ -102,6 +105,8 @@ maven_repository = rule(
     },
     attrs = {
         "modules": attr.label_list(),
+        "unsafe_local_cache": attr.string(),
+        "data": attr.label_list(allow_files = True),
         "_tool": attr.label(default="//private/tools/jvm/mvn", allow_files = True, executable = True, cfg = "host")
     }
 )

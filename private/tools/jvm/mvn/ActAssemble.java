@@ -43,6 +43,7 @@ public class ActAssemble implements Act {
             SLF4JConfigurer.withMDC(id, () -> {
 
                 final Project build = Project.builder()
+                        .args(new Args(simple.args()))
                         .workDir(parent)
                         .pomTemplate(asByteSource(pomFile.toAbsolutePath().toFile()))
                         .pomParent(pom.getParentFile() != null ? pom.getParentFile().toAbsolutePath() : null)

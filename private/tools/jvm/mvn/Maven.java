@@ -1,19 +1,14 @@
 package tools.jvm.mvn;
 
 
-import com.google.devtools.build.runfiles.Runfiles;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.maven.shared.invoker.DefaultInvocationRequest;
 import org.apache.maven.shared.invoker.DefaultInvoker;
 import org.apache.maven.shared.invoker.InvocationRequest;
 import org.apache.maven.shared.invoker.InvocationResult;
-import org.apache.maven.shared.utils.cli.CommandLineException;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Properties;
 
 public interface Maven {
@@ -32,33 +27,38 @@ public interface Maven {
     @Slf4j
     class BazelInvoker implements Maven {
 
+        private final String mvnDir;
+
+        public BazelInvoker(String mavenBinary) {
+            this.mvnDir = mavenBinary;
+        }
+
+        public BazelInvoker() {
+            this(SysProps.getSysPropMavenTool());
+        }
+
         @SneakyThrows
         @Override
         public void run(Project build) {
-            final String ws = System.getProperty("maven.bin.workspace");
-            Runfiles runfiles = Runfiles.create();
-            String mavenBinRunfileDir = runfiles.rlocation(ws);
+            final File mavenHome = new File(mvnDir);
 
             DefaultInvoker invoker = new DefaultInvoker();
-            invoker.setMavenHome(new File(mavenBinRunfileDir));
+            invoker.setMavenHome(mavenHome);
             invoker.setWorkingDirectory(build.workDir().toFile());
 
+            log.debug("maven home exists: {} - {}", mavenHome.exists(),mavenHome);
             log.info("execute: {}", build.args());
 
             final InvocationRequest request = build.args().toInvocationRequest();
             final Path pomFilePath = build.pom();
             request.setPomFile(pomFilePath.toFile());
             request.setJavaHome(new File(System.getProperty("java.home")));
-            request.setLocalRepositoryDirectory(build.repository().toFile());
             request.setBatchMode(true);
+            request.setShowVersion(true);
 
             setLogLevel(request);
-
             final String id = SLF4JConfigurer.shortPath(pomFilePath);
-
-            final InvocationResult result = SLF4JConfigurer.withMDC(id, () ->
-                    invoker.execute(request));
-
+            final InvocationResult result = SLF4JConfigurer.withMDC(id, () -> invoker.execute(request));
             if (result.getExitCode() != 0) {
                 throw new ToolMavenInvocationException(result);
             }

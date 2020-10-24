@@ -1,11 +1,12 @@
 package tools.jvm.mvn;
 
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import lombok.AllArgsConstructor;
-import lombok.Setter;
-import lombok.SneakyThrows;
+import com.google.common.io.Resources;
+import lombok.*;
 import lombok.experimental.Accessors;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,7 @@ import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.apache.commons.io.filefilter.IOFileFilter;
 import org.cactoos.Text;
 import org.cactoos.func.UncheckedProc;
+import org.cactoos.io.BytesOf;
 import org.cactoos.io.InputOf;
 
 import java.io.File;
@@ -92,10 +94,7 @@ public final class Acts {
         @Override
         public Project accept(Project project) {
             final Args args = new Args(project.args())
-                    .offline(false)
-                    .append(GO_OFFLINE_PLUGIN);
-            if (compile) args.append("compile");
-            if (install) args.append("install");
+                    .offline(false).append(GO_OFFLINE_PLUGIN);
             maven.run(
                     project.toBuilder().args(args).build()
             );
@@ -143,33 +142,67 @@ public final class Acts {
         }
     }
 
-
     /**
      * Prepare settings xml.
      */
     @Slf4j
+    @Accessors(fluent = true)
     static class SettingsXml implements Act {
+        public static final String ACTIVE_PROFILE = "bazelizer";
+
+        public SettingsXml() {}
+
+        @SafeVarargs
+        public SettingsXml(Iterable<Repositories.Repository>...rr) {
+            for (Iterable<Repositories.Repository> r : rr) {
+                Iterables.addAll(this.repositories, r);
+            }
+        }
+
+        @SuppressWarnings("unused")
+        @Setter
+        private boolean offline = false;
+
+        @Getter
+        private final List<Repositories.Repository> repositories = Lists.newArrayList();
+
 
         @SneakyThrows
         @Override
+        @SuppressWarnings("UnstableApiUsage")
         public Project accept(Project project) {
             final Path m2Home = project.m2Home();
             final Path settingsXml = m2Home.resolve("settings.xml").toAbsolutePath();
             final Path repository = m2Home.resolve("repository").toAbsolutePath();
             Files.createDirectories(repository);
-            String xml = "<settings xsi:schemaLocation=\"http://maven.apache.org/SETTINGS/1.1.0 http://maven.apache.org/xsd/settings-1.1.0.xsd\" " +
-                    "xmlns=\"http://maven.apache.org/SETTINGS/1.1.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n" +
-                            "   <localRepository>" + repository + "</localRepository>\n" +
-                            "</settings>";
 
-            save(settingsXml, xml);
-            log.debug("\n{}", xml);
+            final ImmutableMap.Builder<String, Object> builder = ImmutableMap.<String, Object>builder()
+                    .put("localRepository", repository);
+                    //.put("offline", offline);
+
+            if (!repositories.isEmpty()) {
+                //builder.put("activeProfile", ACTIVE_PROFILE);
+                builder.put("profiles", ImmutableList.of(
+                        ImmutableMap.of(
+                                "profileId", ACTIVE_PROFILE,
+                                "repositories", this.repositories))
+                );
+            }
+
+            final Map<String, Object> props = builder.build();
+            final Text xmlText = new Template.Mustache(
+                    Resources.asByteSource(
+                            Resources.getResource("settings.mustache.xml")
+                    ),
+                    props
+            ).eval();
+
+            Files.write(settingsXml, new BytesOf(xmlText).asBytes());
+            log.info("\n{}", xmlText.asString());
+
+            project.args().tag(Args.SettingsKey.SETTINGS_XML, settingsXml.toFile());
+
             return project;
-        }
-
-        @lombok.SneakyThrows
-        private static void save(Path settingsXml, String xml) {
-            Files.write(settingsXml, xml.getBytes(StandardCharsets.UTF_8));
         }
     }
 
@@ -181,16 +214,17 @@ public final class Acts {
     @Slf4j
     static class Repository implements Act {
 
+        @NonNull
         private final Path image;
 
         @Override
         @lombok.SneakyThrows
         public Project accept(Project project) {
             final Path repository = project.repository();
-            if (image != null)
-                Archive.extractTar(image, repository);
+            Archive.extractTar(image, repository);
+            project.args().tag(Args.SettingsKey.LOCAL_REPOSITORY, repository.toFile());
             if (log.isDebugEnabled()) {
-                log.debug("Repository state:");
+                log.debug("Repository state: {}", repository);
                 Files.find(repository, 30, (f,attr) -> !attr.isDirectory()).forEach(file ->
                         log.debug(" {}", repository.relativize(file) ));
             }
@@ -221,12 +255,13 @@ public final class Acts {
                         return parentDir;
                     }).orElseGet(() -> {
                         final Path workDir = project.workDir();
-                        final Path parentDir = workDir.resolve(RandomText.randomFileName("_parent_"));
+                        final Path parentDir = workDir.resolve(Texts.randomFileName("_parent_"));
                         final File file = parentDir.toFile();
                         file.mkdir();
                         file.deleteOnExit();
                         return parentDir;
                     });
+
             if (origParent != null) {
                 final Path parentPomFile = parentPomDir.resolve("pom.xml");
                 Files.copy(origParent, parentPomFile, StandardCopyOption.REPLACE_EXISTING);

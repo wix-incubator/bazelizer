@@ -1,9 +1,13 @@
 package tools.jvm.mvn;
 
-import com.google.common.base.Joiner;
+import com.google.common.base.Function;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -11,9 +15,9 @@ import org.apache.maven.shared.invoker.DefaultInvocationRequest;
 import org.apache.maven.shared.invoker.InvocationRequest;
 import picocli.CommandLine;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.io.File;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Args.
@@ -22,6 +26,13 @@ import java.util.Optional;
 public class Args  {
     private final List<String> goals = Lists.newArrayList();
     private final List<String> profiles = Lists.newArrayList();
+    private final Map<SettingsKey, Object> ctx = Maps.newHashMap();
+
+    enum SettingsKey {
+        SETTINGS_XML,
+        LOCAL_REPOSITORY
+    }
+
 
     public Args() {
     }
@@ -30,6 +41,7 @@ public class Args  {
         this.goals.addAll(args.goals);
         this.profiles.addAll(args.profiles);
         this.offline = args.offline;
+        this.ctx.putAll(args.ctx);
     }
 
     @CommandLine.Command(name = "")
@@ -53,6 +65,29 @@ public class Args  {
     @SuppressWarnings("UnusedReturnValue")
     public Args append(String...s) {
         goals.addAll(Arrays.asList(s));
+        return this;
+    }
+
+    /**
+     * Add args to set.
+     * @param s args
+     * @return this
+     */
+    @SuppressWarnings({"UnusedReturnValue", "unused"})
+    public Args profile(String...s) {
+        profiles.addAll(Arrays.asList(s));
+        return this;
+    }
+
+    /**
+     * Add args to set.
+     * @param key args
+     * @param o value
+     * @return this
+     */
+    @SuppressWarnings("UnusedReturnValue")
+    public Args tag(SettingsKey key, Object o) {
+        ctx.put(key, o);
         return this;
     }
 
@@ -91,19 +126,24 @@ public class Args  {
         final DefaultInvocationRequest request = new DefaultInvocationRequest();
         request.setGoals(Lists.newArrayList(Sets.newLinkedHashSet(goals)));
         request.setProfiles(Lists.newArrayList(Sets.newLinkedHashSet(profiles)));
-
-        if (offline)
+        if (offline) {
             request.setOffline(true);
-
+        }
+        if (ctx.containsKey(SettingsKey.SETTINGS_XML)) {
+            request.setUserSettingsFile((File) ctx.get(SettingsKey.SETTINGS_XML));
+        }
+        if (ctx.containsKey(SettingsKey.LOCAL_REPOSITORY)) {
+            request.setLocalRepositoryDirectory((File) ctx.get(SettingsKey.LOCAL_REPOSITORY));
+        }
         return request;
     }
 
     @Override
     public String toString() {
-        return Joiner.on(" ").join(
-                offline ? "--offline" : "",
-                Optional.of(profiles).filter(d -> !d.isEmpty()).map(d -> "-P " + String.join(",", d)).orElse(""),
-                String.join(" ", goals)
-        ).trim();
+        return MoreObjects.toStringHelper(this)
+                .add("goals", goals)
+                .add("profiles", profiles)
+                .add("ctx", ctx)
+                .toString();
     }
 }

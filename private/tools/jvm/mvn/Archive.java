@@ -5,6 +5,7 @@ import com.google.common.io.Closer;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.ToString;
+import lombok.experimental.Delegate;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -48,7 +49,7 @@ public interface Archive extends Proc<Output> {
                 for (File file : files) {
                     final ArchiveEntry entry = aos.createArchiveEntry(file, tarPath.apply(file).toString());
                     aos.putArchiveEntry(entry);
-                    Files.copy(file.toPath(), aos);
+                    com.google.common.io.Files.asByteSource(file).copyTo(aos);
                     aos.closeArchiveEntry();
                 }
                 aos.finish();
@@ -57,6 +58,25 @@ public interface Archive extends Proc<Output> {
             }
         }
     }
+
+    class LocalRepositoryDir implements Archive {
+
+        @Delegate
+        private final Archive archive;
+
+        public LocalRepositoryDir(Project project) {
+            archive = in -> {
+                final Path repository = project.repository();
+
+                new Archive.TAR(
+                        Archive.listFiles(repository),
+                        file -> repository.relativize(file.toPath())
+                ).exec(in);
+            };
+        }
+    }
+
+
 
     /**
      * Tar all directory.
@@ -95,8 +115,6 @@ public interface Archive extends Proc<Output> {
     @SuppressWarnings({"UnstableApiUsage"})
     @SneakyThrows
     static void extractTar(Path tar, Path dest) {
-//        final Path dest = project.m2Home().resolve("repository");
-//        System.out.println("Extracting " + tar + " to " + dest);
         final Closer closer = Closer.create();
 
         final TarArchiveInputStream ais = closer.register(new TarArchiveInputStream(
@@ -136,7 +154,8 @@ public interface Archive extends Proc<Output> {
         private final boolean close;
 
         public LSTar(Path file) throws IOException {
-            this(new TarArchiveInputStream(Files.newInputStream(file, StandardOpenOption.READ)), true);
+            this(new TarArchiveInputStream(
+                    Files.newInputStream(file, StandardOpenOption.READ)), true);
         }
 
         @Override

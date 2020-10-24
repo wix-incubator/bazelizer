@@ -12,6 +12,7 @@ import picocli.CommandLine;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -48,25 +49,35 @@ public class Cli {
     @SuppressWarnings({"unused"})
     @CommandLine.Command(name = "build-repository")
     public static class MkRepository implements Runnable {
+        @CommandLine.Mixin
+        public ArgsFactory argsFactory = new ArgsFactory();
 
-        public static final String GROUP_ID = "io.bazelbuild";
-
-        @CommandLine.Option(names = {"-pt", "--pomFile"}, required = false,
+        @CommandLine.Option(names = {"-pt", "--pomFile"},
                 paramLabel = "POM", description = "the pom xml template file")
         public Path runPom;
 
-        @CommandLine.Option(names = {"-wi", "--writeImg"}, required = false,
+        @CommandLine.Option(names = {"-wi", "--writeImg"},
                 paramLabel = "PATH", description = "desired output for repo snapshot")
         public Path writeImg;
 
         @CommandLine.Option(names = {"--def"}, description = "Rule specific output settings")
         public Path pomDeclarations;
 
+
+        @CommandLine.Option(names = {"--local-cache"}, description = "M2 host's m2 cache")
+        public Path hostMavenCache;
+
         @SneakyThrows
         @Override
         public void run() {
+            SLF4JConfigurer.setLogLevel(SLF4JConfigurer.ToolLogLevel.INFO);
+
             final Maven maven = new Maven.BazelInvoker();
-            final Project simple = Project.builder().build();
+            final Args args = argsFactory.newArgs();
+
+            final Project simple = Project.builder()
+                    .args(args)
+                    .build();
 
             simple.outputs().add(
                     new OutputFile.DeclaredTarDir(
@@ -76,7 +87,9 @@ public class Cli {
             );
 
             new Act.Iterative(
-                    new Acts.SettingsXml(),
+                    new Acts.SettingsXml(
+                            new Repositories.BazelLinkedLocalM2(Paths.get("/Users/bohdans/.m2/repository")) // TODO
+                    ),
                     new ActAssemble(
                             new Builds.DefPomIterable(pomDeclarations),
                             new Act.Iterative(
@@ -94,68 +107,12 @@ public class Cli {
                     + FileUtils.byteCountToDisplaySize(writeImg.toFile().length()));
         }
 
+        @SuppressWarnings("UnstableApiUsage")
         private ByteSource getPomXmlSrc() {
             return Files.asByteSource(runPom.toFile());
         }
     }
 
-    @SuppressWarnings({"UnstableApiUsage", "unused"})
-    @CommandLine.Command(name = "repository")
-    public static class Repository implements Runnable {
-
-        @CommandLine.Mixin
-        public ArgsFactory argsFactory = new ArgsFactory();
-
-        public static final String GROUP_ID = "io.bazelbuild";
-        @CommandLine.Option(names = {"-pt", "--pomFile"}, paramLabel = "POM", description = "the pom xml template file")
-        public Path pomFile;
-
-        @CommandLine.Option(names = {"-wi", "--writeImg"}, paramLabel = "PATH", description = "desired output for repo snapshot")
-        public Path writeImg;
-
-        @CommandLine.Option(names = {"-ppf", "--parentPomFile"}, paramLabel = "P", description = "parent pom path")
-        public Path parentPomFile;
-
-        @CommandLine.Option(names = {"-ppi", "--parentPomImg"}, paramLabel = "P", description = "parent pom path")
-        public Path parentPomImg;
-
-        @SneakyThrows
-        @Override
-        public void run() {
-            final Project project = Project.builder()
-                    .pomTemplate(getPomXmlSrc())
-                    .groupId(GROUP_ID)
-                    .artifactId("id-" + RandomText.randomLetters(6))
-                    .workDir(pomFile.getParent())
-                    .outputs(Lists.newArrayList())
-                    .pomParent(parentPomFile)
-                    .args(argsFactory.newArgs())
-                    .build();
-
-            project.outputs().add(new OutputFile.DeclaredProc(
-                    new Archive.TarDirectory(project.repository()),
-                    writeImg.toString()
-            ));
-
-            new Act.Iterative(
-                    new Acts.SettingsXml(),
-                    new Acts.Repository(
-                            parentPomImg
-                    ),
-                    new Acts.ParentPOM(),
-                    new Acts.InstallParentPOM(),
-                    new Acts.POM(),
-                    new Acts.MvnGoOffline(
-                            new Maven.BazelInvoker()
-                    ).compile(true),
-                    new Acts.Outputs()
-            ).accept(project);
-        }
-
-        private ByteSource getPomXmlSrc() {
-            return Files.asByteSource(pomFile.toFile());
-        }
-    }
 
     @SuppressWarnings({"unused", "UnstableApiUsage", "RedundantSuppression"})
     @CommandLine.Command(name = "run")
@@ -197,6 +154,8 @@ public class Cli {
         @Override
         @lombok.SneakyThrows
         public void run() {
+            SLF4JConfigurer.setLogLevel(SLF4JConfigurer.ToolLogLevel.INFO);
+
             final Path workDir = getWorkDir();
             final Path pom = Project.syntheticPomFile(workDir);
             final Args args = argsFactory.newArgs();
@@ -220,6 +179,8 @@ public class Cli {
                     .outputs(outputs)
                     .build();
 
+            final Maven.BazelInvoker maven = new Maven.BazelInvoker();
+
             new Act.Iterative(
                     new Acts.Repository(
                             repository
@@ -229,7 +190,7 @@ public class Cli {
                     new Acts.ParentPOM(),
                     new Acts.POM(),
                     new Acts.MvnBuild(
-                            new Maven.BazelInvoker()
+                            maven
                     ),
                     new Acts.AppendDefaultOutputs(
                             writeDefaultJar,
@@ -252,8 +213,74 @@ public class Cli {
     }
 
 
+
+
+
+
+    @SuppressWarnings({"UnstableApiUsage", "unused"})
+    @CommandLine.Command(name = "repository")
+    @Deprecated
+    public static class Repository implements Runnable {
+
+        @CommandLine.Mixin
+        public ArgsFactory argsFactory = new ArgsFactory();
+
+        public static final String GROUP_ID = "io.bazelbuild";
+        @CommandLine.Option(names = {"-pt", "--pomFile"}, paramLabel = "POM", description = "the pom xml template file")
+        public Path pomFile;
+
+        @CommandLine.Option(names = {"-wi", "--writeImg"}, paramLabel = "PATH", description = "desired output for repo snapshot")
+        public Path writeImg;
+
+        @CommandLine.Option(names = {"-ppf", "--parentPomFile"}, paramLabel = "P", description = "parent pom path")
+        public Path parentPomFile;
+
+        @CommandLine.Option(names = {"-ppi", "--parentPomImg"}, paramLabel = "P", description = "parent pom path")
+        public Path parentPomImg;
+
+        @SneakyThrows
+        @Override
+        public void run() {
+            final Project project = Project.builder()
+                    .pomTemplate(getPomXmlSrc())
+                    .groupId(GROUP_ID)
+                    .artifactId("id-" + Texts.randomLetters(6))
+                    .workDir(pomFile.getParent())
+                    .outputs(Lists.newArrayList())
+                    .pomParent(parentPomFile)
+                    .args(argsFactory.newArgs())
+                    .build();
+
+            project.outputs().add(new OutputFile.DeclaredProc(
+                    new Archive.TarDirectory(project.repository()),
+                    writeImg.toString()
+            ));
+
+            new Act.Iterative(
+                    new Acts.SettingsXml(),
+                    new Acts.Repository(
+                            parentPomImg
+                    ),
+                    new Acts.ParentPOM(),
+                    new Acts.InstallParentPOM(),
+                    new Acts.POM(),
+                    new Acts.MvnGoOffline(
+                            new Maven.BazelInvoker()
+                    ).compile(true),
+                    new Acts.Outputs()
+            ).accept(project);
+        }
+
+        private ByteSource getPomXmlSrc() {
+            return Files.asByteSource(pomFile.toFile());
+        }
+    }
+
+
+
     @SuppressWarnings({"unused", "UnstableApiUsage"})
     @CommandLine.Command(name = "build")
+    @Deprecated
     public static class Build implements Runnable {
 
         @CommandLine.Mixin

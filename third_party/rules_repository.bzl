@@ -26,6 +26,7 @@ def _jvm_import(name,artifact,server_urls,fetch_sources,**kwargs):
         artifact=artifact,
         server_urls=server_urls,
         fetch_sources=fetch_sources,
+        licenses = ["notice"], # Apache 2.0
         **kwargs)
 
     native.bind(

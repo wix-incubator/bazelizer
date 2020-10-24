@@ -3,10 +3,7 @@ package tools.jvm.mvn;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.io.ByteSource;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.SneakyThrows;
-import lombok.ToString;
+import lombok.*;
 import lombok.experimental.Accessors;
 import org.cactoos.io.InputOf;
 import org.cactoos.scalar.UncheckedScalar;
@@ -21,31 +18,76 @@ import java.util.List;
 @ToString
 public final class Project {
 
+
+
+    interface ProjectView {
+        Iterable<Dep> deps();
+        String groupId();
+        String artifactId();
+        String parent();
+
+    }
+
+    // TODO get rid of
     private String artifactId;
     private String groupId;
 
+    /**
+     * Dependencies.
+     */
     @Builder.Default
     private Iterable<Dep> deps = ImmutableList.of();
 
+    /**
+     * Working directory.
+     */
     private Path workDir;
-    private Path pomParent;
 
+    /**
+     * Maven home directory.
+     */
     @Builder.Default
     private Path m2Home = getTmpDirectory();
 
+    /**
+     * Output files for the project.
+     */
     @Builder.Default
     private List<OutputFile> outputs = Lists.newArrayList();
-    private Path baseImage;
-    private ByteSource pomTemplate;
+
+
+    /**
+     * Arguments for the maven.
+     */
     @Builder.Default
     private Args args = new Args();
 
+    /**
+     * Pom template source.
+     */
+    private ByteSource pomTemplate;
+
+    /**
+     * Generated pom file.
+     */
     private Path pom;
 
+    /**
+     * Parent pom file.
+     * Not templating supported so far/
+     */
+    private Path pomParent;
+
+
+    @Getter(AccessLevel.PRIVATE)
+    private Path repositoryCached;
 
     public Path repository() {
-        return this.m2Home().resolve("repository");
+        if (repositoryCached == null)
+            repositoryCached = this.m2Home().resolve("repository");
+        return repositoryCached;
     }
+
 
     public ProjectView toView() {
         return new ProjectView() {
@@ -95,13 +137,6 @@ public final class Project {
         ).artifactFolder(repository());
     }
 
-    interface ProjectView {
-        Iterable<Dep> deps();
-        String groupId();
-        String artifactId();
-        String parent();
-
-    }
 
     public Path pom() {
         if (pom == null) {
@@ -112,14 +147,16 @@ public final class Project {
 
     @SneakyThrows
     private static Path getTmpDirectory() {
-        final String dirName = SysProps.labelHex().map(n -> n + "__M2_HOME@").orElse("M2_HOME@");
+        final String dirName = SysProps.labelHex().map(n ->
+                "__" + Long.toHexString(System.currentTimeMillis()).toUpperCase()
+                        + "__M2_HOME@" + n + "@").orElse("M2_HOME@");
         return Files.createTempDirectory(dirName);
     }
 
     public static Path syntheticPomFile(Path workDir) {
         for (int i = 0; i < 1000; i++) {
             final Path pom = workDir.resolve(
-                    RandomText.randomFileName("pom-synthetic") + "-" + i + ".xml"
+                    Texts.randomFileName("pom-synthetic") + "-" + i + ".xml"
             );
             if (Files.notExists(pom)) {
                 return pom;

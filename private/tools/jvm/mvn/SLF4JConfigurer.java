@@ -25,7 +25,7 @@ public class SLF4JConfigurer extends ContextAwareBase implements Configurator {
         return root;
     }
 
-    private synchronized static void setLogLevel(ToolLogLevel l) {
+    public synchronized static void setLogLevel(ToolLogLevel l) {
         root = l;
     }
 
