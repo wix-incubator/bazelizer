@@ -2,7 +2,7 @@
 
 [![mavenizer actions Status](https://github.com/wix-incubator/mavenizer/workflows/CI/badge.svg)](https://github.com/wix-incubator/mavenizer/actions)
 
-## IN PROGRESS 
+## !! WORK IN PROGRESS  !!
 
 #### TL;DR
 This is your last chance if you really need some maven plugin inside your Bazel build and you cannot rewrite or adapt it to Bazel.
