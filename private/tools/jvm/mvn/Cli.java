@@ -60,6 +60,7 @@ public class Cli {
                 paramLabel = "PATH", description = "desired output for repo snapshot")
         public Path writeImg;
 
+
         @CommandLine.Option(names = {"--def"}, description = "Rule specific output settings")
         public Path pomDeclarations;
 
@@ -80,8 +81,8 @@ public class Cli {
                     .build();
 
             simple.outputs().add(
-                    new OutputFile.DeclaredTarDir(
-                            simple.repository(),
+                    new OutputFile.ProjectFor(
+                            Archive.LocalRepositoryDir::new,
                             writeImg.toString()
                     )
             );
@@ -136,8 +137,7 @@ public class Cli {
                 required = true, description = "the srcs manifest")
         public File srcs;
 
-        @CommandLine.Option(names = {"-O"},
-                description = "declared bazel output -> relatice file path /target")
+        @CommandLine.Option(names = {"-O"}, description = "declared bazel output -> relatice file path /target")
         public Map<String, String> outputs = ImmutableMap.of();
 
         @CommandLine.Option(names = {"--parent-pom"}, paramLabel = "P", description = "parent pom path")
@@ -159,6 +159,7 @@ public class Cli {
             final Path workDir = getWorkDir();
             final Path pom = Project.syntheticPomFile(workDir);
             final Args args = argsFactory.newArgs();
+            final Maven.BazelInvoker maven = new Maven.BazelInvoker();
 
             final List<OutputFile> outputs = this.outputs.entrySet()
                     .stream()
@@ -179,7 +180,6 @@ public class Cli {
                     .outputs(outputs)
                     .build();
 
-            final Maven.BazelInvoker maven = new Maven.BazelInvoker();
 
             new Act.Iterative(
                     new Acts.Repository(
@@ -266,7 +266,7 @@ public class Cli {
                     new Acts.POM(),
                     new Acts.MvnGoOffline(
                             new Maven.BazelInvoker()
-                    ).compile(true),
+                    ),
                     new Acts.Outputs()
             ).accept(project);
         }
@@ -336,14 +336,11 @@ public class Cli {
                     .deps(getDeps())
                     .workDir(workDir)
                     .pomTemplate(Files.asByteSource(pomXmlTpl.toFile()))
-                    .outputs(outputs.entrySet()
-                            .stream()
-                            .map(entry -> {
-                                final String declared = entry.getKey();
-                                final String buildFile = entry.getValue();
-                                return new OutputFile.Simple(buildFile, declared);
-                            })
-                            .collect(Collectors.toList()))
+                    .outputs(outputs.entrySet().stream().map(entry -> {
+                        final String declared = entry.getKey();
+                        final String buildFile = entry.getValue();
+                        return new OutputFile.Simple(buildFile, declared);
+                    }).collect(Collectors.toList()))
                     .build();
 
             new Act.Iterative(

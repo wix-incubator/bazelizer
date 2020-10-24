@@ -79,14 +79,6 @@ public final class Acts {
 
         private final Maven maven;
 
-        // can be useful to trigger
-        // because of https://github.com/qaware/go-offline-maven-plugin#usage
-        @Setter
-        private boolean compile = false;
-        @Setter
-        private boolean install = false;
-
-
         MvnGoOffline(Maven maven) {
             this.maven = maven;
         }
@@ -150,8 +142,10 @@ public final class Acts {
     static class SettingsXml implements Act {
         public static final String ACTIVE_PROFILE = "bazelizer";
 
-        public SettingsXml() {}
-
+        /**
+         * Ctor
+         * @param rr repositories to activate
+         */
         @SafeVarargs
         public SettingsXml(Iterable<Repositories.Repository>...rr) {
             for (Iterable<Repositories.Repository> r : rr) {
@@ -177,11 +171,11 @@ public final class Acts {
             Files.createDirectories(repository);
 
             final ImmutableMap.Builder<String, Object> builder = ImmutableMap.<String, Object>builder()
-                    .put("localRepository", repository);
-                    //.put("offline", offline);
+                    .put("localRepository", repository)
+                    .put("offline", offline);
 
             if (!repositories.isEmpty()) {
-                //builder.put("activeProfile", ACTIVE_PROFILE);
+                builder.put("activeProfile", ACTIVE_PROFILE);
                 builder.put("profiles", ImmutableList.of(
                         ImmutableMap.of(
                                 "profileId", ACTIVE_PROFILE,

@@ -10,7 +10,10 @@ import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.filefilter.FileFilterUtils;
+import org.apache.commons.io.filefilter.IOFileFilter;
 import org.cactoos.Output;
 import org.cactoos.Proc;
 
@@ -23,11 +26,8 @@ import java.nio.file.StandardOpenOption;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public interface Archive extends Proc<Output> {
-
-
 
     /**
      * Tar.
@@ -59,20 +59,35 @@ public interface Archive extends Proc<Output> {
         }
     }
 
+    /**
+     * Handle archiving local maven directory.
+     */
     class LocalRepositoryDir implements Archive {
 
         @Delegate
         private final Archive archive;
 
+        /**
+         * Ctor.
+         * @param project project
+         */
         public LocalRepositoryDir(Project project) {
-            archive = in -> {
-                final Path repository = project.repository();
-
-                new Archive.TAR(
-                        Archive.listFiles(repository),
-                        file -> repository.relativize(file.toPath())
-                ).exec(in);
-            };
+            this.archive = new TarDirectory(
+                    project.repository(),
+                    FileFilterUtils.and(
+                            FileFilterUtils.fileFileFilter(),
+                            // SEE: https://stackoverflow.com/questions/16866978/maven-cant-find-my-local-artifacts
+                            //
+                            //So with Maven 3.0.x, when an artifact is downloaded from a repository,
+                            // maven leaves a _maven.repositories file to record where the file was resolved from.
+                            //
+                            //Namely: when offline, maven 3.0.x thinks there are no repositories, so will always
+                            // find a mismatch against the _maven.repositories file
+                            FileFilterUtils.notFileFilter(
+                                    FileFilterUtils.prefixFileFilter("_remote.repositories")
+                            )
+                    )
+            );
         }
     }
 
@@ -85,32 +100,34 @@ public interface Archive extends Proc<Output> {
     @ToString
     class TarDirectory implements Archive {
 
+        @Delegate
         private final Archive archive;
 
+        /**
+         * Ctro.
+         * @param dir archive all files from dir
+         */
         public TarDirectory(Path dir)  {
+            this(dir, FileFilterUtils.trueFileFilter());
+        }
+
+        /**
+         * Ctor.
+         * @param dir dir
+         * @param filesFilter files predicate
+         */
+        public TarDirectory(Path dir, IOFileFilter filesFilter)  {
             archive = in -> new Archive.TAR(
-                    Archive.listFiles(dir),
+                    FileUtils.listFiles(
+                            dir.toFile(),
+                            filesFilter,
+                            FileFilterUtils.directoryFileFilter() // recursive
+                    ),
                     file -> dir.relativize(file.toPath())
             ).exec(in);
         }
-
-        @Override
-        public void exec(Output out) throws Exception {
-            archive.exec(out);
-        }
     }
 
-
-    /**
-     * List files in dir and make it relative
-     * @param repository repo
-     * @return relative paths
-     */
-    static Collection<File> listFiles(Path repository) throws IOException {
-        return Files.find(repository, Integer.MAX_VALUE, (x,y) -> y.isRegularFile())
-                .map(Path::toFile)
-                .collect(Collectors.toList());
-    }
 
     @SuppressWarnings({"UnstableApiUsage"})
     @SneakyThrows

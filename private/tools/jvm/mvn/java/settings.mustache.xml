@@ -38,8 +38,10 @@
     </profiles>
 
 
+    {{#activeProfile}}
     <activeProfiles>
-        <activeProfile>bazelizer</activeProfile>
+        <activeProfile>{{activeProfile}}</activeProfile>
     </activeProfiles>
+    {{/activeProfile}}
 
 </settings>
