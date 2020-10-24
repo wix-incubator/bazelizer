@@ -1,12 +1,12 @@
 package tools.jvm.mvn;
 
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.hash.Hashing;
-import lombok.AllArgsConstructor;
-import lombok.Setter;
-import lombok.SneakyThrows;
+import com.google.common.io.Resources;
+import lombok.*;
 import lombok.experimental.Accessors;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
@@ -16,8 +16,8 @@ import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.apache.commons.io.filefilter.IOFileFilter;
 import org.cactoos.Text;
 import org.cactoos.func.UncheckedProc;
+import org.cactoos.io.BytesOf;
 import org.cactoos.io.InputOf;
-import org.cactoos.io.OutputTo;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -75,33 +75,27 @@ public final class Acts {
     @Slf4j
     @Accessors(chain = true, fluent = true)
     static class MvnGoOffline implements Act {
-        public static final String GO_OFFLINE_PLUGIN = "de.qaware.maven:go-offline-maven-plugin:resolve-dependencies";
+
+        /**
+         * Go offline plugin.
+         */
+        public static final String GO_OFFLINE_PLUGIN =
+                "de.qaware.maven:go-offline-maven-plugin:resolve-dependencies";
 
         private final Maven maven;
 
-        // can be useful to trigger
-        // because of https://github.com/qaware/go-offline-maven-plugin#usage
-        @Setter
-        private boolean compile = false;
-        @Setter
-        private boolean install = false;
+        private final List<String> profiles;
 
-
-        MvnGoOffline(Maven maven) {
+        MvnGoOffline(Maven maven, String...goals) {
             this.maven = maven;
+            this.profiles = Lists.newArrayList(goals);
         }
 
         @Override
         public Project accept(Project project) {
-            log.info("Eagerly fetch dependencies to go offline...");
-            final Args args = new Args(project.args())
-                    .offline(false)
-                    .append(GO_OFFLINE_PLUGIN);
-            if (compile) args.append("compile");
-            if (install) args.append("install");
-            maven.run(
-                    project.toBuilder().args(args).build()
-            );
+            final Args args = new Args(project.args()).offline(false).append(GO_OFFLINE_PLUGIN);
+            profiles.forEach(args::append);
+            maven.run(project.toBuilder().args(args).build());
             return project;
         }
     }
@@ -146,33 +140,75 @@ public final class Acts {
         }
     }
 
-
     /**
      * Prepare settings xml.
      */
     @Slf4j
+    @Accessors(fluent = true)
     static class SettingsXml implements Act {
+        public static final String ACTIVE_PROFILE = "bazelizer";
+
+        /**
+         * Ctor
+         * @param rr repositories to activate
+         */
+        @SafeVarargs
+        public SettingsXml(Iterable<Repositories.Repository>...rr) {
+            for (Iterable<Repositories.Repository> r : rr) {
+                Iterables.addAll(this.repositories, r);
+            }
+        }
+
+        /**
+         * Offline mode.
+         */
+        @SuppressWarnings("unused")
+        @Setter
+        private boolean offline = false;
+
+        /**
+         * Repositories.
+         */
+        @Getter
+        private final List<Repositories.Repository> repositories = Lists.newArrayList();
+
 
         @SneakyThrows
         @Override
+        @SuppressWarnings("UnstableApiUsage")
         public Project accept(Project project) {
             final Path m2Home = project.m2Home();
             final Path settingsXml = m2Home.resolve("settings.xml").toAbsolutePath();
             final Path repository = m2Home.resolve("repository").toAbsolutePath();
             Files.createDirectories(repository);
-            String xml = "<settings xsi:schemaLocation=\"http://maven.apache.org/SETTINGS/1.1.0 http://maven.apache.org/xsd/settings-1.1.0.xsd\" " +
-                    "xmlns=\"http://maven.apache.org/SETTINGS/1.1.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n" +
-                            "   <localRepository>" + repository + "</localRepository>\n" +
-                            "</settings>";
 
-            save(settingsXml, xml);
-            log.debug("\n{}", xml);
+            final ImmutableMap.Builder<String, Object> builder = ImmutableMap.<String, Object>builder()
+                    .put("localRepository", repository)
+                    .put("offline", offline);
+
+            if (!repositories.isEmpty()) {
+                builder.put("activeProfile", ACTIVE_PROFILE);
+                builder.put("profiles", ImmutableList.of(
+                        ImmutableMap.of(
+                                "profileId", ACTIVE_PROFILE,
+                                "repositories", this.repositories))
+                );
+            }
+
+            final Map<String, Object> props = builder.build();
+            final Text xmlText = new Template.Mustache(
+                    Resources.asByteSource(
+                            Resources.getResource("settings.mustache.xml")
+                    ),
+                    props
+            ).eval();
+
+            Files.write(settingsXml, new BytesOf(xmlText).asBytes());
+            log.info("\n{}", xmlText.asString());
+
+            project.args().tag(Args.SettingsKey.SETTINGS_XML, settingsXml.toFile());
+
             return project;
-        }
-
-        @lombok.SneakyThrows
-        private static void save(Path settingsXml, String xml) {
-            Files.write(settingsXml, xml.getBytes(StandardCharsets.UTF_8));
         }
     }
 
@@ -184,80 +220,58 @@ public final class Acts {
     @Slf4j
     static class Repository implements Act {
 
+        @NonNull
         private final Path image;
 
         @Override
         @lombok.SneakyThrows
         public Project accept(Project project) {
             final Path repository = project.repository();
-            if (image != null)
-                Archive.extractTar(image, repository);
+            Archive.extractTar(image, repository);
+            project.args().tag(Args.SettingsKey.LOCAL_REPOSITORY, repository.toFile());
             if (log.isDebugEnabled()) {
-                log.debug("Repository state:");
-                Files.find(repository, 30, (f,attr) -> !attr.isDirectory()).forEach(file -> {
-                    log.debug(" {}", repository.relativize(file) );
-                });
+                log.debug("Repository state: {}", repository);
+                Files.find(repository, 30, (f,attr) -> !attr.isDirectory()).forEach(file ->
+                        log.debug(" {}", repository.relativize(file) ));
             }
 
             return project;
         }
     }
 
-    /**
-     * Create snapshot from the repository.
-     */
-    @Slf4j
-    @Deprecated
-    static class RepositoryArchiver implements Act {
-
-        @Override
-        @lombok.SneakyThrows
-        public Project accept(Project project) {
-            final Path m2Home = project.m2Home();
-            final Path src = m2Home.resolve("repository");
-            final String dest = Iterables.getOnlyElement(project.outputs()).src();
-            log.debug("Archive: src={} dest={}", src, dest);
-            final File destFile = new File(dest);
-            new Archive.TarDirectory(src).exec(
-                    new OutputTo(destFile)
-            );
-            log.info("Repository archive created: {}", FileUtils.byteCountToDisplaySize(destFile.length()));
-            return project;
-        }
-    }
 
     /**
      * Resolve relative path to optional parent project.
      */
-    @SuppressWarnings({"UnstableApiUsage", "ResultOfMethodCallIgnored"})
+    @SuppressWarnings({"ResultOfMethodCallIgnored"})
     @Slf4j
     static class ParentPOM implements Act {
 
         @SneakyThrows
         @Override
         public Project accept(Project project) {
-            final Path origParent = project.pomParent();
-            final Path parentPomDir = Optional.ofNullable(System.getProperty("tools.jvm.mvn.BazelLabelName"))
-                    .map(name -> {
-                        final String hashedLabel = Hashing.murmur3_32().hashString(name,
-                                StandardCharsets.UTF_8).toString();
+            final Path origParent = project.parentPom();
+            final Path parentPomDir = SysProps.labelHex()
+                    .map(hashedLabel -> {
                         final Path workDir = project.workDir();
                         final Path parentDir = workDir.resolve("_parent_" + hashedLabel);
                         final File file = parentDir.toFile();
                         file.mkdir();
+                        file.deleteOnExit();
                         return parentDir;
                     }).orElseGet(() -> {
                         final Path workDir = project.workDir();
-                        final Path parentDir = workDir.resolve(RandomText.randomFileName("parent"));
+                        final Path parentDir = workDir.resolve(Texts.randomFileName("_parent_"));
                         final File file = parentDir.toFile();
                         file.mkdir();
                         file.deleteOnExit();
                         return parentDir;
                     });
+
             if (origParent != null) {
                 final Path parentPomFile = parentPomDir.resolve("pom.xml");
                 Files.copy(origParent, parentPomFile, StandardCopyOption.REPLACE_EXISTING);
-                return project.toBuilder().pomParent(parentPomFile).build();
+                return project.toBuilder().parentPom(parentPomFile).build();
             }
             return project;
         }
@@ -268,40 +282,116 @@ public final class Acts {
      * Install parent project.
      */
     @Slf4j
+    @AllArgsConstructor
     static class InstallParentPOM implements Act {
+
+        private final Maven maven;
 
         @Override
         public Project accept(Project project) {
-            final Path origParent = project.pomParent();
-            if (origParent != null) {
-                final Path parentPomFile = origParent.toAbsolutePath();
+            final Path parent = project.parentPom();
+            if (parent != null) {
+                final Path parentPomFile = parent.toAbsolutePath();
                 Path parentDir = parentPomFile.getParent().normalize();
-                log.info("Install parent project into repository...");
+                log.info("Install parent pom file..");
                 final Project parentProject = project.toBuilder()
                         .pom(parentPomFile)
                         .workDir(parentDir)
-                        .args(new Args().append("install"))
+                        .args(new Args(project.args()).append("install"))
                         .build();
 
-                new Maven.BazelInvoker().run(parentProject);
+                maven.run(parentProject);
             }
             return project;
         }
     }
 
+    /**
+     * Write default outputs of maven build: jar file and installed data.
+     */
+    @AllArgsConstructor
+    @Slf4j
+    static class AppendDefaultOutputs implements Act {
+
+        /**
+         * Declared jar path
+         */
+        private final Path jar;
+
+        /**
+         * Declared tar archive.
+         */
+        private final Path artifact;
+
+        @Override
+        public Project accept(Project project) {
+            final List<OutputFile> newOutputFiles = Lists.newArrayListWithCapacity(2);
+            final Pom.Props bean = project.getPomProps();
+
+            final IOFileFilter artifactFilter = FileFilterUtils.and(
+                    new AbstractFileFilter() {
+                        @Override
+                        public boolean accept(File file) {
+                            final Path path = file.toPath();
+                            return path.startsWith(project.getArtifactFolder());
+                        }
+                    },
+                    FileFilterUtils.notFileFilter(
+                            FileFilterUtils.suffixFileFilter(".pom") // exclude pom from a pkg
+                    )
+            );
+
+            final Collection<File> files = FileUtils.listFiles(
+                    project.repository().toFile(),
+                    artifactFilter,
+                    FileFilterUtils.trueFileFilter()
+            );
+
+            final String pomFileJar = String.format("%s-%s.jar", bean.artifactId, bean.version);
+            final Optional<File> installedJar = files.stream().filter(f -> f.getName().endsWith(pomFileJar)).findFirst();
+
+            if (jar != null) {
+                newOutputFiles.add(
+                        installedJar.<OutputFile>map(f -> new OutputFile.Declared(f, jar.toAbsolutePath().toString()))
+                        .orElseGet(() -> new OutputFile.Simple(pomFileJar, jar.toAbsolutePath().toString()))
+                );
+            }
+
+            if (artifact != null) {
+
+                final Archive archive = new Archive.TAR(
+                        files,
+                        aFile -> {
+                            final Path filePath = aFile.toPath();
+                            final Path filePathInRepo = project.repository().relativize(filePath);
+                            log.debug("tar: {} as {}", aFile, filePathInRepo);
+                            return filePathInRepo;
+                        }
+                );
+
+                newOutputFiles.add(
+                        new OutputFile.DeclaredProc(archive, artifact.toAbsolutePath().toString())
+                );
+            }
+
+            final List<OutputFile> outputs = project.outputs();
+            return project.toBuilder().outputs(
+                    Lists.newArrayList(Iterables.concat(outputs, newOutputFiles))
+            ).build();
+        }
+    }
 
     /**
      * Archive artifact binaries as is without pom
      */
     @Slf4j
     @AllArgsConstructor
+    @Deprecated
     static class ArtifactPredefOutputs implements Act {
 
         public static final String FLAG_DEF_JAR = "@DEF_JAR";
 
         public static final String FLAG_PKG = "@DEF_PKG";
-
-        public static final String FLAG_MVN_COORDS = "@MVN_COORDS";
 
         private final Map<String,String> settings;
 
@@ -311,7 +401,7 @@ public final class Acts {
             final ArrayList<OutputFile> outputs = Lists.newArrayList(project.outputs());
             final Pom.Props bean = new Pom.XPath(
                     new InputOf(project.pom())
-            ).value();
+            ).props();
 
             Map<String,String> settings = this.settings != null ? this.settings : Collections.emptyMap();
 
@@ -320,7 +410,7 @@ public final class Acts {
                     bean.getGroupId(),
                     bean.getArtifactId(),
                     bean.getVersion()
-            ).relativeTo(repository);
+            ).artifactFolder(repository);
             final IOFileFilter artifactFilter = FileFilterUtils.and(
                     new AbstractFileFilter() {
                         @Override

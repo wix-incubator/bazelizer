@@ -24,7 +24,7 @@ public class DepTest {
         Assert.assertEquals("myapi-single", dep.artifactId());
         Assert.assertEquals("1.0.0-SNAPSHOT", dep.version());
 
-        final Path relative = dep.relativeTo(Paths.get("/tmp/repo"));
+        final Path relative = dep.artifactFolder(Paths.get("/tmp/repo"));
         Assert.assertEquals("/tmp/repo/com/mavenizer/examples/api/myapi-single/1.0.0-SNAPSHOT", relative.toString());
 
     }

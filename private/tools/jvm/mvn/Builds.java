@@ -1,39 +1,80 @@
 package tools.jvm.mvn;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import com.google.common.collect.*;
 import com.google.gson.annotations.SerializedName;
+import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.ToString;
-import org.cactoos.iterable.Filtered;
+import lombok.experimental.Accessors;
+import lombok.experimental.Delegate;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.file.Path;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Supplier;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public interface Builds extends Iterable<Builds.BuildNode> {
 
 
-
+    /**
+     * Pom definition.
+     */
     @Data
     class DefPom {
         @SerializedName("file")
         private Path file;
         @SerializedName("parent_file")
         private Path parentFile;
+        @SerializedName("flags_line")
+        private List<String> flags;
 
+        @SuppressWarnings("unused")
+        public DefPom() {
+            super();
+        }
+
+        public DefPom(Path path, Path parentFile) {
+            this.file = path;
+            this.parentFile = parentFile;
+        }
+
+        public DefPom(String path, String parentFile) {
+            this(Paths.get(path), Optional
+                    .ofNullable(parentFile).map(Paths::get).orElse(null));
+        }
+
+        /**
+         * Current id
+         * @return id
+         */
         public String id() {
             return file.toString();
         }
 
+        /**
+         * id of parent node
+         * @return id
+         */
         public String parentId() {
             return parentFile != null ? parentFile.toString() : null;
+        }
+
+        /**
+         * Command line args, specific for current build execution
+         * @return args
+         */
+        public Args args() {
+            return Optional.ofNullable(flags)
+                    .filter(d -> !d.isEmpty())
+                    .map(flags -> {
+                        final String line = String.join(" ", flags);
+                        return new Args().parseCommandLine(line);
+                    }).orElse(new Args());
         }
 
         /**
@@ -50,59 +91,114 @@ public interface Builds extends Iterable<Builds.BuildNode> {
      *  Build execution node
      */
     @Data
-    @ToString(of = {"self"})
+    @Accessors(fluent = true)
     class BuildNode {
         private final DefPom self;
         private List<BuildNode> children = Lists.newArrayList();
         private BuildNode parent;
-    }
-    
-    class JsonManifestOf implements Builds {
-
-        /**
-         * Ctor
-         * @param pomDeclarations manifest path
-         */
-        @SuppressWarnings("StaticPseudoFunctionalStyleMethod")
-        public JsonManifestOf(Path pomDeclarations) {
-            lazy = Suppliers.memoize(() -> {
-                final List<DefPom> defFiles = Lists.newArrayList(
-                        Iterables.transform(
-                                new ManifestFile(pomDeclarations), DefPom::deserialize
-                        )
-                );
-                Map<String, BuildNode> lookup = Maps.newHashMap();
-                defFiles.forEach(def -> lookup.put(def.id(), new BuildNode(def)));
-                for (DefPom defFile : defFiles) {
-                    final BuildNode thisNode = lookup.computeIfAbsent(defFile.id(), i -> new BuildNode(defFile));
-                    if (thisNode.self.parentFile != null) {
-                        lookup.computeIfPresent(thisNode.self.parentId(), (k, parent) -> {
-                            parent.children.add(thisNode);
-                            thisNode.parent = parent;
-                            return parent;
-                        });
-                    }
-                }
-                return new Filtered<>(lookup.values(), v -> v.parent == null);
-            });
-        }
-
-        /**
-         * Lazy computed nodes.
-         */
-        private final Supplier<Iterable<BuildNode>> lazy;
-
-        @Override
-        public Iterator<BuildNode> iterator() {
-            return lazy.get().iterator();
-        }
-
         @Override
         public String toString() {
-            final MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper(this);
-            helper.add("parents=", Joiner.on(", ").join(this));
-            return helper.toString();
+            return MoreObjects.toStringHelper("BuildNode")
+                    .add("file", self.file)
+                    .add("parent", self.parentFile)
+                    .toString();
         }
     }
-    
+
+
+    /**
+     * Source of pom definitions
+     */
+    class DefPomIterable implements Iterable<DefPom> {
+
+        @Delegate
+        private final Iterable<DefPom> iter;
+
+        @SuppressWarnings("StaticPseudoFunctionalStyleMethod")
+        public DefPomIterable(Path pomDefFile) {
+            this.iter = new Iterable<DefPom>() {
+
+                @SuppressWarnings("Guava")
+                final Supplier<Iterable<String>> mem = Suppliers.memoize(() ->
+                        Lists.newArrayList(new ManifestFile(pomDefFile)));
+
+                @SuppressWarnings("NullableProblems")
+                @Override
+                public Iterator<DefPom> iterator() {
+                    return Iterables.transform(mem.get(), DefPom::deserialize).iterator();
+                }
+            };
+        }
+    }
+
+
+    /**
+     * Pre order traversal of a graph.
+     */
+    @AllArgsConstructor
+    class PreOrderGraph implements Iterable<BuildNode> {
+
+        private final Iterable<DefPom> defPoms;
+
+        @SuppressWarnings("NullableProblems")
+        @Override
+        public Iterator<BuildNode> iterator() {
+            return preOrder().iterator();
+        }
+
+        @SuppressWarnings({"UnstableApiUsage", "RedundantSuppression"})
+        private List<BuildNode> preOrder() {
+            final ArrayList<DefPom> defFiles = Lists.newArrayList(this.defPoms);
+            Map<String, BuildNode> lookup = Maps.newHashMap();
+            defFiles.forEach(def -> lookup.put(def.id(), new BuildNode(def)));
+            for (DefPom defFile : defFiles) {
+                final BuildNode thisNode = lookup.computeIfAbsent(defFile.id(), i -> new BuildNode(defFile));
+                if (thisNode.self.parentFile != null) {
+                    lookup.computeIfPresent(thisNode.self.parentId(), (k, parent) -> {
+                        parent.children.add(thisNode);
+                        thisNode.parent = parent;
+                        return parent;
+                    });
+                }
+            }
+
+            return lookup.values().stream().filter(node -> node.parent() == null)
+                    .flatMap(node ->
+                            Streams.concat(Stream.of(node), node.children().stream()
+                        )
+                    ).collect(Collectors.toList());
+        }
+
+        @SuppressWarnings("ConstantConditions")
+        @Override
+        public String toString() {
+            final Iterator<BuildNode> iterator = Iterators.filter(this.iterator(), v -> v.parent() == null);
+            final StringWriter out = new StringWriter();
+            print(iterator, 0, new PrintWriter(out));
+            return out.toString();
+        }
+
+        private void print(Iterator<BuildNode> it, int tab, PrintWriter b) {
+            while (it.hasNext()) {
+                final BuildNode next = it.next();
+                for (int i = 0; i <= tab; i++) {
+                    b.append("\t");
+                }
+                if (tab > 0) {
+                    b.append("+-");
+                } else {
+                    b.append("|");
+                }
+                b.append(" ");
+                b.println(next.toString());
+
+                if (!next.children().isEmpty()) {
+                    final Iterator<BuildNode> nextIt = next.children().iterator();
+                    while (nextIt.hasNext()) {
+                        print(nextIt, tab+1, b);
+                    }
+                }
+            }
+        }
+    }
 }

@@ -20,12 +20,12 @@ public class TemplateTest {
 
         public PomXPath(String source, File pom) {
             super(CharSource.wrap(source).asByteSource(StandardCharsets.UTF_8),
-                    valueOf(new Pom.XPath(new InputOf(pom))));
+                    valueOf(() -> new Pom.XPath(new InputOf(pom)).props()));
         }
 
         public PomXPath(String source, String pom) {
             super(CharSource.wrap(source).asByteSource(StandardCharsets.UTF_8),
-                    valueOf(new Pom.XPath((new InputOf(pom)))));
+                    valueOf(() -> new Pom.XPath(new InputOf(pom)).props()));
         }
 
         private static Pom.Props valueOf(Scalar<Pom.Props> xmlIn) {

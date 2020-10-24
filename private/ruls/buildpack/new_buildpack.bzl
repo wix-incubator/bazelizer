@@ -19,6 +19,7 @@ _DepInfo = provider(
         "tags": ""
     }
 )
+
 MvnRunArtifactInfo = provider(fields = {
     "pkg": """Artifact binaries as is. Can be more then one file"""
 })

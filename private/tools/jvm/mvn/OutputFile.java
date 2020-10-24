@@ -3,8 +3,8 @@ package tools.jvm.mvn;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.ToString;
-import org.cactoos.Output;
-import org.cactoos.Proc;
+import org.cactoos.*;
+import org.cactoos.func.UncheckedFunc;
 import org.cactoos.func.UncheckedProc;
 import org.cactoos.io.OutputTo;
 
@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.function.Function;
 
 /**
  * Output.
@@ -44,7 +45,7 @@ public interface OutputFile {
 
 
     /**
-     * Write declired output for a project.
+     * Write declared output for the project.
      * @param project project
      */
     default void exec(Project project)  {
@@ -88,6 +89,7 @@ public interface OutputFile {
     @AllArgsConstructor
     @ToString
     class Declared implements OutputFile {
+
         private final File src;
         private final String dest;
 
@@ -137,6 +139,31 @@ public interface OutputFile {
         @Override
         public void exec(Project project) {
             new UncheckedProc<>(src).exec(new OutputTo(new File(dest)));
+        }
+    }
+
+    /**
+     * Some output handler of a project.
+     */
+    @AllArgsConstructor
+    class ProjectFor implements OutputFile {
+        private final Function<Project, Proc<Output>> src;
+        private final String dest;
+
+        @Override
+        public String src() {
+            throw new UnsupportedOperationException("src");
+        }
+
+        @Override
+        public String dest() {
+            throw new UnsupportedOperationException("dest");
+        }
+
+        @Override
+        @SneakyThrows
+        public void exec(Project project) {
+            src.apply(project).exec(new OutputTo(new File(dest)));
         }
     }
 

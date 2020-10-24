@@ -15,8 +15,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -26,6 +26,30 @@ import java.util.Map;
  * Extenral dependency.
  */
 public interface Dep {
+
+    /**
+     * Artifact folder layout.
+     */
+    interface Layout {
+        /**
+         * Get relative path to repository
+         * @param dep dep
+         * @return path to repo
+         */
+        Path resolveDep(Dep dep);
+    }
+
+    Layout MAVEN_LAYOUT = new Layout() {
+        @Override
+        public Path resolveDep(Dep dep) {
+            String[] gidParts = dep.groupId().split("\\.");
+            Path thisGroupIdRepo = Paths.get("");
+            for (String gidPart : gidParts) {
+                thisGroupIdRepo = thisGroupIdRepo.resolve(gidPart);
+            }
+            return thisGroupIdRepo.resolve(dep.artifactId()).resolve(dep.version());
+        }
+    };
 
     Logger log = LoggerFactory.getLogger(Dep.class);
 
@@ -67,6 +91,35 @@ public interface Dep {
         return Collections.emptyMap();
     }
 
+    /**
+     * Install
+     */
+    @SneakyThrows
+    default Install installTo() {
+        return Install.all(
+                new Install.Folder(this),
+                new Install.NewPom(this),
+                new Install.NewJar(this)
+        );
+    }
+
+    /**
+     * Folder of current dep
+     * @param repo repository
+     * @return folder
+     */
+    default Path artifactFolder(Path repo) {
+        return this.relativeTo(MAVEN_LAYOUT, repo);
+    }
+
+    /**
+     * Resolve maven layout, relative to repo
+     * @param repo relative to this
+     * @return artifact folder
+     */
+    default Path relativeTo(Layout layout, Path repo) {
+        return repo.resolve(layout.resolveDep(this));
+    }
 
 
     @SuppressWarnings("unused")
@@ -158,40 +211,7 @@ public interface Dep {
     }
 
 
-    /**
-     * Install
-     */
-    @SneakyThrows
-    default Install installTo() {
-        return Install.all(
-                new Install.Folder(this),
-                new Install.NewPom(this),
-                new Install.NewJar(this)
-        );
-    }
 
-    /**
-     * Folder of current dep
-     * @param repo repository
-     * @return folder
-     */
-    default Path artifactFolder(Path repo) {
-        return this.relativeTo(repo);
-    }
-
-    /**
-     * Resolve maven layout, relative to repo
-     * @param repo relative to this
-     * @return artifact folder
-     */
-    default Path relativeTo(Path repo) {
-        String[] gidParts = this.groupId().split("\\.");
-        Path thisGroupIdRepo = repo;
-        for (String gidPart : gidParts) {
-            thisGroupIdRepo = thisGroupIdRepo.resolve(gidPart);
-        }
-        return thisGroupIdRepo.resolve(this.artifactId()).resolve(this.version());
-    }
 
     @AllArgsConstructor
     @ToString
@@ -209,7 +229,6 @@ public interface Dep {
         private final String version;
         private final Map<String,String> tags;
 
-        @SuppressWarnings("Guava")
         private Path cachedArtifactFolder;
 
         @Override

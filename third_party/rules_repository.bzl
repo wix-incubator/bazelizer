@@ -26,6 +26,7 @@ def _jvm_import(name,artifact,server_urls,fetch_sources,**kwargs):
         artifact=artifact,
         server_urls=server_urls,
         fetch_sources=fetch_sources,
+        licenses = ["notice"], # Apache 2.0
         **kwargs)
 
     native.bind(
@@ -208,6 +209,6 @@ def install(server_urls = _def_server_urls):
         artifact = 'com.google.code.gson:gson:jar:2.8.6',
         fetch_sources = True,
         server_urls = server_urls,
-#        artifact_sha256 = "0aeb625c948c697ea7b205156e112363b59ed5e2551212cd4e460bdb72c7c06e",
-#        srcjar_sha256 = "0eb5d7f270c2fccdab31daa5f7091b038ad0099b29885040604d66e07fd46a18",
+        artifact_sha256 = "c8fb4839054d280b3033f800d1f5a97de2f028eb8ba2eb458ad287e536f3f25f",
+        srcjar_sha256 = "da4d787939dc8de214724a20d88614b70ef8c3a4931d9c694300b5d9098ed9bc",
     )

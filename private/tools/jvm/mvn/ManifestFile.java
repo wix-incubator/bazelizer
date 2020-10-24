@@ -1,5 +1,6 @@
 package tools.jvm.mvn;
 
+import com.google.common.collect.Iterators;
 import com.google.common.io.CharSource;
 import com.google.common.io.Files;
 import lombok.SneakyThrows;
@@ -24,23 +25,19 @@ public class ManifestFile implements Iterable<String> {
         this.source = source;
     }
 
+    @SuppressWarnings({"ConstantConditions", "NullableProblems"})
     @SneakyThrows
-    Stream<String> lines() {
-        return source.readLines().stream()
-                .map(p -> {
-                    String base = p.trim();
-                    if (base.startsWith(WRAP)) {
-                        base = base.substring(1);
-                    }
-                    if (base.endsWith(WRAP)) {
-                        base = base.substring(0, base.length() - 1);
-                    }
-                    return base;
-                });
-    }
-
     @Override
     public Iterator<String> iterator() {
-        return lines().collect(Collectors.toList()).iterator();
+        return Iterators.transform(source.readLines().iterator(), p -> {
+            String base = p.trim();
+            if (base.startsWith(WRAP)) {
+                base = base.substring(1);
+            }
+            if (base.endsWith(WRAP)) {
+                base = base.substring(0, base.length() - 1);
+            }
+            return base;
+        });
     }
 }

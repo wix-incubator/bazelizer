@@ -7,8 +7,8 @@ public class ArgsTest {
 
     @Test
     public void createFromCmd() {
-        final Args args = new Args().parseCommandLine("--active-profiles=vespa_6,bazel --goals=compile");
+        final Args args = new Args().parseCommandLine("-P vespa_6,bazel --goals=compile");
         final String s = args.toString();
-        Assert.assertEquals("Args{--goals=compile --active-profiles=vespa_6 --active-profiles=bazel}", s);
+        Assert.assertEquals("Args{goals=[compile], profiles=[vespa_6, bazel], ctx={}}", s);
     }
 }
