@@ -9,29 +9,31 @@ This is your last chance if you really need some maven plugin inside your Bazel 
  
 #### Long Version
  
-There is a wide variety of maven plugins already written. Moreover, some plugins have no ports to other build systems. So, if 
+There is a wide variety of the maven plugins already written. Moreover, some plugins have no ports to other build systems. So, if 
 
-- you use Bazel as main build tool, your CI use bazel and all 99% teams and all infra are using Bazel
+- you use Bazel as main build tool;
 - and there is a maven plugin that you need;
 
 Then, you need *bazelizer*. 
 Someone can call it a **dirty hack**, but we know the truths ;)
 
 This tool represents overall maven project as one Bazel's target.
-In this whey you can isolate all your maven stuff as one unit (_if desired, put everything that is not specific to the maven into Bazel_) and integrate it into  Bazel environment.
-Use bazel deps, depends on bazel target and event doing it efficiently. 
+In this whey you can isolate all your maven specific code into one hermetic unit within bazel build graph .
+Use bazel deps, depends on bazel targets and event doing it efficiently. 
 
 ***
-
-##### Take a look on example project [here](tests/integration/README.md)
-
 
 ![Alt text](assets/ci.png?raw=true "Title")
 
 
-## Usage
+## Getting started
 
-```
+> There is no compatibility table of bazel versions right now.
+
+
+
+Add the following to your WORKSPACE file and update the githash if needed:
+```python
 # in your WORKSPACE
 
 RULES_TAG = "0.2.3"
@@ -49,83 +51,140 @@ http_archive(
 load("@wix_incubator_bazelizer//third_party:rules_repository.bzl", "install")
 install()
 
+```
+
+
+## Usage
+
+1. In your maven module's declare BUILD file:
+```python
 # in your BUILD files
 
-load("@wix_incubator_bazelizer//maven:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
+load("@wix_incubator_bazelizer//maven:defs.bzl", "declare_pom")
 
+declare_pom(
+    name = "declared_pom",
+    pom_file = ":pom.xml", # your pom file in a folder 
+    visibility = ["//visibility:public"]
+)
 
+``` 
+
+2. Register declared pom in you WORKSPACE via specific repository rule
+```python
+# in your WORKSPACE files
+# 'wix_incubator_bazelizer' declaration and imports must be above 
+
+load("@wix_incubator_bazelizer//maven:defs.bzl", "maven_repository_registry")
+
+maven_repository_registry(
+    name = "maven_buildpack", 
+    modules = [
+        "//path/to/my/module:declared_pom",
+        # ... all the rest modules 
+    ]
+)
+```
+
+3. Update your maven module's BUILD:
+```python
+load("@wix_incubator_bazelizer//maven:defs.bzl", "declare_pom")
+
+load("@maven_buildpack//:execute_build.bzl", "execute_build")
+
+declare_pom(
+    name = "declared_pom",
+    pom_file = ":pom.xml", # your pom file in a folder 
+    visibility = ["//visibility:public"]
+)
+
+execute_build(
+    name = "mvn-build-lib",
+    pom_def = ":declared_pom",
+    srcs = [":sources"],
+    visibility = ["//visibility:public"],
+    deps = [
+         "//some/target/dep",
+        # ...
+    ],
+)
 ```
 
 
 ## Design
 
-This tools assume that pom.xml (e.g. build configurations) will be updated **rarely**. In this case tool represent 2 ruls:
+This tools assume that pom.xml (e.g. build configurations) will be updated **rarely**. In this case tool works by 2 phases:
 
-- create_mvn_buildpack
-- run_mvn_buildpack
+1. You declare module
+2. You register modules into one maven registry
+3. You use build runner from declared registry
+
+> See example above and e2e tests examples [here](tests/e2e/README.md)
+
+This done for centralizing maven local cache's for all modules, and fetching them only once. 
+All build executions are **stateless** and **hermetic**. 
+Performing in offline mode, so can use only fetched dependencies + dynamic dependencies from bazel  
 
 
-### create_mvn_buildpack
+## Rules
+
+#### maven_repository_registry
  
-This rule generates tarball as a snapshot of m2 repository that resolve everything this project is dependent on (dependencies, plugins, reports) in preparation for going offline. 
-Created tarball + initial pom = a `buildpack`. Image that can be reused for all consequent builds. 
+> This is [repository_rule](https://docs.bazel.build/versions/master/skylark/repository_rules.html), so only allowed in the WORKSPACE file.
                                                            
+Register all maven modules. It's goal to resolves all project dependencies, including plugins and make centralized repository that 
+contains everything maven specific to support offline mode for all registered builds. Can handle resolve maven modules hierarchy. 
 
 Usage
 ```
-create_mvn_buildpack(
-    name = "MyMavenImage",
-    pom_file = "pom.xml"
+load("@wix_incubator_bazelizer//maven:defs.bzl", "maven_repository_registry")
+
+maven_repository_registry(
+    name = "maven_repo",
+    modules = [
+        "//tests/e2e/mvn-parent-pom:declared_pom",
+        "//tests/e2e/mvn-build-lib:declared_pom",
+        "//tests/e2e/mvn-build-lib-one:declared_pom",
+        "//tests/e2e/mvn-build-lib-with-profile:declared_pom",
+    ]
 )
 ```
   
 | attr name  | description  |
 |---|---|
-| name  | Name; required. A unique name for this target.  |
-| pom_file  | File; Reference to an skeleton pom.     |
+| modules  | Label list; required; All declared maven modules that supposed to be used  |
 
 
-**Important to know**: this rule execute dry run of a build by empty project directory + given pom.
-This is done to eagerly fetch all plugin's and there dependencies and reuse for any build. In this case pom file have to be ready to be executed with empty workspace directory.
-Any change in pom file will trigger rebuilding a tarball.
+### declare_pom
 
-
-
-### run_mvn_buildpack
-
-Represent subsequent maven build. Executed in offline mode, as expects that all needed for maven was fetched via `create_mvn_buildpack`. Can consume java based bazel deps.
+TBD
 
 Usage
 ```
-run_mvn_buildpack(
-    name = "MyMavenBuild",
-    deps = [
-        "//examples/targetA",
-        "//examples/targetB"
-    ], # test lib
-    srcs = ["//examples/maven_project:sources"],
-    buildpack = ":MyMavenImage",
-    group_id = "my",
-    artifact_id = "lib",
-    outputs = ["lib-1.0.0-SNAPSHOT.jar"]
+load("@wix_incubator_bazelizer//maven:defs.bzl", "declare_pom")
+
+declare_pom(
+    name = "declared_pom",
+    pom_file = ":pom.xml",
+    parent = "//tests/e2e/mvn-parent-pom:declared_pom",
+    mvn_flags = [ "-P my_profile1,my_profile2" ]
 )
 ```
 
 
 | attr name  | description  |
 |---|---|
-| name  | Name; required. A unique name for this target.  |
-| deps  | Labels; Dependencies for maven build. Support only direct dependencies with JavaInfo provider.     |
-| srcs  | filegroup that represent all workspace of maven project as is     |
-| buildpack  | Reference to a buildpack that was created via  create_mvn_buildpack rule    |
-| group_id  | (Optional) group id that passed into build. Available as placeholder (see below)   |
-| artifact_id  | (Optional) artifact id that passed into build. Available as placeholder (see below)   |
-| outputs  | List of files. Each file is relative to the maven target _folder_. Same files will be registered as an output of the target.   |
+| pom_file  | File; required. The pom file.  |
+| parent  | Parent `declare_pom` module. Support of [this](https://maven.apache.org/guides/introduction/introduction-to-the-pom.html#example-2) scenario of usage.     |
+| mvn_flags  | Additional flags for maven build     |
 
 
-###### Important notes
+##### inheritance
 
-1. This tool **not support** transitive dependencies. Only direct compile dependencies as [full_compile_jars](https://docs.bazel.build/versions/master/skylark/lib/JavaInfo.html#full_compile_jars) will be used.    
+
+##### flags
+
+
 
 ###### pom.xml 
 
