@@ -5,14 +5,14 @@
     <artifactId>myapi</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
-    {{ #parent 'tests/mvn-parent-pom/pom.xml' }}
+    {{#parent}}
     <parent>
         <groupId>com.mavenizer.examples.api</groupId>
         <artifactId>myapi-parent</artifactId>
         <version>1.0.0-SNAPSHOT</version>
         <relativePath>{{ relative_path }}</relativePath>
     </parent>
-    {{ /parent }}
+    {{/parent}}
 
     <dependencies>
         <!-- https://mvnrepository.com/artifact/com.google.guava/guava -->

@@ -128,7 +128,7 @@ Performing in offline mode, so can use only fetched dependencies + dynamic depen
 
 ## Rules
 
-#### maven_repository_registry
+### maven_repository_registry
  
 > This is [repository_rule](https://docs.bazel.build/versions/master/skylark/repository_rules.html), so only allowed in the WORKSPACE file.
                                                            
@@ -157,10 +157,10 @@ maven_repository_registry(
 
 ### declare_pom
 
-TBD
+This is a maven module declaration. It's goals is to describe maven module. 
 
 Usage
-```
+```python
 load("@wix_incubator_bazelizer//maven:defs.bzl", "declare_pom")
 
 declare_pom(
@@ -175,16 +175,79 @@ declare_pom(
 | attr name  | description  |
 |---|---|
 | pom_file  | File; required. The pom file.  |
-| parent  | Parent `declare_pom` module. Support of [this](https://maven.apache.org/guides/introduction/introduction-to-the-pom.html#example-2) scenario of usage.     |
+| parent  | Parent `declare_pom` module. Support of [inheritance](https://maven.apache.org/guides/introduction/introduction-to-the-pom.html#example-2) scenario.     |
 | mvn_flags  | Additional flags for maven build     |
 
+#### inheritance
 
-##### inheritance
+POM projects support inheritance. This can be achieved via two scenarios. 
+1. declaring all submodules in the parent pom
+2. declare parent pom in each sub-module as `<relativePath>` element to our parent section.
 
+**NOTE:** `bazelizer` supports only #2 scenario of usage
 
+###### example 
+
+Pom file is just plait maven project
+```
+<project>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>xxxx</groupId>
+    <artifactId>yyyy</artifactId>
+    <version>1.0.0</version>
+
+    {{#parent}}
+    <parent>
+        <groupId>xxxx</groupId>
+        <artifactId>yyyy-parent</artifactId>
+        <version>1.0.0</version>
+        <relativePath>{{parent}}</relativePath>
+    </parent>
+    {{/parent}}
+</project>
+```
+
+Then declaration will be
+Usage
+```python
+# in yyyy-parent BUILD file
+load("@wix_incubator_bazelizer//maven:defs.bzl", "declare_pom")
+
+declare_pom(
+    name = "yyyy_parent_pom",
+    pom_file = ":pom.xml",
+)
+
+# in yyyy BUILD file
+load("@wix_incubator_bazelizer//maven:defs.bzl", "declare_pom")
+
+declare_pom(
+    name = "yyyy_pom",
+    pom_file = ":pom.xml",
+    parent = "//your/yyyy-parent:yyyy_parent_pom"
+)
+
+```
 ##### flags
 
+Sometimes you need specific maven profiles to be activated. This can be done via additional configurations for each pom declaration.
 
+```python
+
+declare_pom(
+    name = "yyyy_parent_pom",
+    pom_file = ":pom.xml",
+    mvn_flags = [ "-P" ,"my_profile_x,my_profile_y" ]
+)
+
+```
+
+**mvn_flags** is a command line arguments subset of mvn binary. Supported arguments:
+
+| attr  | description  |
+|---    |  ---         |
+| -P PROFILE_1[,PROFILE_N]     | `,` separated list of profiles to activate  |
+| --goal GOAL [--goal GOAL_N]  | mvn executable goals; Default is `clean install` |
 
 ###### pom.xml 
 
@@ -195,8 +258,8 @@ Pom file supports  [mustache](https://mustache.github.io/) templating. Minimal e
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>{{ groupId }}</groupId>
-    <artifactId>{{ artifactId }}</artifactId>
+    <groupId>XXX</groupId>
+    <artifactId>YYY</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
     <dependencies>
@@ -221,23 +284,6 @@ Where:
 
 ##### Logging
 
-By default tool will not print default maven output to minimaze rules output. If it neede log level can be changed by 
-```
-run_mvn_buildpack(
-    ...
-    log_level="INFO"
-)
-```
-
-Supported levels:
-
-- **INFO** - print maven default output + info messages by a tool;
-- **DEBUG** - print maven default output + debug messages by a tool (for example generate pom);
-- **TRACE** - print maven debug output + debug messages by a tool;
-
-###### Support of custom template properties:
-
 TBD
-
 
 ## Features
