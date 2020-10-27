@@ -8,15 +8,14 @@ import com.jcabi.xml.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.SneakyThrows;
-import org.cactoos.Input;
-import org.cactoos.Scalar;
 import org.cactoos.Text;
 import org.cactoos.io.InputOf;
 import org.cactoos.text.TextOf;
+import org.w3c.dom.Node;
+import org.xembly.Xembler;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 public interface Template {
 
@@ -39,7 +38,9 @@ public interface Template {
      */
     @AllArgsConstructor
     class Mustache implements Template {
+
         private final ByteSource source;
+
         private final Object bean;
 
         @Override
@@ -58,4 +59,23 @@ public interface Template {
             }
         }
     }
+
+    @AllArgsConstructor
+    class Xe implements Template {
+
+        private final Pom source;
+
+        private final XePom dir;
+
+        @SneakyThrows
+        @Override
+        public Text eval() {
+            final Node newNode = new Xembler(dir.value()).applyQuietly(source.xml().node());
+            return new TextOf(
+                    new XMLDocument(newNode).toString()
+            );
+        }
+    }
+
+
 }

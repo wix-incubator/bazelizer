@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  User schema which will be used within the search API context, so be very careful with
+  incompatible changes. In case of doubt please contact PMI2-A for support.
+-->
+<xs:schema
+        xmlns="http://rest.immobilienscout24.de/schema/offer/realtor/1.0"
+        targetNamespace="http://rest.immobilienscout24.de/schema/offer/realtor/1.0"
+        xmlns:xs="http://www.w3.org/2001/XMLSchema"
+        elementFormDefault="unqualified"
+        attributeFormDefault="unqualified"
+        version="1.0">
+
+    <xs:attribute name="remove">
+    </xs:attribute>
+
+</xs:schema>

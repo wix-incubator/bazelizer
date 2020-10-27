@@ -20,6 +20,9 @@ def _jvm_external_name(name):
     return "wix_incubator_bazelizer_" + str(name)
 
 def _jvm_import(name,artifact,server_urls,fetch_sources,**kwargs):
+    if 'deps' in kwargs:
+        kwargs['deps'] = _jvm_external_deps(kwargs['deps'])
+
     _id = _jvm_external_name(name)
     _jvm_maven_import_external(
         name= _id,
@@ -92,7 +95,7 @@ def install(server_urls = _def_server_urls):
         server_urls = server_urls,
         artifact_sha256 = "dba351234ffa0c37557c45d06eed51b3c972f801ad56f9bfb12c6a355469e2c3",
         srcjar_sha256 = "c68148e5343c7bfa8e3aafb2ebbefdadd49d8518612f8703fc4ce9cab0d93dc5",
-        deps = _jvm_external_deps( ["com_jcabi_jcabi_log", "org_cactoos_cactoos"] )
+        deps =  ["com_jcabi_jcabi_log", "org_cactoos_cactoos"]
     )
 
     _jvm_import(
@@ -211,4 +214,32 @@ def install(server_urls = _def_server_urls):
         server_urls = server_urls,
         artifact_sha256 = "c8fb4839054d280b3033f800d1f5a97de2f028eb8ba2eb458ad287e536f3f25f",
         srcjar_sha256 = "da4d787939dc8de214724a20d88614b70ef8c3a4931d9c694300b5d9098ed9bc",
+    )
+
+    _jvm_import(
+	    name = "com_jcabi_incubator_xembly",
+        artifact = "com.jcabi.incubator:xembly:0.24.0",
+        fetch_sources = True,
+        server_urls = server_urls,
+#        artifact_sha256 = "c8fb4839054d280b3033f800d1f5a97de2f028eb8ba2eb458ad287e536f3f25f",
+#        srcjar_sha256 = "da4d787939dc8de214724a20d88614b70ef8c3a4931d9c694300b5d9098ed9bc",
+        deps = [ "org_antlr_antlr4_runtime", "org_mockito_mockito_core" ]
+    )
+
+    _jvm_import(
+	    name = "org_antlr_antlr4_runtime",
+        artifact = "org.antlr:antlr4-runtime:4.8-1",
+        fetch_sources = True,
+        server_urls = server_urls,
+#        artifact_sha256 = "c8fb4839054d280b3033f800d1f5a97de2f028eb8ba2eb458ad287e536f3f25f",
+#        srcjar_sha256 = "da4d787939dc8de214724a20d88614b70ef8c3a4931d9c694300b5d9098ed9bc",
+    )
+
+    _jvm_import(
+	    name = "org_mockito_mockito_core",
+        artifact = "org.mockito:mockito-core:jar:3.5.15",
+        fetch_sources = True,
+        server_urls = server_urls,
+#        artifact_sha256 = "c8fb4839054d280b3033f800d1f5a97de2f028eb8ba2eb458ad287e536f3f25f",
+#        srcjar_sha256 = "da4d787939dc8de214724a20d88614b70ef8c3a4931d9c694300b5d9098ed9bc",
     )

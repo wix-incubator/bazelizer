@@ -5,7 +5,6 @@ import com.google.common.collect.Lists;
 import com.google.common.io.ByteSource;
 import lombok.*;
 import lombok.experimental.Accessors;
-import org.cactoos.io.InputOf;
 import org.cactoos.scalar.UncheckedScalar;
 
 import java.nio.file.Files;
@@ -122,8 +121,8 @@ public final class Project {
 
     public Pom.Props getPomProps() {
         return new UncheckedScalar<>(
-                () -> new Pom.XPath(
-                        new InputOf(this.pom())
+                () -> new Pom.PomOf(
+                        this.pom()
                 ).props()
         ).value();
     }
