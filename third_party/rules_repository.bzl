@@ -243,3 +243,50 @@ def install(server_urls = _def_server_urls):
 #        artifact_sha256 = "c8fb4839054d280b3033f800d1f5a97de2f028eb8ba2eb458ad287e536f3f25f",
 #        srcjar_sha256 = "da4d787939dc8de214724a20d88614b70ef8c3a4931d9c694300b5d9098ed9bc",
     )
+
+    _jvm_import(
+	    name = "org_thymeleaf_thymeleaf",
+        artifact = 'org.thymeleaf:thymeleaf:jar:3.0.11.RELEASE',
+        fetch_sources = True,
+        server_urls = server_urls,
+        artifact_sha256 = "c4decad2647404c3de7bf825e606008d5795738eaa0d12d5d38451de748f1961",
+        srcjar_sha256 = "d8c0b14f5ba720714d2bba2b28b0478d3dff3478efcb7bb340ea6f5fb38de469",
+        deps = [ "ognl_ognl", "org_attoparser_attoparser", 'org_unbescape_unbescape' ]
+    )
+
+    _jvm_import(
+	    name = "ognl_ognl",
+        artifact = 'ognl:ognl:jar:3.2.15',
+        fetch_sources = True,
+        server_urls = server_urls,
+#        artifact_sha256 = "1d3a48105a3314cf11bd9be074a4212a21d3949fa1d4b61b5285064595a4c59e",
+#        srcjar_sha256 = "da4d787939dc8de214724a20d88614b70ef8c3a4931d9c694300b5d9098ed9bc",
+        deps = [ 'org_javassist_javassist' ]
+    )
+
+    _jvm_import(
+	    name = "org_javassist_javassist",
+        artifact = 'org.javassist:javassist:jar:3.27.0-GA',
+        fetch_sources = True,
+        server_urls = server_urls,
+        artifact_sha256 = "0730bdb1547a5a3f458d60400d804078d80f329c5b5dbc2498a4e220de8f7013",
+        srcjar_sha256 = "17b1fd9fcea3294ec2327eed855497a786977af2170d8f773494c5e7271fcb3a",
+    )
+
+    _jvm_import(
+	    name = "org_attoparser_attoparser",
+        artifact = 'org.attoparser:attoparser:jar:2.0.5.RELEASE',
+        fetch_sources = True,
+        server_urls = server_urls,
+        artifact_sha256 = "d4015d56147f696ed0a90078675bc940529f907e7b2dfc1fad754e8033da8796",
+        srcjar_sha256 = "c83e242bc1912f53f34977f8afa3e587880e5e8ff44bd2553bf6760dad302286",
+    )
+
+    _jvm_import(
+	    name = "org_unbescape_unbescape",
+        artifact = 'org.unbescape:unbescape:jar:1.1.6.RELEASE',
+        fetch_sources = True,
+        server_urls = server_urls,
+        artifact_sha256 = "597cf87d5b1a4f385b9d1cec974b7b483abb3ee85fc5b3f8b62af8e4bec95c2c",
+        srcjar_sha256 = "da8928dca71c08097688c6c8ec8c4543ca6e5e78d07a43b8bca62a0fc1253a81",
+    )

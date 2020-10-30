@@ -6,6 +6,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
+import com.jcabi.xml.XML;
+import com.jcabi.xml.XMLDocument;
 import lombok.*;
 import lombok.experimental.Accessors;
 import lombok.experimental.UtilityClass;
@@ -18,6 +20,7 @@ import org.cactoos.Text;
 import org.cactoos.func.UncheckedProc;
 import org.cactoos.io.BytesOf;
 import org.cactoos.io.InputOf;
+import org.xembly.Xembler;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -381,6 +384,27 @@ public final class Acts {
         }
     }
 
+    @AllArgsConstructor
+    static class PomXembly implements Act {
+
+        private final Iterable<XeSource> dirs;
+
+        @SneakyThrows
+        @Override
+        public Project accept(Project project) {
+            Pom pom = new Pom.StringOf(project.pom());
+
+            XML xml = pom.xml();
+            for (XeSource dir : dirs) {
+                xml = new XMLDocument(
+                        new Xembler(new DirectivesNs(dir.value())).apply(xml.node())
+                );
+            }
+
+            return null;
+        }
+    }
+
     /**
      * Archive artifact binaries as is without pom
      */
@@ -399,7 +423,7 @@ public final class Acts {
         @Override
         public Project accept(Project project) {
             final ArrayList<OutputFile> outputs = Lists.newArrayList(project.outputs());
-            final Pom.Props bean = new Pom.PomOf(
+            final Pom.Props bean = new Pom.StringOf(
                     project.pom()
             ).props();
 

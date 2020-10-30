@@ -1,13 +1,16 @@
 package tools.jvm.mvn;
 
-import lombok.AllArgsConstructor;
+import com.jcabi.xml.XPathContext;
 import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
-import org.cactoos.Scalar;
+import org.xembly.Directive;
 
+import javax.xml.xpath.*;
+import java.lang.reflect.Field;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Iterator;
 import java.util.concurrent.ThreadLocalRandom;
 
 @UtilityClass

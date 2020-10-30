@@ -121,7 +121,7 @@ public final class Project {
 
     public Pom.Props getPomProps() {
         return new UncheckedScalar<>(
-                () -> new Pom.PomOf(
+                () -> new Pom.StringOf(
                         this.pom()
                 ).props()
         ).value();

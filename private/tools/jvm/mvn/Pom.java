@@ -1,134 +1,161 @@
 package tools.jvm.mvn;
 
-import com.google.common.collect.Sets;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import com.google.common.io.CharSource;
+import com.google.common.io.Files;
 import com.jcabi.xml.XML;
 import com.jcabi.xml.XMLDocument;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.ToString;
-import lombok.experimental.Delegate;
-import org.cactoos.Input;
-import org.cactoos.io.InputOf;
-import org.cactoos.text.TextOf;
+import lombok.SneakyThrows;
+import org.cactoos.iterable.IterableOf;
+import org.xembly.Xembler;
 
-import java.io.File;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import java.io.InputStream;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
-public interface Pom {
+public abstract class Pom {
 
+
+    /**
+     * POM xml.
+     * @return xml
+     */
+    public abstract XML xml();
+
+    /**
+     * Properties.
+     */
     @Data
-    class Props {
+    static class Props {
         final java.lang.String groupId;
         final java.lang.String artifactId;
         final java.lang.String version;
     }
 
-
-    default Set<java.lang.String> namespaces() throws Exception {
-        return Collections.emptySet();
+    /**
+     * Transform xml.
+     *
+     * @param dirs directives
+     * @return new pom
+     */
+    public final Pom transform(XeSource... dirs) {
+        return this.transform(new IterableOf<>(dirs));
     }
+
 
     /**
-     * Properties of pom file.
-     * @return props
+     * Transform xml.
+     *
+     * @param dirs directives
+     * @return new pom
      */
-    default Props props() throws Exception  {
-        throw new IllegalStateException();
-    }
-
-    /**
-     * Pom as XMP
-     * @return xml
-     * @throws Exception if any error
-     */
-    XML xml() throws Exception ;
-
-    /**
-     * File source.
-     * @return source
-     */
-    default File source() {
-        throw new UnsupportedOperationException("source()");
-    }
-
-
-    @AllArgsConstructor
-    abstract class Wrap implements Pom {
-        @Delegate
-        private final Pom pom;
-    }
-
-    @ToString
-    class PomOf extends Wrap implements Pom {
-
-        private final File file;
-
-
-        public PomOf(Path _file) {
-            this(_file.toFile());
-        }
-
-        public PomOf(File _file) {
-            super(new StringOf(new InputOf(_file)));
-            file = _file;
-        }
-
-        @Override
-        public File source() {
-            return file;
-        }
-    }
-
-    class StringOf implements Pom {
-
-        /**
-         * Real file.
-         */
-        private final Input input;
-
-
-        public StringOf(java.lang.String input) {
-            this(new InputOf(new TextOf(input)));
-        }
-
-        public StringOf(Input input) {
-            this.input = input;
-        }
-
-
-        @Override
-        public Set<java.lang.String> namespaces() throws Exception {
-            return Sets.newHashSet(
-                    xml().xpath("/*/namespace::*[name()='']")
-            );
-        }
-
-        @Override
-        public Props props() throws Exception {
-            XML xml = xml();
-            final List<java.lang.String> namespaces = xml.xpath("/*/namespace::*[name()='']");
-            if (!namespaces.isEmpty()) {
-                java.lang.String gid =  xml.xpath("/pom:project/pom:groupId/text()").get(0);
-                java.lang.String aid =  xml.xpath("/pom:project/pom:artifactId/text()").get(0);
-                java.lang.String v =  xml.xpath("/pom:project/pom:version/text()").get(0);
-                return new Props(gid, aid, v);
-            } else {
-                java.lang.String gid =  xml.xpath("/project/groupId/text()").get(0);
-                java.lang.String aid =  xml.xpath("/project/artifactId/text()").get(0);
-                java.lang.String v =  xml.xpath("/project/version/text()").get(0);
-                return new Props(gid, aid, v);
+    public final Pom transform(Iterable<XeSource> dirs) {
+        return new Cached(new Pom() {
+            @SneakyThrows
+            @Override
+            public XML xml() {
+                XML xml = Pom.this.xml();
+                for (XeSource dir : dirs) {
+                    xml = new XMLDocument(
+                            new Xembler(new DirectivesNs(dir.value())).apply(xml.node())
+                    );
+                }
+                return xml;
             }
+        });
+    }
+
+    /**
+     * Resolved props by xpath.
+     *
+     * @return properties from pom file
+     */
+    public Props props() {
+        XML xml = xml();
+        final List<java.lang.String> namespaces = xml.xpath("/*/namespace::*[name()='']");
+        if (!namespaces.isEmpty()) {
+            java.lang.String gid = xml.xpath("/pom:project/pom:groupId/text()").get(0);
+            java.lang.String aid = xml.xpath("/pom:project/pom:artifactId/text()").get(0);
+            java.lang.String v = xml.xpath("/pom:project/pom:version/text()").get(0);
+            return new Props(gid, aid, v);
+        } else {
+            java.lang.String gid = xml.xpath("/project/groupId/text()").get(0);
+            java.lang.String aid = xml.xpath("/project/artifactId/text()").get(0);
+            java.lang.String v = xml.xpath("/project/version/text()").get(0);
+            return new Props(gid, aid, v);
+        }
+    }
+
+
+    @SneakyThrows
+    public String toPrettyXml() {
+        final XML xml = this.xml();
+        TransformerFactory transformerFactory = TransformerFactory.newInstance();
+        transformerFactory.setAttribute("indent-number", 4);
+        Transformer transformer = transformerFactory.newTransformer();
+        transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+        transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        StringWriter stringWriter = new StringWriter();
+        transformer.transform(new DOMSource(xml.node()), new StreamResult(stringWriter));
+        return stringWriter.toString();
+    }
+
+    @Override
+    @SneakyThrows
+    public String toString() {
+        return this.toPrettyXml();
+    }
+
+
+    @SuppressWarnings("Guava")
+    private static class Cached extends Pom {
+
+        private final Supplier<XML> pom;
+
+        private Cached(Pom pom) {
+            this.pom = Suppliers.memoize(pom::xml);
         }
 
         @Override
-        public XML xml() throws Exception {
-            try (InputStream src = input.stream()) {
+        public XML xml() {
+            return pom.get();
+        }
+    }
+
+    /**
+     *
+     */
+    @AllArgsConstructor
+    static class StringOf extends Pom {
+
+        @SuppressWarnings("UnstableApiUsage")
+        public StringOf(Path s) {
+            this(Files.asByteSource(s.toFile()).asCharSource(StandardCharsets.UTF_8));
+        }
+
+        public StringOf(String s) {
+            this(CharSource.wrap(s));
+        }
+
+        private final CharSource input;
+
+        @SneakyThrows
+        @SuppressWarnings("UnstableApiUsage")
+        @Override
+        public XML xml() {
+            try (InputStream src = input.asByteSource(StandardCharsets.UTF_8).openStream()) {
                 return new XMLDocument(src)
-                        .registerNs("xe", "http://www.w3.org/1999/xhtml") // dummy
                         .registerNs("pom", "http://maven.apache.org/POM/4.0.0");
             }
         }

@@ -1,16 +1,5 @@
 package tools.jvm.mvn;
 
-import com.google.common.io.CharSource;
-import org.cactoos.Scalar;
-import org.cactoos.io.InputOf;
-import org.cactoos.scalar.UncheckedScalar;
-import org.junit.Assert;
-import org.junit.Test;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-
 public class TemplateTest {
 
 
