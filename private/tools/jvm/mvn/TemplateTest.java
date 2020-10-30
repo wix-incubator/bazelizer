@@ -31,26 +31,6 @@ public class TemplateTest {
                 "    </parent>\n" +
                 "    <packaging>pom</packaging>\n" +
                 "        <dependencies>\n" +
-                "            <dependency xhtml:class=\"freeze\">\n" +
-                "                <groupId>javax.xml.bind</groupId>\n" +
-                "                <artifactId>jaxb-api</artifactId>\n" +
-                "                <version>2.3.0</version>\n" +
-                "            </dependency>\n" +
-                "            <dependency>\n" +
-                "                <groupId>com.sun.xml.bind</groupId>\n" +
-                "                <artifactId>jaxb-core</artifactId>\n" +
-                "                <version>2.3.0</version>\n" +
-                "            </dependency>\n" +
-                "            <dependency>\n" +
-                "                <groupId>com.sun.xml.bind</groupId>\n" +
-                "                <artifactId>jaxb-impl</artifactId>\n" +
-                "                <version>2.3.0</version>\n" +
-                "            </dependency>\n" +
-                "            <dependency>\n" +
-                "                <groupId>org.jvnet.jaxb2_commons</groupId>\n" +
-                "                <artifactId>jaxb2-basics-runtime</artifactId>\n" +
-                "                <version>1.11.1</version>\n" +
-                "            </dependency>\n" +
                 "        </dependencies>\n" +
                 "</project>";
 
@@ -64,14 +44,10 @@ public class TemplateTest {
                 "        <groupId>com.mavenizer.examples.api</groupId>\n" +
                 "        <artifactId>myapi-parent</artifactId>\n" +
                 "        <version>1.0.0-SNAPSHOT</version>\n" +
-                "        <relativePath>/foo/bar.xml</relativePath>\n" +
+                "        <relativePath>../bar.xml</relativePath>\n" +
                 "    </parent>\n" +
                 "    <packaging>pom</packaging>\n" +
                 "        <dependencies>\n" +
-                "            \n" +
-                "            \n" +
-                "            \n" +
-                "            \n" +
                 "        <dependency>\n" +
                 "            <!--source-of: /x/y/z -->\n" +
                 "            <groupId>xxx</groupId>\n" +
@@ -84,11 +60,12 @@ public class TemplateTest {
 
 
         final Project.ProjectView projectView = Project.builder()
+                .workDir(Paths.get("/tmp"))
                 .pomTemplate(CharSource.wrap(xml).asByteSource(StandardCharsets.UTF_8))
                 .deps(Lists.newArrayList(
                         new Dep.Simple(new File("/x/y/z"), "xxx", "yyy", "zzz")
                 ))
-                .parentPom(Paths.get("/foo/bar.xml"))
+                .parentPom(Paths.get("/tmp/bar.xml"))
                 .build().toView();
 
         String resXML = new Template.Xembled(

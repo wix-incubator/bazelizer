@@ -16,14 +16,18 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.AbstractFileFilter;
 import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.apache.commons.io.filefilter.IOFileFilter;
+import org.cactoos.Input;
 import org.cactoos.Text;
 import org.cactoos.func.UncheckedProc;
 import org.cactoos.io.BytesOf;
 import org.cactoos.io.InputOf;
+import org.cactoos.text.TextOf;
 import org.cactoos.text.UncheckedText;
 import org.xembly.Xembler;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
@@ -130,17 +134,16 @@ public final class Acts {
         @lombok.SneakyThrows
         public Project accept(Project project) {
             final Project.ProjectView props = project.toView();
-            final Path syntheticPom = project.pom();
+            final Path syntheticPomFile = project.pom();
 
             final Text renderedTpl = new Template.Xembled(
-                    new Template.Mustache(
-                            project.pomTemplate(),
-                            props
-                    ),
+                    new TextOf(() -> project.pomTemplate().openStream()),
                     props
             ).eval();
 
-            Files.copy(new InputOf(renderedTpl, StandardCharsets.UTF_8).stream(),syntheticPom);
+            try (InputStream is = new InputOf(renderedTpl, StandardCharsets.UTF_8).stream()) {
+                Files.copy(is, syntheticPomFile);
+            }
 
             if (log.isDebugEnabled()) {
                 log.debug("\n{}", renderedTpl.asString()); }

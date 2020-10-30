@@ -40,18 +40,9 @@ public class ActsTest {
         String pom = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                 "<project>\n" +
                 "    <modelVersion>4.0.0</modelVersion>\n" +
-                "    <groupId> {{ groupId }} </groupId>\n" +
-                "    <artifactId> {{ artifactId }} </artifactId>\n" +
+                "    <groupId>BBBB</groupId>\n" +
+                "    <artifactId>AAAA</artifactId>\n" +
                 "    <version>1.0.0-SNAPSHOT</version>\n" +
-                "    <dependencies>\n" +
-                "        {{#deps}}\n" +
-                "        <dependency>\n" +
-                "            <groupId>{{groupId}}</groupId>\n" +
-                "            <artifactId>{{artifactId}}</artifactId>\n" +
-                "            <version>{{version}}</version>\n" +
-                "        </dependency>\n" +
-                "        {{/deps}}\n" +
-                "    </dependencies>\n" +
                 "</project>";
 
         Project p = Project.builder()
@@ -68,8 +59,8 @@ public class ActsTest {
         final Project accept = act.accept(p);
 
         XML xml = new XMLDocument(accept.pom().toFile());
-        Assert.assertEquals(xml.xpath("//project/groupId/text()").get(0).trim(), "BBBB");
-        Assert.assertEquals(xml.xpath("//project/artifactId/text()").get(0).trim(), "AAAA");
+        Assert.assertEquals("BBBB",xml.xpath("//project/groupId/text()").get(0).trim());
+        Assert.assertEquals("AAAA", xml.xpath("//project/artifactId/text()").get(0).trim());
         Assert.assertEquals(xml.xpath("//project/dependencies/dependency/groupId/text()"), Lists.newArrayList("xyz"));
         Assert.assertEquals(xml.xpath("//project/dependencies/dependency/artifactId/text()"), Lists.newArrayList("xyz-aaa"));
         Assert.assertEquals(xml.xpath("//project/dependencies/dependency/version/text()"), Lists.newArrayList("1.0"));

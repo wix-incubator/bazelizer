@@ -42,6 +42,8 @@ public interface Template {
      */
     @AllArgsConstructor
     class Mustache implements Template {
+        private static final MustacheFactory MF = new DefaultMustacheFactory();
+
 
         private final ByteSource source;
 
@@ -51,11 +53,10 @@ public interface Template {
         @SneakyThrows
         public Text eval() {
             final CharSource tplSource = source.asCharSource(StandardCharsets.UTF_8);
-            MustacheFactory mf = new DefaultMustacheFactory();
             try (Reader tpl = tplSource.openStream()) {
                 final StringWriter str = new StringWriter();
                 try (Writer dest = new PrintWriter(str)) {
-                    com.github.mustachejava.Mustache mustache = mf.compile(tpl, "template.mustache");
+                    com.github.mustachejava.Mustache mustache = MF.compile(tpl, "template.mustache");
                     mustache.execute(dest, bean);
                 }
 
