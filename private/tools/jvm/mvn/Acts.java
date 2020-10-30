@@ -408,9 +408,7 @@ public final class Acts {
         @Override
         public Project accept(Project project) {
             final ArrayList<OutputFile> outputs = Lists.newArrayList(project.outputs());
-            final Pom.Props bean = new Pom.StringOf(
-                    project.pom()
-            ).props();
+            final Pom.Props bean = project.getPomProps();
 
             Map<String,String> settings = this.settings != null ? this.settings : Collections.emptyMap();
 

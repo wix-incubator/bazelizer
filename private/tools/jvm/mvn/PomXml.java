@@ -45,8 +45,6 @@ public interface PomXml {
             final Directives dirs = new Directives()
                     .xpath("/project")
                     .addIf("dependencies");
-//                    .xpath("/project/dependencies/dependency")
-//                    .remove();
 
             final Directives depsDirs = dirs
                     .xpath("/project/dependencies");
