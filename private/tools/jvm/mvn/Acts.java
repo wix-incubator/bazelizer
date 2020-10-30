@@ -20,6 +20,7 @@ import org.cactoos.Text;
 import org.cactoos.func.UncheckedProc;
 import org.cactoos.io.BytesOf;
 import org.cactoos.io.InputOf;
+import org.cactoos.text.UncheckedText;
 import org.xembly.Xembler;
 
 import java.io.File;
@@ -130,12 +131,17 @@ public final class Acts {
         public Project accept(Project project) {
             final Project.ProjectView props = project.toView();
             final Path syntheticPom = project.pom();
+
             final Text renderedTpl = new Template.Mustache(
                     project.pomTemplate(),
                     props
             ).eval();
 
-            Files.copy(new InputOf(renderedTpl, StandardCharsets.UTF_8).stream(),syntheticPom);
+            final Text pomXml = new PomXml.Xemblerd(
+                    project
+            ).apply(renderedTpl);
+
+            Files.copy(new InputOf(pomXml, StandardCharsets.UTF_8).stream(),syntheticPom);
 
             if (log.isDebugEnabled()) {
                 log.debug("\n{}", renderedTpl.asString()); }
@@ -381,27 +387,6 @@ public final class Acts {
             return project.toBuilder().outputs(
                     Lists.newArrayList(Iterables.concat(outputs, newOutputFiles))
             ).build();
-        }
-    }
-
-    @AllArgsConstructor
-    static class PomXembly implements Act {
-
-        private final Iterable<XeSource> dirs;
-
-        @SneakyThrows
-        @Override
-        public Project accept(Project project) {
-            Pom pom = new Pom.StringOf(project.pom());
-
-            XML xml = pom.xml();
-            for (XeSource dir : dirs) {
-                xml = new XMLDocument(
-                        new Xembler(new DirectivesNs(dir.value())).apply(xml.node())
-                );
-            }
-
-            return null;
         }
     }
 

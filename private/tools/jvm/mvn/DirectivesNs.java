@@ -129,7 +129,6 @@ public final class DirectivesNs implements Iterable<Directive>  {
     }
 
 
-    @SuppressWarnings("NullableProblems")
     @Override
     public Iterator<Directive> iterator() {
         initXPathFactory();

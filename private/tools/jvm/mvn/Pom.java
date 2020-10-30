@@ -9,8 +9,6 @@ import com.jcabi.xml.XMLDocument;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.SneakyThrows;
-import org.cactoos.iterable.IterableOf;
-import org.xembly.Xembler;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -42,38 +40,6 @@ public abstract class Pom {
         final java.lang.String version;
     }
 
-    /**
-     * Transform xml.
-     *
-     * @param dirs directives
-     * @return new pom
-     */
-    public final Pom transform(XeSource... dirs) {
-        return this.transform(new IterableOf<>(dirs));
-    }
-
-
-    /**
-     * Transform xml.
-     *
-     * @param dirs directives
-     * @return new pom
-     */
-    public final Pom transform(Iterable<XeSource> dirs) {
-        return new Cached(new Pom() {
-            @SneakyThrows
-            @Override
-            public XML xml() {
-                XML xml = Pom.this.xml();
-                for (XeSource dir : dirs) {
-                    xml = new XMLDocument(
-                            new Xembler(new DirectivesNs(dir.value())).apply(xml.node())
-                    );
-                }
-                return xml;
-            }
-        });
-    }
 
     /**
      * Resolved props by xpath.
