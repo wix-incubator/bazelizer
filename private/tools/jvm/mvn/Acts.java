@@ -132,16 +132,15 @@ public final class Acts {
             final Project.ProjectView props = project.toView();
             final Path syntheticPom = project.pom();
 
-            final Text renderedTpl = new Template.Mustache(
-                    project.pomTemplate(),
+            final Text renderedTpl = new Template.Xembled(
+                    new Template.Mustache(
+                            project.pomTemplate(),
+                            props
+                    ),
                     props
             ).eval();
 
-            final Text pomXml = new PomXml.Xemblerd(
-                    project
-            ).apply(renderedTpl);
-
-            Files.copy(new InputOf(pomXml, StandardCharsets.UTF_8).stream(),syntheticPom);
+            Files.copy(new InputOf(renderedTpl, StandardCharsets.UTF_8).stream(),syntheticPom);
 
             if (log.isDebugEnabled()) {
                 log.debug("\n{}", renderedTpl.asString()); }

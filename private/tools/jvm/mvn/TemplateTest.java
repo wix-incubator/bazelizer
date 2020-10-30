@@ -3,6 +3,7 @@ package tools.jvm.mvn;
 import com.google.common.collect.Lists;
 import com.google.common.io.CharSource;
 import org.cactoos.text.TextOf;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
@@ -10,9 +11,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 
-import static org.junit.Assert.assertEquals;
 
-public class PomXmlTest {
+public class TemplateTest {
+
     @SuppressWarnings("UnstableApiUsage")
     @Test
     public void xe() throws IOException {
@@ -82,18 +83,20 @@ public class PomXmlTest {
                 "</project>\n";
 
 
-        String resXML = new PomXml.Xemblerd(
-                Project.builder()
-                        .pomTemplate(CharSource.wrap(xml).asByteSource(StandardCharsets.UTF_8))
-                        .deps(Lists.newArrayList(
-                                new Dep.Simple(new File("/x/y/z"), "xxx", "yyy", "zzz")
-                        ))
-                        .parentPom(Paths.get("/foo/bar.xml"))
-                        .build()
-        ).apply(new TextOf(xml)).asString();
+        final Project.ProjectView projectView = Project.builder()
+                .pomTemplate(CharSource.wrap(xml).asByteSource(StandardCharsets.UTF_8))
+                .deps(Lists.newArrayList(
+                        new Dep.Simple(new File("/x/y/z"), "xxx", "yyy", "zzz")
+                ))
+                .parentPom(Paths.get("/foo/bar.xml"))
+                .build().toView();
+
+        String resXML = new Template.Xembled(
+                new TextOf(xml),
+                projectView
+        ).eval().asString();
 
         System.out.println(resXML);
-        assertEquals(expected, resXML);
+        Assert.assertEquals(expected, resXML);
     }
-
 }
