@@ -46,7 +46,7 @@ public interface Maven {
             invoker.setMavenHome(mavenHome);
             invoker.setWorkingDirectory(build.workDir().toFile());
 
-            log.debug("maven home exists: {} - {}", mavenHome.exists(),mavenHome);
+            log.debug("maven home exists: {} - {}", mavenHome.exists(), mavenHome);
             log.info("execute: {}", build.args());
 
             final InvocationRequest request = build.args().toInvocationRequest();

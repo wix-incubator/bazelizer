@@ -1,7 +1,6 @@
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xmlns:xhtml="http://www.w3.org/1999/xhtml"
          xmlns="http://maven.apache.org/POM/4.0.0"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd http://www.w3.org/1999/xhtml">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.mavenizer.examples-single.lib</groupId>
     <artifactId>myapi-single</artifactId>
@@ -9,15 +8,6 @@
 
 
     <dependencies>
-        {{#deps}}
-        <dependency>
-            <!--  file: {{source}}-->
-            <groupId>{{groupId}}</groupId>
-            <artifactId>{{artifactId}}</artifactId>
-            <version>{{version}}</version>
-        </dependency>
-        {{/deps}}
-
     </dependencies>
 
     <build>
