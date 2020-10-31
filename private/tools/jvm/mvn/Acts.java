@@ -21,6 +21,7 @@ import org.cactoos.Text;
 import org.cactoos.func.UncheckedProc;
 import org.cactoos.io.BytesOf;
 import org.cactoos.io.InputOf;
+import org.cactoos.io.ResourceOf;
 import org.cactoos.text.TextOf;
 import org.cactoos.text.UncheckedText;
 import org.xembly.Xembler;
@@ -130,16 +131,33 @@ public final class Acts {
     @Slf4j
     static class POM implements Act {
 
+        private final Template<Project.ProjectView> template;
+
+        /**
+         * Pom handling action..
+         */
+        public POM() {
+            this(new Template.Xembled());
+        }
+
+        /**
+         * Ctor.
+         * @param _template template engine
+         */
+        public POM(Template<Project.ProjectView> _template) {
+            template = _template;
+        }
+
         @Override
         @lombok.SneakyThrows
         public Project accept(Project project) {
             final Project.ProjectView props = project.toView();
             final Path syntheticPomFile = project.pom();
 
-            final Text renderedTpl = new Template.Xembled(
+            final Text renderedTpl = template.eval(
                     new TextOf(() -> project.pomTemplate().openStream()),
                     props
-            ).eval();
+            );
 
             try (InputStream is = new InputOf(renderedTpl, StandardCharsets.UTF_8).stream()) {
                 Files.copy(is, syntheticPomFile);
@@ -159,15 +177,26 @@ public final class Acts {
     static class SettingsXml implements Act {
         public static final String ACTIVE_PROFILE = "bazelizer";
 
+
         /**
          * Ctor
          * @param rr repositories to activate
          */
         @SafeVarargs
         public SettingsXml(Iterable<Repositories.Repository>...rr) {
+            this(new Template.Mustache<>(), rr);
+        }
+
+        /**
+         * Ctor
+         * @param rr repositories to activate
+         */
+        @SafeVarargs
+        public SettingsXml(Template<Object> t, Iterable<Repositories.Repository>...rr) {
             for (Iterable<Repositories.Repository> r : rr) {
                 Iterables.addAll(this.repositories, r);
             }
+            this.template = t;
         }
 
         /**
@@ -178,6 +207,11 @@ public final class Acts {
         private boolean offline = false;
 
         /**
+         * Template.
+         */
+        private final Template<Object> template;
+
+        /**
          * Repositories.
          */
         @Getter
@@ -186,7 +220,6 @@ public final class Acts {
 
         @SneakyThrows
         @Override
-        @SuppressWarnings("UnstableApiUsage")
         public Project accept(Project project) {
             final Path m2Home = project.m2Home();
             final Path settingsXml = m2Home.resolve("settings.xml").toAbsolutePath();
@@ -207,15 +240,15 @@ public final class Acts {
             }
 
             final Map<String, Object> props = builder.build();
-            final Text xmlText = new Template.Mustache(
-                    Resources.asByteSource(
-                            Resources.getResource("settings.mustache.xml")
+            final Text xmlText = template.eval(
+                    new TextOf(
+                            new ResourceOf("settings.mustache.xml")
                     ),
                     props
-            ).eval();
+            );
 
             Files.write(settingsXml, new BytesOf(xmlText).asBytes());
-            log.info("\n{}", xmlText.asString());
+            log.debug("\n{}", xmlText.asString());
 
             project.args().tag(Args.SettingsKey.SETTINGS_XML, settingsXml.toFile());
 

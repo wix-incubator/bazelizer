@@ -8,33 +8,15 @@ import javax.xml.xpath.*;
 import java.lang.reflect.Field;
 import java.util.Iterator;
 
-public final class DirectivesNs implements Iterable<Directive>  {
+public final class XemblerNs implements Iterable<Directive>  {
 
-    private final static ThreadLocal<XPathFactory> XFACTORY;
-
-    static {
-        ThreadLocal<XPathFactory> tl = null;
-        try {
-            Class<?> clz = Class.forName("org.xembly.XpathDirective");
-            @SuppressWarnings("JavaReflectionMemberAccess")
-            final Field factory = clz.getDeclaredField("FACTORY");
-            factory.setAccessible(true);
-            @SuppressWarnings("unchecked")
-            final ThreadLocal<XPathFactory> tmp = (ThreadLocal<XPathFactory>) factory.get(clz);
-            tl = tmp;
-        } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
-            e.printStackTrace();
-        }
-
-        XFACTORY = tl;
-    }
 
     /**
      * Ctor
      * @param dirs directives
      */
     @SafeVarargs
-    public DirectivesNs(Iterable<Directive>...dirs) {
+    public XemblerNs(Iterable<Directive>...dirs) {
         this(new Joined<>(dirs), new XPathContext());
     }
 
@@ -43,7 +25,7 @@ public final class DirectivesNs implements Iterable<Directive>  {
      * @param dirs directives
      * @param context ctx
      */
-    public DirectivesNs(Iterable<Directive> dirs, XPathContext context) {
+    public XemblerNs(Iterable<Directive> dirs, XPathContext context) {
         this.dirs = dirs;
         this.context = context;
     }
@@ -65,8 +47,8 @@ public final class DirectivesNs implements Iterable<Directive>  {
      * @param uri uri
      * @return Namespaces dirs
      */
-    public DirectivesNs registerNs(final String prefix, final Object uri) {
-        return new DirectivesNs(
+    public XemblerNs registerNs(final String prefix, final Object uri) {
+        return new XemblerNs(
                 this.dirs,
                 this.context.add(prefix, uri)
         );
@@ -144,6 +126,25 @@ public final class DirectivesNs implements Iterable<Directive>  {
             );
             XFACTORY.set(delegate);
         }
+    }
+
+    private final static ThreadLocal<XPathFactory> XFACTORY;
+
+    static {
+        ThreadLocal<XPathFactory> tl = null;
+        try {
+            Class<?> clz = Class.forName("org.xembly.XpathDirective");
+            @SuppressWarnings("JavaReflectionMemberAccess")
+            final Field factory = clz.getDeclaredField("FACTORY");
+            factory.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            final ThreadLocal<XPathFactory> tmp = (ThreadLocal<XPathFactory>) factory.get(clz);
+            tl = tmp;
+        } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
+            e.printStackTrace();
+        }
+
+        XFACTORY = tl;
     }
 }
 

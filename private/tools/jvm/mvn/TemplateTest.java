@@ -59,19 +59,18 @@ public class TemplateTest {
                 "</project>\n";
 
 
-        final Project.ProjectView projectView = Project.builder()
+        final Project p = Project.builder()
                 .workDir(Paths.get("/tmp"))
                 .pomTemplate(CharSource.wrap(xml).asByteSource(StandardCharsets.UTF_8))
                 .deps(Lists.newArrayList(
                         new Dep.Simple(new File("/x/y/z"), "xxx", "yyy", "zzz")
                 ))
                 .parentPom(Paths.get("/tmp/bar.xml"))
-                .build().toView();
+                .build();
 
-        String resXML = new Template.Xembled(
-                new TextOf(xml),
-                projectView
-        ).eval().asString();
+        String resXML = new Template.Xembled().eval(
+                new TextOf(xml), p.toView()
+        ).asString();
 
         System.out.println(resXML);
         Assert.assertEquals(expected, resXML);
