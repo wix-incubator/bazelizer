@@ -6,7 +6,11 @@ import com.google.common.io.ByteSource;
 import lombok.*;
 import lombok.experimental.Accessors;
 import org.cactoos.scalar.UncheckedScalar;
+import org.cactoos.text.TextOf;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -142,6 +146,23 @@ public final class Project {
             pom = syntheticPomFile(workDir);
         }
         return pom;
+    }
+
+
+    public String toDebugStr() throws IOException {
+        StringWriter w = new StringWriter();
+        final PrintWriter writer = new PrintWriter(w);
+        writer.println(" Project { ");
+        writer.println();
+        writer.println("Deps:");
+        deps.forEach(d -> {
+            writer.println("\t" + d);
+        });
+        writer.println();
+        writer.println("PON: ");
+        writer.write(new TextOf(pom).asString());
+        writer.println(" }");
+        return w.toString();
     }
 
     @SneakyThrows
