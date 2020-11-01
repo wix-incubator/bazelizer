@@ -221,18 +221,18 @@ def install(server_urls = _def_server_urls):
         artifact = "com.jcabi.incubator:xembly:0.24.0",
         fetch_sources = True,
         server_urls = server_urls,
-#        artifact_sha256 = "c8fb4839054d280b3033f800d1f5a97de2f028eb8ba2eb458ad287e536f3f25f",
-#        srcjar_sha256 = "da4d787939dc8de214724a20d88614b70ef8c3a4931d9c694300b5d9098ed9bc",
-        deps = [ "org_antlr_antlr4_runtime", "org_mockito_mockito_core" ]
+        artifact_sha256 = "81684631e93c1db7030581a9c83c14feb84cc596f61d46957b5dd4d31c78a092",
+        srcjar_sha256 = "5bf5f56a7610154fbd730a4c1722fb17fe13c9e669ddc8751ed590d73cc552ae",
+        deps = [ "org_antlr_antlr_runtime", "org_mockito_mockito_core" ]
     )
 
     _jvm_import(
-	    name = "org_antlr_antlr4_runtime",
-        artifact = "org.antlr:antlr4-runtime:4.8-1",
+	    name = "org_antlr_antlr_runtime",
+        artifact ='org.antlr:antlr-runtime:jar:3.5.2',
         fetch_sources = True,
         server_urls = server_urls,
-#        artifact_sha256 = "c8fb4839054d280b3033f800d1f5a97de2f028eb8ba2eb458ad287e536f3f25f",
-#        srcjar_sha256 = "da4d787939dc8de214724a20d88614b70ef8c3a4931d9c694300b5d9098ed9bc",
+        artifact_sha256 = "ce3fc8ecb10f39e9a3cddcbb2ce350d272d9cd3d0b1e18e6fe73c3b9389c8734",
+        srcjar_sha256 = "3a8fde6cabadd1f6c6dcddc92edbe17501448e0553fee893cfc62becce57531a",
     )
 
     _jvm_import(

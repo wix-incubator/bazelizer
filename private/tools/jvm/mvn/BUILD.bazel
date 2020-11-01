@@ -18,7 +18,6 @@ _deps = [
     "//external:wix_incubator_bazelizer_rules/dependency/ch_qos_logback_logback_core",
     "//external:wix_incubator_bazelizer_rules/dependency/com_google_code_gson_gson",
     "//external:wix_incubator_bazelizer_rules/dependency/com_jcabi_incubator_xembly",
-#    "//external:wix_incubator_bazelizer_rules/dependency/org_thymeleaf_thymeleaf",
     # bazel infra support
     "@bazel_tools//tools/java/runfiles"
 ]

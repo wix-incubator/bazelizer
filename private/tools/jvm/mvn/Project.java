@@ -152,16 +152,14 @@ public final class Project {
     public String toDebugStr() throws IOException {
         StringWriter w = new StringWriter();
         final PrintWriter writer = new PrintWriter(w);
-        writer.println(" Project { ");
-        writer.println();
-        writer.println("Deps:");
-        deps.forEach(d -> {
-            writer.println("\t" + d);
-        });
-        writer.println();
-        writer.println("PON: ");
+        writer.println("Project{");
+        writer.println("deps=[");
+        deps.forEach(d -> writer.println(d + ","));
+        writer.println("],");
+        writer.println("pom=");
         writer.write(new TextOf(pom).asString());
-        writer.println(" }");
+        writer.println();
+        writer.println("}");
         return w.toString();
     }
 

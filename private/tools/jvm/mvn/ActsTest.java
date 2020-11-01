@@ -200,8 +200,16 @@ public class ActsTest {
                 "</project>\n";
 
 
+        final Project p = newProject(xml);
+        Acts.POM pom = new Acts.POM();
+        final Project newProj = pom.accept(p);
+        final String resXML = new TextOf(newProj.pom()).asString();
+        Assert.assertEquals(expected, resXML);
+    }
+
+    private static Project newProject(String xml) {
         final Path workDir = Files.createTempDir().toPath();
-        final Project p = Project.builder()
+        return Project.builder()
                 .workDir(workDir)
                 .pomTemplate(CharSource.wrap(xml).asByteSource(StandardCharsets.UTF_8))
                 .deps(Lists.newArrayList(
@@ -209,11 +217,148 @@ public class ActsTest {
                 ))
                 .parentPom(workDir.resolve("bar.xml"))
                 .build();
+    }
 
+
+    @Test
+    public void xeDeps() throws IOException {
+        String xml = "<project xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n" +
+                "         xmlns=\"http://maven.apache.org/POM/4.0.0\"\n" +
+                "         xmlns:xe=\"http://www.w3.org/1999/xhtml\"\n" +
+                "         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd\"\n" +
+                "         >\n" +
+                "    <!-- xembler:on  no-drop-deps-first  -->\n" +
+                "\n" +
+                "    <modelVersion>4.0.0</modelVersion>\n" +
+                "    <!--suppress MavenRedundantGroupId -->\n" +
+                "    <groupId>com.mavenizer.examples.api</groupId>\n" +
+                "    <artifactId>myapi</artifactId>\n" +
+                "    <version>1.0.0-SNAPSHOT</version>\n" +
+                "\n" +
+                "    <parent>\n" +
+                "        <groupId>com.mavenizer.examples.api</groupId>\n" +
+                "        <artifactId>myapi-parent</artifactId>\n" +
+                "        <version>1.0.0-SNAPSHOT</version>\n" +
+                "        <relativePath>PLACEHOLDER</relativePath>\n" +
+                "    </parent>\n" +
+                "\n" +
+                "    <dependencies>\n" +
+                "        <!-- https://mvnrepository.com/artifact/com.google.guava/guava -->\n" +
+                "        <dependency>\n" +
+                "            <groupId>com.google.guava</groupId>\n" +
+                "            <artifactId>guava</artifactId>\n" +
+                "            <version>30.0-jre</version>\n" +
+                "        </dependency>\n" +
+                "        <!--\n" +
+                "            My JAXB bindings, can be passed via Bazel\n" +
+                "         -->\n" +
+                "        <dependency>\n" +
+                "            <groupId>javax.xml.bind</groupId>\n" +
+                "            <artifactId>jaxb-api</artifactId>\n" +
+                "        </dependency>\n" +
+                "        <dependency>\n" +
+                "            <groupId>com.sun.xml.bind</groupId>\n" +
+                "            <artifactId>jaxb-core</artifactId>\n" +
+                "        </dependency>\n" +
+                "        <dependency>\n" +
+                "            <groupId>com.sun.xml.bind</groupId>\n" +
+                "            <artifactId>jaxb-impl</artifactId>\n" +
+                "        </dependency>\n" +
+                "        <dependency>\n" +
+                "            <groupId>org.jvnet.jaxb2_commons</groupId>\n" +
+                "            <artifactId>jaxb2-basics-runtime</artifactId>\n" +
+                "        </dependency>\n" +
+                "\n" +
+                "        <dependency>\n" +
+                "            <groupId>junit</groupId>\n" +
+                "            <artifactId>junit</artifactId>\n" +
+                "            <version>4.13.1</version>\n" +
+                "            <scope>test</scope>\n" +
+                "        </dependency>\n" +
+                "    </dependencies>\n" +
+                "\n" +
+                "\n" +
+                "    <build>\n" +
+                "        <plugins>\n" +
+                "\n" +
+                "            <plugin>\n" +
+                "                <groupId>de.qaware.maven</groupId>\n" +
+                "                <artifactId>go-offline-maven-plugin</artifactId>\n" +
+                "                <version>1.2.7</version>\n" +
+                "                <configuration>\n" +
+                "                    <dynamicDependencies>\n" +
+                "                        <DynamicDependency>\n" +
+                "                            <groupId>org.jvnet.jaxb2.maven2</groupId>\n" +
+                "                            <artifactId>maven-jaxb2-plugin</artifactId>\n" +
+                "                            <version>0.14.0</version>\n" +
+                "                            <repositoryType>PLUGIN</repositoryType>\n" +
+                "                        </DynamicDependency>\n" +
+                "\n" +
+                "                        <DynamicDependency>\n" +
+                "                            <groupId>net.java.dev.jaxb2-commons</groupId>\n" +
+                "                            <artifactId>jaxb-fluent-api</artifactId>\n" +
+                "                            <version>2.1.8</version>\n" +
+                "                            <repositoryType>PLUGIN</repositoryType>\n" +
+                "                        </DynamicDependency>\n" +
+                "\n" +
+                "                        <DynamicDependency>\n" +
+                "                            <groupId>org.jvnet.jaxb2_commons</groupId>\n" +
+                "                            <artifactId>jaxb2-basics</artifactId>\n" +
+                "                            <version>1.11.1</version>\n" +
+                "                            <repositoryType>PLUGIN</repositoryType>\n" +
+                "                        </DynamicDependency>\n" +
+                "                    </dynamicDependencies>\n" +
+                "                </configuration>\n" +
+                "            </plugin>\n" +
+                "\n" +
+                "            <plugin>\n" +
+                "                <groupId>org.jvnet.jaxb2.maven2</groupId>\n" +
+                "                <artifactId>maven-jaxb2-plugin</artifactId>\n" +
+                "                <version>0.14.0</version>\n" +
+                "                <executions>\n" +
+                "                    <execution>\n" +
+                "                        <goals>\n" +
+                "                            <goal>generate</goal>\n" +
+                "                        </goals>\n" +
+                "                    </execution>\n" +
+                "                </executions>\n" +
+                "                <configuration>\n" +
+                "                    <extension>true</extension>\n" +
+                "                    <args>\n" +
+                "                        <arg>-Xfluent-api</arg>\n" +
+                "                        <arg>-XtoString</arg>\n" +
+                "                    </args>\n" +
+                "                    <plugins>\n" +
+                "                        <plugin>\n" +
+                "                            <groupId>net.java.dev.jaxb2-commons</groupId>\n" +
+                "                            <artifactId>jaxb-fluent-api</artifactId>\n" +
+                "                            <version>2.1.8</version>\n" +
+                "                        </plugin>\n" +
+                "                        <plugin>\n" +
+                "                            <groupId>org.jvnet.jaxb2_commons</groupId>\n" +
+                "                            <artifactId>jaxb2-basics</artifactId>\n" +
+                "                            <version>1.11.1</version>\n" +
+                "                        </plugin>\n" +
+                "                    </plugins>\n" +
+                "                </configuration>\n" +
+                "            </plugin>\n" +
+                "            <plugin>\n" +
+                "                <groupId>org.apache.maven.plugins</groupId>\n" +
+                "                <artifactId>maven-compiler-plugin</artifactId>\n" +
+                "                <configuration>\n" +
+                "                    <source>1.6</source>\n" +
+                "                    <target>1.6</target>\n" +
+                "                </configuration>\n" +
+                "            </plugin>\n" +
+                "        </plugins>\n" +
+                "    </build>\n" +
+                "</project>";
+
+        String expected = "";
+
+        final Project p = newProject(xml);
         Acts.POM pom = new Acts.POM();
-
         final Project newProj = pom.accept(p);
-
         final String resXML = new TextOf(newProj.pom()).asString();
         System.out.println(resXML);
         Assert.assertEquals(expected, resXML);

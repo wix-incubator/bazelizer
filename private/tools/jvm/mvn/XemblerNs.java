@@ -1,23 +1,32 @@
 package tools.jvm.mvn;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import com.google.common.collect.Lists;
 import com.jcabi.xml.XPathContext;
-import org.cactoos.collection.Joined;
+import lombok.SneakyThrows;
 import org.xembly.Directive;
+import org.xembly.Directives;
 
 import javax.xml.xpath.*;
 import java.lang.reflect.Field;
 import java.util.Iterator;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class XemblerNs implements Iterable<Directive>  {
 
+
+    public static final Pattern BRAKES = Pattern.compile("\"(.*?)\"");
+    public static final String XPATH = "XPATH";
 
     /**
      * Ctor
      * @param dirs directives
      */
-    @SafeVarargs
-    public XemblerNs(Iterable<Directive>...dirs) {
-        this(new Joined<>(dirs), new XPathContext());
+    public XemblerNs(Iterable<Directive> dirs, XPathQuery query) {
+        this(dirs, new XPathContext().add(Pom.NS, Pom.NS_URL), query);
     }
 
     /**
@@ -25,9 +34,9 @@ public final class XemblerNs implements Iterable<Directive>  {
      * @param dirs directives
      * @param context ctx
      */
-    public XemblerNs(Iterable<Directive> dirs, XPathContext context) {
-        this.dirs = dirs;
+    public XemblerNs(Iterable<Directive> dirs, XPathContext context, XPathQuery query) {
         this.context = context;
+        this.dirs = verbsTransformed(dirs, query);
     }
 
     /**
@@ -41,18 +50,33 @@ public final class XemblerNs implements Iterable<Directive>  {
     private final XPathContext context;
 
 
-    /**
-     * Register new namespace
-     * @param prefix prefix
-     * @param uri uri
-     * @return Namespaces dirs
-     */
-    public XemblerNs registerNs(final String prefix, final Object uri) {
-        return new XemblerNs(
-                this.dirs,
-                this.context.add(prefix, uri)
-        );
+    @Override
+    public Iterator<Directive> iterator() {
+        return dirs.iterator();
     }
+
+    @SneakyThrows
+    private Directives verbsTransformed(Iterable<Directive> dirs, XPathQuery query) {
+        initXPathFactory();
+
+        List<String> verbs = Lists.newArrayList();
+        dirs.iterator().forEachRemaining(expr -> {
+            verbs.add(expr.toString());
+        });
+
+        for (int i = 0; i < verbs.size(); i++) {
+            final String verb = verbs.get(i);
+            if (verb.contains(XPATH)) {
+                final Matcher matcher = BRAKES.matcher(verb);
+                if (matcher.find()) {
+                    final String xpath = matcher.group(1);
+                    verbs.set(i, String.format(XPATH + " \"%s\"", query.apply(xpath)));
+                }
+            }
+        }
+        return new Directives(String.join(";", verbs) + ";");
+    }
+
 
     public static class XPathFactoryDelegate extends XPathFactory {
 
@@ -111,11 +135,7 @@ public final class XemblerNs implements Iterable<Directive>  {
     }
 
 
-    @Override
-    public Iterator<Directive> iterator() {
-        initXPathFactory();
-        return dirs.iterator();
-    }
+
 
     private void initXPathFactory() {
         final XPathFactory that = XFACTORY.get();

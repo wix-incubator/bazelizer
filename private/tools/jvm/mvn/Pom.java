@@ -1,6 +1,8 @@
 package tools.jvm.mvn;
 
-import com.google.common.base.*;
+import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -17,19 +19,35 @@ import org.xembly.Directive;
 import org.xembly.Directives;
 import org.xembly.Xembler;
 
-import javax.xml.transform.*;
+import javax.xml.namespace.NamespaceContext;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Source;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @SuppressWarnings("NullableProblems")
 public abstract class Pom {
 
+    /**
+     * Namespace.
+     */
+    public static final String NS = "pom";
+
+    /**
+     * Namespace xmlns.
+     */
+    public static final String NS_URL = "http://maven.apache.org/POM/4.0.0";
+    /**
+     * Xembler.
+     */
     public static final String ENABLE_XEMBLY = "xembler:on";
 
     /**
@@ -56,7 +74,7 @@ public abstract class Pom {
      */
     public Props props() {
         XML xml = xml();
-        final List<java.lang.String> namespaces = xml.xpath("/*/namespace::*[name()='']");
+        final List<java.lang.String> namespaces = getNamespaces(xml);
         if (!namespaces.isEmpty()) {
             java.lang.String gid = xml.xpath("/pom:project/pom:groupId/text()").get(0);
             java.lang.String aid = xml.xpath("/pom:project/pom:artifactId/text()").get(0);
@@ -70,6 +88,9 @@ public abstract class Pom {
         }
     }
 
+    private static List<String> getNamespaces(XML xml) {
+        return xml.xpath("/*/namespace::*[name()='']");
+    }
 
     @Override
     @SneakyThrows
@@ -84,7 +105,7 @@ public abstract class Pom {
     public Bytes bytes() {
         return new BytesOf(new Text(){
             @Override
-            public String asString() throws IOException {
+            public String asString() {
                 return Pom.asString(xml());
             }
 
@@ -164,6 +185,9 @@ public abstract class Pom {
             this(new org.cactoos.io.InputOf(s));
         }
 
+        /**
+         * Input.
+         */
         private final org.cactoos.Input input;
 
 
@@ -171,27 +195,27 @@ public abstract class Pom {
         @Override
         public XML xml() {
             try (InputStream src = input.stream()) {
-                return new XMLDocument(src)
-                        .registerNs("pom", "http://maven.apache.org/POM/4.0.0");
+                return new XMLDocument(src).registerNs(NS, NS_URL);
             }
         }
     }
 
 
     public Pom xemblerd(Project project) {
+
         XML xml = this.xml();
-        final List<String> comments = xml.nodes("/project/comment()")
-                .stream().map(XML::toString).collect(Collectors.toList());
+        XPathQuery query = new XPathQuery(xml);
+        xml = new XMLSanitized(xml, query);
+
+        final List<String> comments = xml.nodes("/project/comment()").stream().map(XML::toString).collect(Collectors.toList());
         for (String comment : comments) {
             final int enable = comment.indexOf(ENABLE_XEMBLY);
             if (enable != -1) {
                 int i = enable + ENABLE_XEMBLY.length();
-                final String[] tagsLine = toTags(comment.substring(i));
-                xml = apply(xml, project, tagsLine);
+                xml = apply(xml, project, comment.substring(i), query);
             }
         }
         XML finalXml = xml;
-
         return new Cached(new Pom() {
             @Override
             public XML xml() {
@@ -200,49 +224,43 @@ public abstract class Pom {
         });
     }
 
-    public static String[] toTags(String str) {
-        final String replace = str
-                .replace("-->", "")
-                .replace("\n", "");
-        if (replace.isEmpty()) return new String[] {};
-        return replace.split(" ");
-    }
-
-
-
     /**
      * Build xml scalar based on comment flags
      * @param xml xml
-     * @param flags flags
+     * @param flagsLine flags
      * @return scalar
      */
     @SneakyThrows
     @SuppressWarnings("StaticPseudoFunctionalStyleMethod")
-    private static XML apply(XML xml, Project project, String[] flags) {
-        final List<XeFunc> dirs = Lists.newArrayList(
+    private static XML apply(XML xml, Project project, String flagsLine, XPathQuery query) {
+        final List<XeFunc> chain = Lists.newArrayList(
                 new DefaultStrucTags(),
                 new ClearDeps(),
                 new AddDepsTags()
         );
-
-        for (String flag : flags) {
+        for (String s : new String[]{"-->", "\n"}) {
+            flagsLine = flagsLine.replace(s, "");
+        }
+        final String finalFlagsLine = flagsLine;
+        Stream.of(flagsLine.split(" ")).map(String::trim).filter(s -> !s.isEmpty()).forEach(flag -> {
             //noinspection SwitchStatementWithTooFewBranches
             switch (flag.trim()) {
                 case "no-drop-deps-first":
-                    dirs.removeIf(x -> x instanceof ClearDeps);
+                    chain.removeIf(x -> x instanceof ClearDeps);
                     break;
                 default:
-                    throw new IllegalStateException("unknown: " + flag + ". " + Arrays.toString(flags));
+                    throw new IllegalStateException("unknown: " + flag + " - " + finalFlagsLine);
             }
-        }
+        });
+
+        final Iterable<Directive> dirs = Iterables.concat(
+                Iterables.transform(chain, dir -> dir.apply(project, xml)));
 
         final Node node = new Xembler(
-                new XemblerNs(Iterables.concat(
-                        Iterables.transform(dirs, dir -> dir.apply(project,xml)))
-                ).registerNs("xe", "http://www.w3.org/2000/svg")
+                new XemblerNs(dirs, query)
         ).apply(xml.node());
 
-        return new XMLDocument(asString(new DOMSource(node)));
+        return new XMLDocument(node);
     }
 
     /**
@@ -282,6 +300,8 @@ public abstract class Pom {
     }
 
     static class AddDepsTags implements XeFunc {
+
+
         @Override
         public Iterable<Directive> apply(Project project, XML xml) {
             final Directives directives = new Directives();
@@ -301,4 +321,58 @@ public abstract class Pom {
         }
     }
 
+    /**
+     * Pom sanitized xml.
+     */
+    private static class XMLSanitized implements XML {
+
+        /**
+         * Query transform.
+         */
+        private final XPathQuery map;
+
+        /**
+         * Origin.
+         */
+        private final XML xml;
+
+        /**
+         * Ctor.
+         * @param xml xml
+         */
+        private XMLSanitized(XML xml, XPathQuery query) {
+            this.xml = xml;
+            this.map = query ;
+        }
+
+        @Override
+        public List<String> xpath(String query) {
+            return xml.xpath(map.apply(query));
+        }
+
+        @Override
+        public List<XML> nodes(String query) {
+            return xml.nodes(map.apply(query));
+        }
+
+        @Override
+        public XML registerNs(String prefix, Object uri) {
+            return xml.registerNs(prefix, uri);
+        }
+
+        @Override
+        public XML merge(NamespaceContext context) {
+            return xml.merge(context);
+        }
+
+        @Override
+        public Node node() {
+            return xml.node();
+        }
+
+        @Override
+        public String toString() {
+            return xml.toString();
+        }
+    }
 }
