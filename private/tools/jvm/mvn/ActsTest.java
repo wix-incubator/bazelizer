@@ -41,6 +41,7 @@ public class ActsTest {
     public void generatePom() throws IOException {
         String pom = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                 "<project>\n" +
+                "<!-- xembler:on -->\n" +
                 "    <modelVersion>4.0.0</modelVersion>\n" +
                 "    <groupId>BBBB</groupId>\n" +
                 "    <artifactId>AAAA</artifactId>\n" +
@@ -61,11 +62,11 @@ public class ActsTest {
         final Project accept = act.accept(p);
 
         XML xml = new XMLDocument(accept.pom().toFile());
-        Assert.assertEquals("BBBB",xml.xpath("//project/groupId/text()").get(0).trim());
-        Assert.assertEquals("AAAA", xml.xpath("//project/artifactId/text()").get(0).trim());
-        Assert.assertEquals(xml.xpath("//project/dependencies/dependency/groupId/text()"), Lists.newArrayList("xyz"));
-        Assert.assertEquals(xml.xpath("//project/dependencies/dependency/artifactId/text()"), Lists.newArrayList("xyz-aaa"));
-        Assert.assertEquals(xml.xpath("//project/dependencies/dependency/version/text()"), Lists.newArrayList("1.0"));
+        Assert.assertEquals("BBBB",xml.xpath("/project/groupId/text()").get(0).trim());
+        Assert.assertEquals("AAAA", xml.xpath("/project/artifactId/text()").get(0).trim());
+        Assert.assertEquals(xml.xpath("/project/dependencies/dependency/groupId/text()"), Lists.newArrayList("xyz"));
+        Assert.assertEquals(xml.xpath("/project/dependencies/dependency/artifactId/text()"), Lists.newArrayList("xyz-aaa"));
+        Assert.assertEquals(xml.xpath("/project/dependencies/dependency/version/text()"), Lists.newArrayList("1.0"));
     }
 
 
@@ -149,8 +150,10 @@ public class ActsTest {
     @Test
     public void xe() throws IOException {
 
+        final String onComment = "<!-- xembler:on -->\n";
+
         String xml = "<project xmlns:xhtml=\"http://www.w3.org/1999/xhtml\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n" +
-                "<!-- xembler:on --> \n" +
+                onComment +
                 "    <modelVersion>4.0.0</modelVersion>\n" +
                 "    <groupId>com.mavenizer.examples.api</groupId>\n" +
                 "    <artifactId>myapi-parent</artifactId>\n" +
@@ -172,7 +175,7 @@ public class ActsTest {
 
         String expected = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n" +
                 "<project xmlns:xhtml=\"http://www.w3.org/1999/xhtml\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n" +
-                "<!-- xembler:on --> \n" +
+                onComment +
                 "    <modelVersion>4.0.0</modelVersion>\n" +
                 "    <groupId>com.mavenizer.examples.api</groupId>\n" +
                 "    <artifactId>myapi-parent</artifactId>\n" +
@@ -185,6 +188,7 @@ public class ActsTest {
                 "    </parent>\n" +
                 "    <packaging>pom</packaging>\n" +
                 "        <dependencies>\n" +
+                "           \n" +
                 "        <dependency>\n" +
                 "            <!--source-of: /x/y/z -->\n" +
                 "            <groupId>xxx</groupId>\n" +
@@ -196,13 +200,14 @@ public class ActsTest {
                 "</project>\n";
 
 
+        final Path workDir = Files.createTempDir().toPath();
         final Project p = Project.builder()
-                .workDir(Files.createTempDir().toPath())
+                .workDir(workDir)
                 .pomTemplate(CharSource.wrap(xml).asByteSource(StandardCharsets.UTF_8))
                 .deps(Lists.newArrayList(
                         new Dep.Simple(new File("/x/y/z"), "xxx", "yyy", "zzz")
                 ))
-                .parentPom(Paths.get("/tmp/bar.xml"))
+                .parentPom(workDir.resolve("bar.xml"))
                 .build();
 
         Acts.POM pom = new Acts.POM();

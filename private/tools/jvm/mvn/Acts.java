@@ -22,7 +22,6 @@ import org.cactoos.text.TextOf;
 
 import java.io.File;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
 
@@ -152,14 +151,16 @@ public final class Acts {
                     props
             );
 
-            Pom pom = Pom.xembledBy(new InputOf(renderedTpl), project);
+            Pom pom = new Pom.FromInput(
+                    renderedTpl
+            ).xemblerd(project);
 
             try (InputStream is = new InputOf(pom.bytes()).stream()) {
                 Files.copy(is, syntheticPomFile);
             }
 
             if (log.isDebugEnabled()) {
-                log.debug("\n{}", renderedTpl.asString()); }
+                log.debug("\n{}", pom.toString()); }
             return project;
         }
     }

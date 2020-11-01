@@ -1,11 +1,8 @@
 package tools.jvm.mvn;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableList;
+import com.google.common.base.*;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.jcabi.xml.XML;
 import com.jcabi.xml.XMLDocument;
@@ -13,18 +10,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.SneakyThrows;
 import org.cactoos.Bytes;
-import org.cactoos.Input;
 import org.cactoos.Text;
 import org.cactoos.io.BytesOf;
-import org.cactoos.io.InputOf;
-import org.cactoos.iterable.Joined;
-import org.cactoos.iterable.Mapped;
-import org.cactoos.text.TextOf;
 import org.w3c.dom.Node;
 import org.xembly.Directive;
 import org.xembly.Directives;
 import org.xembly.Xembler;
-import picocli.CommandLine;
 
 import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
@@ -36,6 +27,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("NullableProblems")
 public abstract class Pom {
 
     public static final String ENABLE_XEMBLY = "xembler:on";
@@ -114,6 +106,7 @@ public abstract class Pom {
         transformerFactory.setAttribute("indent-number", 4);
         Transformer transformer = transformerFactory.newTransformer(); // An identity transformer
         transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        transformer.setOutputProperty(OutputKeys.STANDALONE, "no");
         transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
         transformer.setOutputProperty("{http://xml.customer.org/xslt}indent-amount", "4");
         final StringWriter writer = new StringWriter();
@@ -144,13 +137,13 @@ public abstract class Pom {
      */
     @AllArgsConstructor
     @SuppressWarnings("unused")
-    static class AsInput extends Pom {
+    static class FromInput extends Pom {
 
         /**
          * Ctor.
          * @param s path
          */
-        public AsInput(Path s) {
+        public FromInput(Path s) {
             this(new org.cactoos.io.InputOf(s));
         }
 
@@ -158,10 +151,18 @@ public abstract class Pom {
          * String
          * @param s str
          */
-        public AsInput(String s) {
+        public FromInput(String s) {
             this(new org.cactoos.io.InputOf(s));
         }
 
+
+        /**
+         * String
+         * @param s str
+         */
+        public FromInput(Text s) {
+            this(new org.cactoos.io.InputOf(s));
+        }
 
         private final org.cactoos.Input input;
 
@@ -177,16 +178,16 @@ public abstract class Pom {
     }
 
 
-    public static Pom xembledBy(org.cactoos.Input in, Project project) {
-        XML xml = new AsInput(in).xml();
+    public Pom xemblerd(Project project) {
+        XML xml = this.xml();
         final List<String> comments = xml.nodes("/project/comment()")
-                .stream().map(XML::toString).map(Pom::clear).collect(Collectors.toList());
+                .stream().map(XML::toString).collect(Collectors.toList());
         for (String comment : comments) {
             final int enable = comment.indexOf(ENABLE_XEMBLY);
             if (enable != -1) {
                 int i = enable + ENABLE_XEMBLY.length();
-                final String[] cmd = comment.substring(i).split(" ");
-                xml = resolve(xml, cmd).transformBy(project);
+                final String[] tagsLine = toTags(comment.substring(i));
+                xml = apply(xml, project, tagsLine);
             }
         }
         XML finalXml = xml;
@@ -199,17 +200,14 @@ public abstract class Pom {
         });
     }
 
-    public static String clear(String str) {
-        return str.replace("-->", "").replace("\n", "");
+    public static String[] toTags(String str) {
+        final String replace = str
+                .replace("-->", "")
+                .replace("\n", "");
+        if (replace.isEmpty()) return new String[] {};
+        return replace.split(" ");
     }
 
-
-    /**
-     * Xml scalara with transformation based on Project state
-     */
-    interface XeFuncs {
-        XML transformBy(Project project);
-    }
 
 
     /**
@@ -218,81 +216,48 @@ public abstract class Pom {
      * @param flags flags
      * @return scalar
      */
-    private static XeFuncs resolve(XML xml, String[] flags) {
-        final XeFuncsFlags params;
-        try {
-            params = new XeFuncsFlags(xml);
-            final CommandLine.ParseResult result = new CommandLine(params).parseArgs(flags);
-            Preconditions.checkState(!result.isUsageHelpRequested());
-            Preconditions.checkState(!result.isVersionHelpRequested());
-        } catch (CommandLine.ParameterException e) {
-            throw new ToolException("[pom flags] flags " + Arrays.toString(flags)   + " not valid: "
-                    + e.getMessage() + "\n correct flags: "
-                    + e.getCommandLine().getHelp().synopsis(0)
-            );
-        }
-        return params;
-    }
+    @SneakyThrows
+    @SuppressWarnings("StaticPseudoFunctionalStyleMethod")
+    private static XML apply(XML xml, Project project, String[] flags) {
+        final List<XeFunc> dirs = Lists.newArrayList(
+                new DefaultStrucTags(),
+                new ClearDeps(),
+                new AddDepsTags()
+        );
 
-    /**
-     * Scalar
-     */
-    @CommandLine.Command(name = ENABLE_XEMBLY)
-    public static class XeFuncsFlags implements XeFuncs {
-        @CommandLine.Option(names = {"-fcd", "--first-clear-deps"}, defaultValue = "true")
-        public boolean clearDepsFirst = true;
-
-        private final XML xml;
-
-        /**
-         * Ctor.
-         * @param xml pom xml
-         */
-        public XeFuncsFlags(XML xml) {
-            this.xml = xml;
+        for (String flag : flags) {
+            //noinspection SwitchStatementWithTooFewBranches
+            switch (flag.trim()) {
+                case "no-drop-deps-first":
+                    dirs.removeIf(x -> x instanceof ClearDeps);
+                    break;
+                default:
+                    throw new IllegalStateException("unknown: " + flag + ". " + Arrays.toString(flags));
+            }
         }
 
-        @SneakyThrows
-        public XML transformBy(Project project) {
-            final ArrayList<XeFunc> chain = Lists.newArrayList(
-                    new DefaultStrucTags(),
-                    this.clearDepsFirst ? new ClearDepr() : NOP,
-                    new DepsTags()
-            );
+        final Node node = new Xembler(
+                new XemblerNs(Iterables.concat(
+                        Iterables.transform(dirs, dir -> dir.apply(project,xml)))
+                ).registerNs("xe", "http://www.w3.org/2000/svg")
+        ).apply(xml.node());
 
-            final Node node = new Xembler(
-                    new XemblerNs(
-                            new Joined<>(
-                                    new Mapped<>(
-                                            chain,
-                                            func -> func.get(project, xml)
-                                    )
-                            )
-                    )
-            ).apply(xml.node());
-
-            return new XMLDocument(
-                    asString(new DOMSource(node))
-            );
-        }
+        return new XMLDocument(asString(new DOMSource(node)));
     }
 
     /**
      * Single directives resolver.
      */
     interface XeFunc {
-        Iterable<Directive> get(Project project, XML xml);
+        Iterable<Directive> apply(Project project, XML xml);
     }
 
 
-    static final XeFunc NOP = (project, xml) -> ImmutableList.of();
-
-
-    static class ClearDepr implements XeFunc {
+    static class ClearDeps implements XeFunc {
         @Override
-        public Iterable<Directive> get(Project project, XML xml) {
+        public Iterable<Directive> apply(Project project, XML xml) {
             return new Directives()
-                    .xpath("/project/dependencies/dependency")
+                    .xpath("/project/dependencies/dependency[not(@xe:class=\"no-drop-dep\")]")
                     .remove();
         }
     }
@@ -300,13 +265,11 @@ public abstract class Pom {
     static class DefaultStrucTags implements XeFunc {
 
         @Override
-        public Iterable<Directive> get(Project project, XML xml) {
+        public Iterable<Directive> apply(Project project, XML xml) {
             final Directives directives = new Directives()
                     .xpath("/project")
                     .addIf("dependencies");
-
             final Project.ProjectView projectView = project.toView();
-
             if (!Strings.isNullOrEmpty(projectView.parent())) {
                 if (!xml.nodes("/project/parent").isEmpty()) {
                     directives.xpath("/project/parent")
@@ -318,10 +281,11 @@ public abstract class Pom {
         }
     }
 
-    static class DepsTags implements XeFunc {
+    static class AddDepsTags implements XeFunc {
         @Override
-        public Iterable<Directive> get(Project project, XML xml) {
+        public Iterable<Directive> apply(Project project, XML xml) {
             final Directives directives = new Directives();
+            directives.xpath("/project/dependencies");
             project.deps().forEach(dep -> {
                 directives.add("dependency")
                         .comment("source-of: " + dep.source() + " ")

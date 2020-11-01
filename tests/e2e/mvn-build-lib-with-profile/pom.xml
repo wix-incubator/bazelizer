@@ -1,4 +1,5 @@
 <project>
+    <!-- xembler:on  -->
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.mavenizer.examples-single.lib</groupId>
     <artifactId>myapi-single-v2</artifactId>
