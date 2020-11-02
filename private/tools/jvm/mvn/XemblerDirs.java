@@ -1,7 +1,5 @@
 package tools.jvm.mvn;
 
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import com.jcabi.xml.XPathContext;
 import lombok.SneakyThrows;
@@ -15,28 +13,41 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public final class XemblerNs implements Iterable<Directive>  {
+public final class XemblerDirs implements Iterable<Directive> {
 
 
-    public static final Pattern BRAKES = Pattern.compile("\"(.*?)\"");
-    public static final String XPATH = "XPATH";
+    /**
+     * Extract brakes data.
+     */
+    public static final Pattern BRAKETS = Pattern.compile("\"(.*?)\"");
+
+    /**
+     * XPath query verb.
+     */
+    public static final String XPATH_VERB = "XPATH";
 
     /**
      * Ctor
+     *
      * @param dirs directives
      */
-    public XemblerNs(Iterable<Directive> dirs, XPathQuery query) {
-        this(dirs, new XPathContext().add(Pom.NS, Pom.NS_URL), query);
+    public XemblerDirs(Iterable<Directive> dirs, PomXPath query) {
+        this(dirs,
+                new XPathContext()
+                        .add(Pom.NS, Pom.NS_URL)
+                        .add("xe", "http://www.w3.org/1999/xhtml"),
+                query);
     }
 
     /**
      * Ctor.
-     * @param dirs directives
+     *
+     * @param dirs    directives
      * @param context ctx
      */
-    public XemblerNs(Iterable<Directive> dirs, XPathContext context, XPathQuery query) {
+    public XemblerDirs(Iterable<Directive> dirs, XPathContext context, PomXPath query) {
         this.context = context;
-        this.dirs = verbsTransformed(dirs, query);
+        this.dirs = sanitizeVerbs(dirs, query);
     }
 
     /**
@@ -52,25 +63,24 @@ public final class XemblerNs implements Iterable<Directive>  {
 
     @Override
     public Iterator<Directive> iterator() {
+        initXPathFactory();
         return dirs.iterator();
     }
 
     @SneakyThrows
-    private Directives verbsTransformed(Iterable<Directive> dirs, XPathQuery query) {
+    private Iterable<Directive> sanitizeVerbs(Iterable<Directive> dirs, PomXPath query) {
         initXPathFactory();
-
         List<String> verbs = Lists.newArrayList();
         dirs.iterator().forEachRemaining(expr -> {
             verbs.add(expr.toString());
         });
-
         for (int i = 0; i < verbs.size(); i++) {
             final String verb = verbs.get(i);
-            if (verb.contains(XPATH)) {
-                final Matcher matcher = BRAKES.matcher(verb);
+            if (verb.contains(XPATH_VERB)) {
+                final Matcher matcher = BRAKETS.matcher(verb);
                 if (matcher.find()) {
                     final String xpath = matcher.group(1);
-                    verbs.set(i, String.format(XPATH + " \"%s\"", query.apply(xpath)));
+                    verbs.set(i, String.format(XPATH_VERB + " \"%s\"", query.apply(xpath)));
                 }
             }
         }
@@ -92,6 +102,7 @@ public final class XemblerNs implements Iterable<Directive>  {
 
         /**
          * Ctor.
+         *
          * @param factory factory
          * @param context context
          */
@@ -135,8 +146,6 @@ public final class XemblerNs implements Iterable<Directive>  {
     }
 
 
-
-
     private void initXPathFactory() {
         final XPathFactory that = XFACTORY.get();
         if (!(that instanceof XPathFactoryDelegate)) {
@@ -154,11 +163,9 @@ public final class XemblerNs implements Iterable<Directive>  {
         ThreadLocal<XPathFactory> tl = null;
         try {
             Class<?> clz = Class.forName("org.xembly.XpathDirective");
-            @SuppressWarnings("JavaReflectionMemberAccess")
-            final Field factory = clz.getDeclaredField("FACTORY");
+            @SuppressWarnings("JavaReflectionMemberAccess") final Field factory = clz.getDeclaredField("FACTORY");
             factory.setAccessible(true);
-            @SuppressWarnings("unchecked")
-            final ThreadLocal<XPathFactory> tmp = (ThreadLocal<XPathFactory>) factory.get(clz);
+            @SuppressWarnings("unchecked") final ThreadLocal<XPathFactory> tmp = (ThreadLocal<XPathFactory>) factory.get(clz);
             tl = tmp;
         } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
             e.printStackTrace();

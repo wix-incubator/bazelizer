@@ -151,7 +151,7 @@ public final class Acts {
                     props
             );
 
-            Pom pom = new Pom.FromInput(renderedTpl).xemblerd(project);
+            Pom pom = Pom.create(renderedTpl).xemblerd(project);
             try (InputStream is = new InputOf(pom.bytes()).stream()) {
                 Files.copy(is, syntheticPomFile);
             }

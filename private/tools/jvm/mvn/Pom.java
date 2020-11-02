@@ -67,6 +67,18 @@ public abstract class Pom {
     }
 
 
+    public static Pom create(Path s) {
+        return new Standard(s);
+    }
+
+    public static Pom create(Text s) {
+        return new Standard(s);
+    }
+
+    public static Pom create(String s) {
+        return new Standard(s);
+    }
+
     /**
      * Resolved props by xpath.
      *
@@ -153,18 +165,19 @@ public abstract class Pom {
         }
     }
 
+
     /**
      * Pom from input.
      */
     @AllArgsConstructor
     @SuppressWarnings("unused")
-    static class FromInput extends Pom {
+    private static class Standard extends Pom {
 
         /**
          * Ctor.
          * @param s path
          */
-        public FromInput(Path s) {
+        public Standard(Path s) {
             this(new org.cactoos.io.InputOf(s));
         }
 
@@ -172,7 +185,7 @@ public abstract class Pom {
          * String
          * @param s str
          */
-        public FromInput(String s) {
+        public Standard(String s) {
             this(new org.cactoos.io.InputOf(s));
         }
 
@@ -181,7 +194,7 @@ public abstract class Pom {
          * String
          * @param s str
          */
-        public FromInput(Text s) {
+        public Standard(Text s) {
             this(new org.cactoos.io.InputOf(s));
         }
 
@@ -202,17 +215,17 @@ public abstract class Pom {
 
 
     public Pom xemblerd(Project project) {
-
         XML xml = this.xml();
-        XPathQuery query = new XPathQuery(xml);
+        PomXPath query = new PomXPath(xml);
         xml = new XMLSanitized(xml, query);
 
-        final List<String> comments = xml.nodes("/project/comment()").stream().map(XML::toString).collect(Collectors.toList());
+        final List<String> comments = xml.nodes("/project/comment()").stream()
+                .map(XML::toString).collect(Collectors.toList());
         for (String comment : comments) {
             final int enable = comment.indexOf(ENABLE_XEMBLY);
             if (enable != -1) {
                 int i = enable + ENABLE_XEMBLY.length();
-                xml = apply(xml, project, comment.substring(i), query);
+                xml = transform(xml, project, comment.substring(i), query);
             }
         }
         XML finalXml = xml;
@@ -232,14 +245,14 @@ public abstract class Pom {
      */
     @SneakyThrows
     @SuppressWarnings("StaticPseudoFunctionalStyleMethod")
-    private static XML apply(XML xml, Project project, String flagsLine, XPathQuery query) {
+    private static XML transform(XML xml, Project project, String flagsLine, PomXPath query) {
         final List<XeFunc> chain = Lists.newArrayList(
                 new DefaultStrucTags(),
                 new ClearDeps(),
-                new AddDepsTags()
+                new AddProjectDeps()
         );
-        for (String s : new String[]{"-->", "\n"}) {
-            flagsLine = flagsLine.replace(s, "");
+        for (String trashSign : new String[]{"-->", "\n"}) {
+            flagsLine = flagsLine.replace(trashSign, "");
         }
         final String finalFlagsLine = flagsLine;
         Stream.of(flagsLine.split(" ")).map(String::trim).filter(s -> !s.isEmpty()).forEach(flag -> {
@@ -253,13 +266,9 @@ public abstract class Pom {
             }
         });
 
-        final Iterable<Directive> dirs = Iterables.concat(
-                Iterables.transform(chain, dir -> dir.apply(project, xml)));
-
-        final Node node = new Xembler(
-                new XemblerNs(dirs, query)
-        ).apply(xml.node());
-
+        @SuppressWarnings("ConstantConditions")
+        final Iterable<Directive> dirs = Iterables.concat(Iterables.transform(chain, dir -> dir.apply(project, xml)));
+        final Node node = new Xembler(new XemblerDirs(dirs, query)).apply(xml.node());
         return new XMLDocument(node);
     }
 
@@ -270,12 +279,18 @@ public abstract class Pom {
         Iterable<Directive> apply(Project project, XML xml);
     }
 
-
     static class ClearDeps implements XeFunc {
+
+        /**
+         * Tag to indicate that dependency is freeze.
+         */
+        public static final String DO_NOT_RM_TAG = "no-drop-dep";
+
+
         @Override
         public Iterable<Directive> apply(Project project, XML xml) {
             return new Directives()
-                    .xpath("/project/dependencies/dependency[not(@xe:class=\"no-drop-dep\")]")
+                    .xpath("/project/dependencies/dependency[not(@xe:class=\"" + DO_NOT_RM_TAG + "\")]")
                     .remove();
         }
     }
@@ -299,7 +314,7 @@ public abstract class Pom {
         }
     }
 
-    static class AddDepsTags implements XeFunc {
+    static class AddProjectDeps implements XeFunc {
 
 
         @Override
@@ -329,7 +344,7 @@ public abstract class Pom {
         /**
          * Query transform.
          */
-        private final XPathQuery map;
+        private final PomXPath map;
 
         /**
          * Origin.
@@ -340,7 +355,7 @@ public abstract class Pom {
          * Ctor.
          * @param xml xml
          */
-        private XMLSanitized(XML xml, XPathQuery query) {
+        private XMLSanitized(XML xml, PomXPath query) {
             this.xml = xml;
             this.map = query ;
         }

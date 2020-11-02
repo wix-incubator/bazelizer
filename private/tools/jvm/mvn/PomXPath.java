@@ -6,12 +6,26 @@ import com.jcabi.xml.XML;
 import java.util.List;
 import java.util.function.Function;
 
-public class XPathQuery {
+/**
+ * Workaround xpath query that aware of namespace of pom.
+ */
+public class PomXPath {
 
+    /**
+     * Resolve all namespaces.
+     */
+    public static final String NAMESPACE_XPATH = "/*/namespace::*[name()='']";
+    /**
+     * XPath transformation
+     */
     private final Function<String,String> map;
 
-    public XPathQuery(XML xml) {
-        final List<String> namespaces = xml.xpath("/*/namespace::*[name()='']");
+    /**
+     * Ctor.
+     * @param xml pom xml
+     */
+    public PomXPath(XML xml) {
+        final List<String> namespaces = xml.xpath(NAMESPACE_XPATH);
         Function<String,String> map = Function.identity();
         if (namespaces.contains(Pom.NS_URL)) {
             map = (query) -> {
@@ -21,6 +35,9 @@ public class XPathQuery {
                     if (token.isEmpty() || token.contains("()")) {
                         tokens.add(token);
                     } else {
+                        // all xpath that not a function will have a namespace prefix
+                        // was: /project/groupId
+                        // to:  /pom:project/pom:groupId
                         tokens.add(Pom.NS + ":" + token);
                     }
                 }

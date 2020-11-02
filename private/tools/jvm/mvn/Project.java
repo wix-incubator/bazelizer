@@ -125,7 +125,7 @@ public final class Project {
 
     public Pom.Props getPomProps() {
         return new UncheckedScalar<>(
-                () -> new Pom.FromInput(
+                () -> Pom.create(
                         this.pom()
                 ).props()
         ).value();
@@ -149,16 +149,17 @@ public final class Project {
     }
 
 
-    public String toDebugStr() throws IOException {
+    public String asString() throws IOException {
         StringWriter w = new StringWriter();
         final PrintWriter writer = new PrintWriter(w);
         writer.println("Project{");
+        writer.println("args="+args + ", ");
+        writer.println("workdir="+workDir + ", ");
         writer.println("deps=[");
         deps.forEach(d -> writer.println(d + ","));
         writer.println("],");
-        writer.println("pom=");
+        writer.println("xml=");
         writer.write(new TextOf(pom).asString());
-        writer.println();
         writer.println("}");
         return w.toString();
     }

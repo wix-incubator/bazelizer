@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.shared.invoker.DefaultInvoker;
 import org.apache.maven.shared.invoker.InvocationRequest;
 import org.apache.maven.shared.invoker.InvocationResult;
-import org.cactoos.text.TextOf;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -62,7 +61,7 @@ public interface Maven {
             final InvocationResult result = SLF4JConfigurer.withMDC(id, () -> invoker.execute(request));
             if (result.getExitCode() != 0) {
                 log.error("Maven invocation failed. Project:");
-                log.error(build.toDebugStr());
+                log.error(build.asString());
                 throw new ToolMavenInvocationException(result);
             }
         }
