@@ -48,7 +48,7 @@ public interface XemblyFunc {
     class PomDropDeps implements XemblyFunc {
         @Override
         public Iterable<Directive> dirs(Project project, XML xml) {
-            return new Directives().xpath("/project/dependencies/dependency").remove();
+            return new Directives().xpath("/project/dependencies/dependency[not(@xe:remove=\"never\")]").remove();
         }
     }
 }

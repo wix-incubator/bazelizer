@@ -16,7 +16,16 @@ import java.nio.charset.StandardCharsets;
 
 @SuppressWarnings({"UnstableApiUsage", "DuplicatedCode"})
 public class PomTest {
-    final String NS = "xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\"";
+
+    static String getNs(String s) {
+        final String v = " xmlns=\"http://maven.apache.org/POM/4.0.0\" %s" +
+                "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\"";
+        return String.format(v, s);
+    }
+
+    static String getNs() {
+        return getNs( "");
+    }
 
     final File tempDir = Files.createTempDir();
 
@@ -93,7 +102,7 @@ public class PomTest {
 
     @Test
     public void defStruc() throws Exception {
-        for (String ns : new String[]{"", " " + NS}) {
+        for (String ns : new String[]{"", "" + getNs()}) {
 
             String xmlStr = "<project" + ns + ">\n" +
                     "    <modelVersion>4.0.0</modelVersion>\n" +
@@ -123,7 +132,7 @@ public class PomTest {
 
     @Test
     public void defParent() throws Exception {
-        for (String ns : new String[]{"", " " + NS}) {
+        for (String ns : new String[]{"", "" + getNs()}) {
 
             String xmlStr = "<project" + ns + ">\n" +
                     "    <modelVersion>4.0.0</modelVersion>\n" +
@@ -166,8 +175,7 @@ public class PomTest {
 
     @Test
     public void rmDeps() throws Exception {
-        for (String ns : new String[]{"", " " + NS}) {
-
+        for (String ns : new String[]{"", "" + getNs()}) {
             String xmlStr = "<project" + ns + ">\n" +
                     "    <modelVersion>4.0.0</modelVersion>\n" +
                     "    <!--suppress MavenRedundantGroupId -->\n" +
@@ -215,6 +223,63 @@ public class PomTest {
         }
     }
 
+
+    @Test
+    public void rmDepsWithExclude() throws Exception {
+        String newNs = "xmlns:xe=\"http://www.w3.org/1999/xhtml\"";
+        for (String ns : new String[]{" " + newNs, getNs(newNs + " ")}) {
+
+            String xmlStr = "<project" + ns + ">\n" +
+                    "    <modelVersion>4.0.0</modelVersion>\n" +
+                    "    <!--suppress MavenRedundantGroupId -->\n" +
+                    "    <groupId>com.mavenizer.examples.api</groupId>\n" +
+                    "    <artifactId>myapi</artifactId>\n" +
+                    "    <version>1.0.0-SNAPSHOT</version>\n" +
+                    "\n" +
+                    "    <parent>\n" +
+                    "        <groupId>com.mavenizer.examples.api</groupId>\n" +
+                    "        <artifactId>myapi-parent</artifactId>\n" +
+                    "        <version>1.0.0-SNAPSHOT</version>\n" +
+                    "        <relativePath>PATHPATHPATH</relativePath>\n" +
+                    "    </parent>" +
+                    "    <dependencies>\n" +
+                    "        <dependency xe:remove=\"never\">\n" +
+                    "            <groupId>javax.xml.bind</groupId>\n" +
+                    "            <artifactId>jaxb-api</artifactId>\n" +
+                    "        </dependency>\n" +
+                    "        <dependency>\n" +
+                    "            <groupId>com.sun.xml.bind</groupId>\n" +
+                    "            <artifactId>jaxb-core</artifactId>\n" +
+                    "        </dependency>\n" +
+                    "    </dependencies>\n" +
+                    "</project>";
+
+            String expectedXmlStr = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n" +
+                    "<project" + ns + ">\n" +
+                    "    <modelVersion>4.0.0</modelVersion>\n" +
+                    "    <!--suppress MavenRedundantGroupId -->\n" +
+                    "    <groupId>com.mavenizer.examples.api</groupId>\n" +
+                    "    <artifactId>myapi</artifactId>\n" +
+                    "    <version>1.0.0-SNAPSHOT</version>\n" +
+                    "    <parent>\n" +
+                    "        <groupId>com.mavenizer.examples.api</groupId>\n" +
+                    "        <artifactId>myapi-parent</artifactId>\n" +
+                    "        <version>1.0.0-SNAPSHOT</version>\n" +
+                    "        <relativePath>../parent-pom.xml</relativePath>\n" +
+                    "    </parent>\n" +
+                    "    <dependencies>\n" +
+                    "        <dependency xe:remove=\"never\">\n" +
+                    "            <groupId>javax.xml.bind</groupId>\n" +
+                    "            <artifactId>jaxb-api</artifactId>\n" +
+                    "        </dependency>\n" +
+                    "    </dependencies>\n" +
+                    "</project>\n";
+
+            final XML xml = eval(xmlStr);
+            final String resXML = xml.toString();
+            Assert.assertEquals(resXML, expectedXmlStr, resXML);
+        }
+    }
 
     public XML eval(String xmlStr) throws Exception {
         final Project build = Project.builder()

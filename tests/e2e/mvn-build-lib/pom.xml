@@ -1,4 +1,4 @@
-<project>
+<project xmlns:xe="http://www.w3.org/1999/xhtml">
     <modelVersion>4.0.0</modelVersion>
     <!--suppress MavenRedundantGroupId -->
     <groupId>com.mavenizer.examples.api</groupId>
@@ -24,7 +24,7 @@
 
 
         {{#deps}}
-        <dependency>
+        <dependency xe:class="never">
             <!--  file: {{source}}-->
             <groupId>{{groupId}}</groupId>
             <artifactId>{{artifactId}}</artifactId>

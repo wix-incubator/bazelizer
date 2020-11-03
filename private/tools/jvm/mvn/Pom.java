@@ -31,7 +31,9 @@ public interface Pom {
     /**
      * Global xpath context.
      */
-    XPathContext XPATH_CONTEXT = new XPathContext().add(POM, POM_URI);
+    XPathContext XPATH_CONTEXT = new XPathContext()
+            .add(POM, POM_URI)
+            .add("xe", "http://www.w3.org/1999/xhtml");
 
     @Data
     class Props {
