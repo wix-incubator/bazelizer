@@ -8,25 +8,31 @@ import com.google.common.collect.Sets;
 import com.jcabi.xml.XML;
 import com.jcabi.xml.XMLDocument;
 import com.jcabi.xml.XPathContext;
+import com.sun.org.apache.xml.internal.serializer.OutputPropertiesFactory;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
 import lombok.experimental.Delegate;
 import org.cactoos.Input;
+import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xembly.Directive;
 import org.xembly.Xembler;
 
+import javax.xml.transform.*;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import java.io.InputStream;
-import java.util.ArrayList;
+import java.io.StringWriter;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.google.common.collect.Iterables.*;
+import static com.google.common.collect.Iterables.concat;
+import static com.google.common.collect.Iterables.transform;
 
 public interface Pom {
 
@@ -89,7 +95,13 @@ public interface Pom {
 
     @SuppressWarnings({"StaticPseudoFunctionalStyleMethod","ConstantConditions"})
     @AllArgsConstructor
-    class PomXempled implements Pom {
+    class PomXembly implements Pom {
+
+        /**
+         * Transformer factory.
+         */
+        private static final TransformerFactory TFACTORY =
+                TransformerFactory.newInstance();
 
         @AllArgsConstructor
         enum XemblyFeature {
@@ -104,7 +116,7 @@ public interface Pom {
          * @param input input
          * @param project project
          */
-        public PomXempled(Input input,Project project) {
+        public PomXembly(Input input, Project project) {
             this(new Standard(input), project);
         }
 
@@ -124,7 +136,8 @@ public interface Pom {
         private final List<XemblyFunc> xe = ImmutableList.of(
                 new XemblyFunc.PomDefaultStruc(),
                 new XemblyFunc.PomParentRelPath(),
-                new XemblyFunc.PomDropDeps()
+                new XemblyFunc.PomDropDeps(),
+                new XemblyFunc.AppendDeps()
         );
 
         @Override
@@ -152,7 +165,7 @@ public interface Pom {
                     )
             );
             trimWhitespace(node);
-            return new XMLDocument(node);
+            return new SanitizedXML(node);
         }
 
         private static void trimWhitespace(Node node) {
@@ -164,6 +177,23 @@ public interface Pom {
                 }
                 trimWhitespace(child);
             }
+        }
+
+        private static String prettyPrint(Node node) {
+            final StringWriter writer = new StringWriter();
+            try {
+                final Transformer trans = PomXembly.TFACTORY.newTransformer();
+                trans.setOutputProperty(OutputKeys.INDENT, "yes");
+                trans.setOutputProperty(OutputKeys.VERSION, "1.0");
+                trans.setOutputProperty(OutputPropertiesFactory.S_KEY_INDENT_AMOUNT, "2");
+                if (!(node instanceof Document)) {
+                    trans.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+                }
+                trans.transform(new DOMSource(node), new StreamResult(writer));
+            } catch (TransformerException ex) {
+                throw new IllegalStateException(ex);
+            }
+            return writer.toString();
         }
 
         /**
@@ -182,6 +212,9 @@ public interface Pom {
              */
             @Getter
             private final XemblerAugment.XPathQuery xpathQuery;
+
+
+            private final Supplier<String> xml;
 
             /**
              * Xemlby features.
@@ -202,11 +235,24 @@ public interface Pom {
             }
 
             /**
+             * Ctor
+             * @param node original node
+             */
+            private SanitizedXML(Node node) {
+                this(new XMLDocument(node));
+            }
+
+            /**
              * Ctor.
              * @param orig original xml
              */
             private SanitizedXML(XML orig) {
                 this.orig = orig;
+                this.xml = Suppliers.memoize(() -> {
+                    final Node node = orig.node();
+                    trimWhitespace(node);
+                    return prettyPrint(node);
+                });
                 XemblerAugment.XPathQuery queryMap = s -> s;
                 if (orig.xpath(NAMESPACE_XPATH).contains(POM_URI)) {
                     queryMap = query -> Stream.of(query.split("/"))
@@ -215,11 +261,7 @@ public interface Pom {
                             .collect(Collectors.joining("/", "/", ""));
                 }
                 this.xpathQuery = queryMap;
-//                this.asStr = Suppliers.memoize(() -> {
-//                    final Node node = orig.node();
-//                    trimWhitespace(node);
-//                    return new XMLDocument(node).toString();
-//                });
+
             }
 
             @Override
@@ -240,7 +282,7 @@ public interface Pom {
 
             @Override
             public String toString() {
-                return this.orig.toString();
+                return this.xml.get();
             }
         }
     }

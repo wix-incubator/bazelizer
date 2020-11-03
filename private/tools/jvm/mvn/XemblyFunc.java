@@ -1,28 +1,11 @@
 package tools.jvm.mvn;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.jcabi.xml.XML;
-import lombok.AllArgsConstructor;
-import lombok.experimental.Delegate;
 import org.xembly.Directive;
 import org.xembly.Directives;
-import org.xembly.SyntaxException;
 
-import javax.xml.xpath.XPathFactory;
-import java.io.Closeable;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.util.List;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
-import static com.google.common.collect.Iterables.concat;
-import static com.google.common.collect.Iterables.transform;
-import static com.google.common.collect.Lists.newArrayList;
+import java.util.HashMap;
 
 public interface XemblyFunc {
 
@@ -49,6 +32,23 @@ public interface XemblyFunc {
         @Override
         public Iterable<Directive> dirs(Project project, XML xml) {
             return new Directives().xpath("/project/dependencies/dependency[not(@xe:remove=\"never\")]").remove();
+        }
+    }
+
+    class AppendDeps implements XemblyFunc {
+        @Override
+        public Iterable<Directive> dirs(Project project, XML xml) {
+            final Directives deps = new Directives()
+                    .xpath("/project/dependencies");
+            for (Dep dep : project.deps()) {
+                final HashMap<String, String> map = Maps.newHashMap();
+                map.put("groupId", dep.groupId());
+                map.put("artifactId", dep.artifactId());
+                map.put("version", dep.version());
+                map.put("scope", dep.scope());
+                deps.add(map);
+            }
+            return deps;
         }
     }
 }
