@@ -14,13 +14,16 @@ _maven_binary_sha256 = "26ad91d751b3a9a53087aefa743f4e16a17741d3915b219cf74112bf
 MAVEN_BINARY_NAME = "wix_incubator_bazelizer_maven_binary_tool"
 
 def _jvm_external_deps(deps):
-    return [ "@" + _jvm_external_name(x) for x in  deps ]
+    return [ "@" + _jvm_external_name( x ) for x in  deps ]
 
 def _jvm_external_name(name):
     return "wix_incubator_bazelizer_" + str(name)
 
 def _jvm_import(name,artifact,server_urls,fetch_sources,**kwargs):
     _id = _jvm_external_name(name)
+    if 'deps' in kwargs:
+        kwargs['deps'] = _jvm_external_deps(kwargs['deps'])
+
     _jvm_maven_import_external(
         name= _id,
         artifact=artifact,
@@ -92,7 +95,7 @@ def install(server_urls = _def_server_urls):
         server_urls = server_urls,
         artifact_sha256 = "dba351234ffa0c37557c45d06eed51b3c972f801ad56f9bfb12c6a355469e2c3",
         srcjar_sha256 = "c68148e5343c7bfa8e3aafb2ebbefdadd49d8518612f8703fc4ce9cab0d93dc5",
-        deps = _jvm_external_deps( ["com_jcabi_jcabi_log", "org_cactoos_cactoos"] )
+        deps = ["com_jcabi_jcabi_log", "org_cactoos_cactoos"]
     )
 
     _jvm_import(
@@ -211,4 +214,32 @@ def install(server_urls = _def_server_urls):
         server_urls = server_urls,
         artifact_sha256 = "c8fb4839054d280b3033f800d1f5a97de2f028eb8ba2eb458ad287e536f3f25f",
         srcjar_sha256 = "da4d787939dc8de214724a20d88614b70ef8c3a4931d9c694300b5d9098ed9bc",
+    )
+
+    _jvm_import(
+	    name = "com_jcabi_incubator_xembly",
+        artifact = "com.jcabi.incubator:xembly:0.24.0",
+        fetch_sources = True,
+        server_urls = server_urls,
+        artifact_sha256 = "81684631e93c1db7030581a9c83c14feb84cc596f61d46957b5dd4d31c78a092",
+        srcjar_sha256 = "5bf5f56a7610154fbd730a4c1722fb17fe13c9e669ddc8751ed590d73cc552ae",
+        deps = [ "org_antlr_antlr_runtime", "org_mockito_mockito_core" ]
+    )
+
+    _jvm_import(
+	    name = "org_antlr_antlr_runtime",
+        artifact ='org.antlr:antlr-runtime:jar:3.5.2',
+        fetch_sources = True,
+        server_urls = server_urls,
+        artifact_sha256 = "ce3fc8ecb10f39e9a3cddcbb2ce350d272d9cd3d0b1e18e6fe73c3b9389c8734",
+        srcjar_sha256 = "3a8fde6cabadd1f6c6dcddc92edbe17501448e0553fee893cfc62becce57531a",
+    )
+
+    _jvm_import(
+	    name = "org_mockito_mockito_core",
+        artifact = "org.mockito:mockito-core:jar:3.5.15",
+        fetch_sources = True,
+        server_urls = server_urls,
+#        artifact_sha256 = "c8fb4839054d280b3033f800d1f5a97de2f028eb8ba2eb458ad287e536f3f25f",
+#        srcjar_sha256 = "da4d787939dc8de214724a20d88614b70ef8c3a4931d9c694300b5d9098ed9bc",
     )

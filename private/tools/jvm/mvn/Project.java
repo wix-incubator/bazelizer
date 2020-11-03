@@ -122,7 +122,7 @@ public final class Project {
 
     public Pom.Props getPomProps() {
         return new UncheckedScalar<>(
-                () -> new Pom.XPath(
+                () -> new Pom.Standard(
                         new InputOf(this.pom())
                 ).props()
         ).value();

@@ -1,7 +1,6 @@
 package tools.jvm.mvn;
 
 import com.google.common.io.CharSource;
-import lombok.SneakyThrows;
 import org.cactoos.Scalar;
 import org.cactoos.io.InputOf;
 import org.cactoos.scalar.UncheckedScalar;
@@ -20,12 +19,12 @@ public class TemplateTest {
 
         public PomXPath(String source, File pom) {
             super(CharSource.wrap(source).asByteSource(StandardCharsets.UTF_8),
-                    valueOf(() -> new Pom.XPath(new InputOf(pom)).props()));
+                    valueOf(() -> new Pom.Standard(new InputOf(pom)).props()));
         }
 
         public PomXPath(String source, String pom) {
             super(CharSource.wrap(source).asByteSource(StandardCharsets.UTF_8),
-                    valueOf(() -> new Pom.XPath(new InputOf(pom)).props()));
+                    valueOf(() -> new Pom.Standard(new InputOf(pom)).props()));
         }
 
         private static Pom.Props valueOf(Scalar<Pom.Props> xmlIn) {

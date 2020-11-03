@@ -399,7 +399,7 @@ public final class Acts {
         @Override
         public Project accept(Project project) {
             final ArrayList<OutputFile> outputs = Lists.newArrayList(project.outputs());
-            final Pom.Props bean = new Pom.XPath(
+            final Pom.Props bean = new Pom.Standard(
                     new InputOf(project.pom())
             ).props();
 
