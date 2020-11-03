@@ -4,10 +4,6 @@ import com.google.common.io.CharSource;
 import com.google.common.io.Files;
 import com.jcabi.xml.XML;
 import org.cactoos.io.InputOf;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.CustomMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -27,84 +23,16 @@ public class PomTest {
         return getNs( "");
     }
 
+    static String FLAGS = "    <!-- xembly:on -->\n";
+
     final File tempDir = Files.createTempDir();
 
-    static final String xml = "<project>\n" +
-            "    <modelVersion>4.0.0</modelVersion>\n" +
-            "    <!--suppress MavenRedundantGroupId -->\n" +
-            "    <groupId>com.mavenizer.examples.api</groupId>\n" +
-            "    <artifactId>myapi</artifactId>\n" +
-            "    <version>1.0.0-SNAPSHOT</version>\n" +
-            "\n" +
-            "    <parent>\n" +
-            "        <groupId>com.mavenizer.examples.api</groupId>\n" +
-            "        <artifactId>myapi-parent</artifactId>\n" +
-            "        <version>1.0.0-SNAPSHOT</version>\n" +
-            "        <relativePath>Relative_Path</relativePath>\n" +
-            "    </parent>\n" +
-            "\n" +
-            "    <dependencies>\n" +
-            "        <dependency>\n" +
-            "            <groupId>com.google.guava</groupId>\n" +
-            "            <artifactId>guava</artifactId>\n" +
-            "            <version>30.0-jre</version>\n" +
-            "        </dependency>\n" +
-            "        <!--\n" +
-            "            My JAXB bindings, can be passed via Bazel\n" +
-            "         -->\n" +
-            "        <dependency>\n" +
-            "            <groupId>javax.xml.bind</groupId>\n" +
-            "            <artifactId>jaxb-api</artifactId>\n" +
-            "        </dependency>\n" +
-            "        <dependency>\n" +
-            "            <groupId>com.sun.xml.bind</groupId>\n" +
-            "            <artifactId>jaxb-core</artifactId>\n" +
-            "        </dependency>\n" +
-            "    </dependencies>\n" +
-            "\n" +
-            "</project>";
-
-    static final String expectedXml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n" +
-            "<project>\n" +
-            "    <modelVersion>4.0.0</modelVersion>\n" +
-            "    <!--suppress MavenRedundantGroupId -->\n" +
-            "    <groupId>com.mavenizer.examples.api</groupId>\n" +
-            "    <artifactId>myapi</artifactId>\n" +
-            "    <version>1.0.0-SNAPSHOT</version>\n" +
-            "\n" +
-            "    <parent>\n" +
-            "        <groupId>com.mavenizer.examples.api</groupId>\n" +
-            "        <artifactId>myapi-parent</artifactId>\n" +
-            "        <version>1.0.0-SNAPSHOT</version>\n" +
-            "        <relativePath>Relative_Path</relativePath>\n" +
-            "    </parent>\n" +
-            "\n" +
-            "    <dependencies>\n" +
-            "        <dependency>\n" +
-            "            <groupId>com.google.guava</groupId>\n" +
-            "            <artifactId>guava</artifactId>\n" +
-            "            <version>30.0-jre</version>\n" +
-            "        </dependency>\n" +
-            "        <!--\n" +
-            "            My JAXB bindings, can be passed via Bazel\n" +
-            "         -->\n" +
-            "        <dependency>\n" +
-            "            <groupId>javax.xml.bind</groupId>\n" +
-            "            <artifactId>jaxb-api</artifactId>\n" +
-            "        </dependency>\n" +
-            "        <dependency>\n" +
-            "            <groupId>com.sun.xml.bind</groupId>\n" +
-            "            <artifactId>jaxb-core</artifactId>\n" +
-            "        </dependency>\n" +
-            "    </dependencies>\n" +
-            "\n" +
-            "</project>";
 
     @Test
     public void defStruc() throws Exception {
         for (String ns : new String[]{"", "" + getNs()}) {
 
-            String xmlStr = "<project" + ns + ">\n" +
+            String xmlStr = "<project" + ns + ">\n" + FLAGS +
                     "    <modelVersion>4.0.0</modelVersion>\n" +
                     "    <!--suppress MavenRedundantGroupId -->\n" +
                     "    <groupId>com.mavenizer.examples.api</groupId>\n" +
@@ -115,7 +43,7 @@ public class PomTest {
                     "</project>";
 
             String expectedXmlStr = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n" +
-                    "<project" + ns + ">\n" +
+                    "<project" + ns + ">\n" + FLAGS +
                     "    <modelVersion>4.0.0</modelVersion>\n" +
                     "    <!--suppress MavenRedundantGroupId -->\n" +
                     "    <groupId>com.mavenizer.examples.api</groupId>\n" +
@@ -134,7 +62,7 @@ public class PomTest {
     public void defParent() throws Exception {
         for (String ns : new String[]{"", "" + getNs()}) {
 
-            String xmlStr = "<project" + ns + ">\n" +
+            String xmlStr = "<project" + ns + ">\n" + FLAGS +
                     "    <modelVersion>4.0.0</modelVersion>\n" +
                     "    <!--suppress MavenRedundantGroupId -->\n" +
                     "    <groupId>com.mavenizer.examples.api</groupId>\n" +
@@ -151,7 +79,7 @@ public class PomTest {
                     "</project>";
 
             String expectedXmlStr = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n" +
-                    "<project" + ns + ">\n" +
+                    "<project" + ns + ">\n" + FLAGS +
                     "    <modelVersion>4.0.0</modelVersion>\n" +
                     "    <!--suppress MavenRedundantGroupId -->\n" +
                     "    <groupId>com.mavenizer.examples.api</groupId>\n" +
@@ -176,7 +104,7 @@ public class PomTest {
     @Test
     public void rmDeps() throws Exception {
         for (String ns : new String[]{"", "" + getNs()}) {
-            String xmlStr = "<project" + ns + ">\n" +
+            String xmlStr = "<project" + ns + ">\n" + FLAGS +
                     "    <modelVersion>4.0.0</modelVersion>\n" +
                     "    <!--suppress MavenRedundantGroupId -->\n" +
                     "    <groupId>com.mavenizer.examples.api</groupId>\n" +
@@ -202,7 +130,7 @@ public class PomTest {
                     "</project>";
 
             String expectedXmlStr = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n" +
-                    "<project" + ns + ">\n" +
+                    "<project" + ns + ">\n" + FLAGS +
                     "    <modelVersion>4.0.0</modelVersion>\n" +
                     "    <!--suppress MavenRedundantGroupId -->\n" +
                     "    <groupId>com.mavenizer.examples.api</groupId>\n" +
@@ -229,7 +157,7 @@ public class PomTest {
         String newNs = "xmlns:xe=\"http://www.w3.org/1999/xhtml\"";
         for (String ns : new String[]{" " + newNs, getNs(newNs + " ")}) {
 
-            String xmlStr = "<project" + ns + ">\n" +
+            String xmlStr = "<project" + ns + ">\n" + FLAGS +
                     "    <modelVersion>4.0.0</modelVersion>\n" +
                     "    <!--suppress MavenRedundantGroupId -->\n" +
                     "    <groupId>com.mavenizer.examples.api</groupId>\n" +
@@ -255,7 +183,7 @@ public class PomTest {
                     "</project>";
 
             String expectedXmlStr = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n" +
-                    "<project" + ns + ">\n" +
+                    "<project" + ns + ">\n" + FLAGS +
                     "    <modelVersion>4.0.0</modelVersion>\n" +
                     "    <!--suppress MavenRedundantGroupId -->\n" +
                     "    <groupId>com.mavenizer.examples.api</groupId>\n" +

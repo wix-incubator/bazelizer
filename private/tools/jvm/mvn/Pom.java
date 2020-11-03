@@ -1,6 +1,10 @@
 package tools.jvm.mvn;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.jcabi.xml.XML;
 import com.jcabi.xml.XMLDocument;
 import com.jcabi.xml.XPathContext;
@@ -15,12 +19,14 @@ import org.xembly.Directive;
 import org.xembly.Xembler;
 
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.google.common.collect.Iterables.concat;
-import static com.google.common.collect.Iterables.transform;
+import static com.google.common.collect.Iterables.*;
 
 public interface Pom {
 
@@ -85,6 +91,14 @@ public interface Pom {
     @AllArgsConstructor
     class PomXempled implements Pom {
 
+        @AllArgsConstructor
+        enum XemblyFeature {
+            ENABLED("xembly:on"),
+            NO_DROP_DEPS("xembly:no-drop-deps");
+
+            private final String qname;
+        }
+
         /**
          * Ctor.
          * @param input input
@@ -119,9 +133,18 @@ public interface Pom {
             final SanitizedXML xml = new SanitizedXML(
                     origXML
             );
+            final Set<XemblyFeature> features = xml.getFeatures();
+            if (!features.contains(XemblyFeature.ENABLED)) {
+                return xml;
+            }
+
+            final List<XemblyFunc> funcs = Lists.newArrayList(xe);
+            if (features.contains(XemblyFeature.NO_DROP_DEPS)) {
+                funcs.removeIf(func -> func instanceof XemblyFunc.PomDropDeps);
+            }
 
             final Iterable<Directive> dirs = new XemblerAugment.XPathContextOf(
-              xml.getXpathQuery(), concat(transform(xe, d -> d.dirs(project, xml)))
+              xml.getXpathQuery(), concat(transform(funcs, d -> d.dirs(project, xml)))
             );
             final Node node = XemblerAugment.withinContenxt(XPATH_CONTEXT, () ->
                     new Xembler(dirs).apply(
@@ -161,6 +184,24 @@ public interface Pom {
             private final XemblerAugment.XPathQuery xpathQuery;
 
             /**
+             * Xemlby features.
+             * @return features
+             */
+            public Set<XemblyFeature> getFeatures() {
+                Set<XemblyFeature> ll = Sets.newHashSet();
+                final List<String> xpath1 = Lists.transform(this.nodes("/project/comment()"), Objects::toString);
+                final List<String> xpath2 = Lists.transform(this.nodes("/comment()"), Objects::toString);
+                concat(xpath1, xpath2).forEach(comment -> {
+                    for (XemblyFeature value : XemblyFeature.values()) {
+                        if (comment.contains(value.qname)) {
+                            ll.add(value);
+                        }
+                    }
+                });
+                return ll;
+            }
+
+            /**
              * Ctor.
              * @param orig original xml
              */
@@ -174,6 +215,11 @@ public interface Pom {
                             .collect(Collectors.joining("/", "/", ""));
                 }
                 this.xpathQuery = queryMap;
+//                this.asStr = Suppliers.memoize(() -> {
+//                    final Node node = orig.node();
+//                    trimWhitespace(node);
+//                    return new XMLDocument(node).toString();
+//                });
             }
 
             @Override
@@ -190,6 +236,11 @@ public interface Pom {
             public interface WithXPath {
                 List<String> xpath(String query);
                 List<XML> nodes(String query);
+            }
+
+            @Override
+            public String toString() {
+                return this.orig.toString();
             }
         }
     }
