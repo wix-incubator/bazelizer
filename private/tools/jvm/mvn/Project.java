@@ -6,7 +6,6 @@ import com.google.common.io.ByteSource;
 import lombok.*;
 import lombok.experimental.Accessors;
 import org.cactoos.io.InputOf;
-import org.cactoos.scalar.UncheckedScalar;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,7 +28,9 @@ public final class Project {
     }
 
     // TODO get rid of
+    @Deprecated
     private String artifactId;
+    @Deprecated
     private String groupId;
 
     /**
@@ -78,17 +79,32 @@ public final class Project {
      */
     private Path parentPom;
 
-
+    /**
+     * cached computation
+     */
     @Getter(AccessLevel.PRIVATE)
+    @Setter(AccessLevel.PRIVATE)
     private Path repositoryCached;
 
+    /**
+     * POM XML.
+     */
+    @Getter(AccessLevel.PRIVATE)
+    private Pom pomXML;
+
+    /**
+     * Local repository
+     * @return path
+     */
     public Path repository() {
         if (repositoryCached == null)
             repositoryCached = this.m2Home().resolve("repository");
         return repositoryCached;
     }
 
-
+    /**
+     * project view for props access
+     */
     public ProjectView toView() {
         return new ProjectView() {
             @Override
@@ -119,25 +135,36 @@ public final class Project {
         };
     }
 
-
-    public Pom.Props getPomProps() {
-        return new UncheckedScalar<>(
-                () -> new Pom.Standard(
-                        new InputOf(this.pom())
-                ).props()
-        ).value();
+    /**
+     * Loaded and cached pom xml.
+      * @return pom
+     */
+    public Pom getPomXML() {
+        if (pomXML == null) {
+            pomXML = new Pom.Cached(
+                    new Pom.Standard(new InputOf(pom()))
+            );
+        }
+        return pomXML;
     }
 
+    /**
+     * Current project's default artifact folder within local repo
+     * @return local repo's folder
+     */
     public Path getArtifactFolder() {
-        final Pom.Props bean = getPomProps();
+        final Pom pom = getPomXML();
         return new Dep.Simple(null,
-                bean.getGroupId(),
-                bean.getArtifactId(),
-                bean.getVersion()
+                pom.groupId(),
+                pom.artifactId(),
+                pom.version()
         ).artifactFolder(repository());
     }
 
-
+    /**
+     * Pom path (auto generated if any)
+     * @return path
+     */
     public Path pom() {
         if (pom == null) {
             pom = syntheticPomFile(workDir);

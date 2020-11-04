@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
+import com.jcabi.xml.XML;
 import lombok.*;
 import lombok.experimental.Accessors;
 import lombok.experimental.UtilityClass;
@@ -17,10 +18,9 @@ import org.apache.commons.io.filefilter.IOFileFilter;
 import org.cactoos.Text;
 import org.cactoos.func.UncheckedProc;
 import org.cactoos.io.BytesOf;
-import org.cactoos.io.InputOf;
+import org.cactoos.io.InputStreamOf;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
 
@@ -125,18 +125,24 @@ public final class Acts {
         @Override
         @lombok.SneakyThrows
         public Project accept(Project project) {
-            final Project.ProjectView props = project.toView();
             final Path syntheticPom = project.pom();
-            final Text renderedTpl = new Template.Mustache(
-                    project.pomTemplate(),
-                    props
-            ).eval();
 
-            Files.copy(new InputOf(renderedTpl, StandardCharsets.UTF_8).stream(),syntheticPom);
+            final Pom pom = new Pom.Cached(
+                    new Pom.PomXembly(
+                            new Pom.Standard(project.pomTemplate()),
+                            project
+                    )
+            );
+
+            final XML pomXml = pom.xml();
+
+            Files.copy(new InputStreamOf(pomXml.toString()), syntheticPom);
 
             if (log.isDebugEnabled()) {
-                log.debug("\n{}", renderedTpl.asString()); }
-            return project;
+                log.debug("\n{}", pomXml);
+            }
+
+            return project.toBuilder().pomXML(pom).build();
         }
     }
 
@@ -326,7 +332,7 @@ public final class Acts {
         @Override
         public Project accept(Project project) {
             final List<OutputFile> newOutputFiles = Lists.newArrayListWithCapacity(2);
-            final Pom.Props bean = project.getPomProps();
+            final Pom pom = project.getPomXML();
 
             final IOFileFilter artifactFilter = FileFilterUtils.and(
                     new AbstractFileFilter() {
@@ -347,7 +353,7 @@ public final class Acts {
                     FileFilterUtils.trueFileFilter()
             );
 
-            final String pomFileJar = String.format("%s-%s.jar", bean.artifactId, bean.version);
+            final String pomFileJar = String.format("%s-%s.jar", pom.artifactId(), pom.version());
             final Optional<File> installedJar = files.stream().filter(f -> f.getName().endsWith(pomFileJar)).findFirst();
 
             if (jar != null) {
@@ -358,7 +364,6 @@ public final class Acts {
             }
 
             if (artifact != null) {
-
                 final Archive archive = new Archive.TAR(
                         files,
                         aFile -> {
@@ -378,83 +383,6 @@ public final class Acts {
             return project.toBuilder().outputs(
                     Lists.newArrayList(Iterables.concat(outputs, newOutputFiles))
             ).build();
-        }
-    }
-
-    /**
-     * Archive artifact binaries as is without pom
-     */
-    @Slf4j
-    @AllArgsConstructor
-    @Deprecated
-    static class ArtifactPredefOutputs implements Act {
-
-        public static final String FLAG_DEF_JAR = "@DEF_JAR";
-
-        public static final String FLAG_PKG = "@DEF_PKG";
-
-        private final Map<String,String> settings;
-
-        @SneakyThrows
-        @Override
-        public Project accept(Project project) {
-            final ArrayList<OutputFile> outputs = Lists.newArrayList(project.outputs());
-            final Pom.Props bean = new Pom.Standard(
-                    new InputOf(project.pom())
-            ).props();
-
-            Map<String,String> settings = this.settings != null ? this.settings : Collections.emptyMap();
-
-            final Path repository = project.repository();
-            final Path thisArtifactFolder = new Dep.Simple(null,
-                    bean.getGroupId(),
-                    bean.getArtifactId(),
-                    bean.getVersion()
-            ).artifactFolder(repository);
-            final IOFileFilter artifactFilter = FileFilterUtils.and(
-                    new AbstractFileFilter() {
-                        @Override
-                        public boolean accept(File file) {
-                            final Path path = file.toPath();
-                            return path.startsWith(thisArtifactFolder);
-                        }
-                    },
-                    FileFilterUtils.notFileFilter(
-                            FileFilterUtils.suffixFileFilter(".pom") // exclude pom from a pkg
-                    )
-            );
-
-            final Collection<File> files = FileUtils.listFiles(
-                    repository.toFile(), artifactFilter, FileFilterUtils.trueFileFilter()
-            );
-
-            Optional.ofNullable(settings.get(FLAG_PKG)).ifPresent(dest -> {
-                final Archive archive = new Archive.TAR(
-                        files,
-                        aFile -> {
-                            final Path filePath = aFile.toPath();
-                            final Path filePathInRepo = repository.relativize(filePath);
-                            log.debug("tar: {} as {}", aFile, filePathInRepo);
-                            return filePathInRepo;
-                        }
-                );
-
-                outputs.add(
-                        new OutputFile.DeclaredProc(archive, dest)
-                );
-            });
-
-            Optional.ofNullable(settings.get(FLAG_DEF_JAR)).ifPresent(dest -> {
-                final String pomFileJar = String.format("%s-%s.jar", bean.artifactId, bean.version);
-                final Optional<File> installed = files.stream().filter(f -> f.getName().endsWith(pomFileJar)).findFirst();
-
-                outputs.add(
-                        installed.<OutputFile>map(f -> new OutputFile.Declared(f, dest))
-                                .orElseGet(() -> new OutputFile.Simple(pomFileJar, dest))
-                );
-            });
-
-            return project.toBuilder().outputs(outputs).build();
         }
     }
 }

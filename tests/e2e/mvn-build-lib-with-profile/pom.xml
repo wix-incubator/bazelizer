@@ -12,14 +12,6 @@
     </properties>
 
     <dependencies>
-        {{#deps}}
-        <dependency>
-            <!--  file: {{source}}-->
-            <groupId>{{groupId}}</groupId>
-            <artifactId>{{artifactId}}</artifactId>
-            <version>{{version}}</version>
-        </dependency>
-        {{/deps}}
 
     </dependencies>
 

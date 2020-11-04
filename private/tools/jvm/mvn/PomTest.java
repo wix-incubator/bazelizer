@@ -108,7 +108,8 @@ public class PomTest {
     public void rmDeps() throws Exception {
         for (String ns : new String[]{"", getNs()}) {
 
-            String xmlStr = "<project" + ns + ">\n" + FLAGS +
+            String xmlStr = "<project" + ns + ">\n"
+                    + FLAGS +
                     "    <modelVersion>4.0.0</modelVersion>\n" +
                     "    <!--suppress MavenRedundantGroupId -->\n" +
                     "    <groupId>com.mavenizer.examples.api</groupId>\n" +
@@ -271,10 +272,13 @@ public class PomTest {
                     "      <groupId>com.sun.xml.bind</groupId>\n" +
                     "      <artifactId>jaxb-core</artifactId>\n" +
                     "    </dependency>\n" +
-                    "    <groupId>AAA</groupId>\n" +
-                    "    <scope>compile</scope>\n" +
-                    "    <artifactId>BBB</artifactId>\n" +
-                    "    <version>0.0.1</version>\n" +
+                    "    <dependency>\n" +
+                    "      <![CDATA[ source by: /x/y/z]]>\n" +
+                    "      <groupId>AAA</groupId>\n" +
+                    "      <artifactId>BBB</artifactId>\n" +
+                    "      <version>0.0.1</version>\n" +
+                    "      <scope>compile</scope>\n" +
+                    "    </dependency>\n" +
                     "  </dependencies>\n" +
                     "</project>\n";
 
@@ -284,6 +288,45 @@ public class PomTest {
 
             final String resXML = xml.toString();
             Assert.assertEquals(resXML, expectedXmlStr, resXML);
+        }
+    }
+
+
+    @Test
+    public void xpath() {
+        for (String ns : new String[] {"", getNs()}) {
+            String xmlStr = "<project" + ns + ">\n" +
+                    "  <modelVersion>4.0.0</modelVersion>\n" +
+                    "  <!--suppress MavenRedundantGroupId -->\n" +
+                    "  <groupId>com.mavenizer.examples.api</groupId>\n" +
+                    "  <artifactId>myapi</artifactId>\n" +
+                    "  <version>1.0.0-SNAPSHOT</version>\n" +
+                    "\n" +
+                    "  <parent>\n" +
+                    "      <groupId>com.mavenizer.examples.api</groupId>\n" +
+                    "      <artifactId>myapi-parent</artifactId>\n" +
+                    "      <version>1.0.0-SNAPSHOT</version>\n" +
+                    "      <relativePath>PATHPATHPATH</relativePath>\n" +
+                    "  </parent>" +
+                    "  <dependencies>\n" +
+                    "      <dependency>\n" +
+                    "          <groupId>javax.xml.bind</groupId>\n" +
+                    "          <artifactId>jaxb-api</artifactId>\n" +
+                    "      </dependency>\n" +
+                    "      <dependency>\n" +
+                    "          <groupId>com.sun.xml.bind</groupId>\n" +
+                    "          <artifactId>jaxb-core</artifactId>\n" +
+                    "      </dependency>\n" +
+                    "  </dependencies>\n" +
+                    "</project>";
+
+            final Pom.Cached pom = new Pom.Cached(
+                    new Pom.Standard(new InputOf(xmlStr))
+            );
+
+            Assert.assertEquals("com.mavenizer.examples.api", pom.groupId());
+            Assert.assertEquals("myapi", pom.artifactId());
+            Assert.assertEquals("1.0.0-SNAPSHOT", pom.version());
         }
     }
 

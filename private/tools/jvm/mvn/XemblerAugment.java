@@ -2,7 +2,9 @@ package tools.jvm.mvn;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.jcabi.xml.XPathContext;
+import lombok.ToString;
 import lombok.experimental.Delegate;
 import org.cactoos.Scalar;
 import org.w3c.dom.Node;
@@ -31,7 +33,7 @@ public class XemblerAugment {
      * @return node
      * @throws Exception if any
      */
-    public static Node withinContenxt(XPathContext context, Scalar<Node> block) throws Exception {
+    public static Node withinContext(XPathContext context, Scalar<Node> block) throws Exception {
         final XPathFactory real = FACTORY.get();
         if (!(real instanceof XPathFactoryWrap)) {
             FACTORY.set(new XPathFactoryWrap(real, context));
@@ -46,7 +48,69 @@ public class XemblerAugment {
     /**
      * XPath Query.
      */
-    public interface XPathQuery extends Function<String,String> {}
+    public interface XPathQuery extends Function<String,String> {
+    }
+
+
+
+    @ToString
+    public static class XPathQueryPref implements XPathQuery {
+
+        @SuppressWarnings("RegExpRedundantEscape")
+        private final static Pattern ATTRS = Pattern.compile("^\\w+(\\[(.*?)\\])");
+
+        /**
+         * Ctor.
+         * @param prefix prefix
+         */
+        public XPathQueryPref(String prefix) {
+            this.prefix = prefix;
+            this.fmt = prefix + ":%s";
+        }
+
+        private final String prefix;
+
+        private final String fmt;
+
+        @Override
+        public String apply(String query) {
+            final List<String> tokens = Lists.newArrayList();
+            String startOf = "";
+            for (String token : query.split("/")) {
+                if (token.isEmpty()) {
+                    //noinspection StringConcatenationInLoop
+                    startOf += "/";
+                    continue;
+                }
+                if (token.contains("()")) {
+                    tokens.add(token);
+                    continue;
+                }
+                if (ATTRS.matcher(token).matches()) {
+                    tokens.add(String.format(fmt, token));
+                    continue;
+                }
+                if (!isAlpha(token)) {
+                    tokens.add(token);
+                    continue;
+                }
+                tokens.add(String.format(fmt, token));
+            }
+            return startOf + String.join("/", tokens);
+        }
+
+        private static boolean isAlpha(String str) {
+            int sz = str.length();
+            for (int i = 0; i < sz; i++) {
+                if (!Character.isLetter(str.charAt(i))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+
 
     /**
      * Directives with xpath context.
@@ -133,7 +197,7 @@ public class XemblerAugment {
             return xPath;
         }
 
-        @SuppressWarnings("UnnecessaryInterfaceModifier")
+        @SuppressWarnings({"UnnecessaryInterfaceModifier", "unused"})
         public static interface WithNewXPath {
             public abstract XPath newXPath();
         }
