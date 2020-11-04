@@ -3,14 +3,15 @@ package tools.jvm.mvn;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Streams;
 import com.jcabi.xml.XPathContext;
+import lombok.AllArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.ToString;
 import lombok.experimental.Delegate;
 import org.cactoos.Scalar;
 import org.w3c.dom.Node;
-import org.xembly.Directive;
-import org.xembly.Directives;
-import org.xembly.SyntaxException;
+import org.xembly.*;
 
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathFactory;
@@ -24,7 +25,21 @@ import java.util.stream.Collectors;
 import static com.google.common.collect.Iterables.transform;
 import static com.google.common.collect.Lists.newArrayList;
 
+@AllArgsConstructor
 public class XemblerAugment {
+
+    private final Xembler xembler;
+
+    private final XPathContext context;
+
+
+    @SneakyThrows
+    public Node applyQuietly(final Node dom) {
+        return withinContext(this.context, () -> {
+            return this.xembler.apply(dom);
+        });
+    }
+
 
     /**
      * Execute within xpath context.
@@ -33,7 +48,7 @@ public class XemblerAugment {
      * @return node
      * @throws Exception if any
      */
-    public static Node withinContext(XPathContext context, Scalar<Node> block) throws Exception {
+    private static Node withinContext(XPathContext context, Scalar<Node> block) throws Exception {
         final XPathFactory real = FACTORY.get();
         if (!(real instanceof XPathFactoryWrap)) {
             FACTORY.set(new XPathFactoryWrap(real, context));
@@ -115,7 +130,19 @@ public class XemblerAugment {
     /**
      * Directives with xpath context.
      */
-    public static class XPathContextOf implements Iterable<Directive> {
+    public static class AugmentedDirs implements Iterable<Directive> {
+
+        private static final Class<?> commentType;
+        static {
+            Class<?> cls;
+            try {
+                cls = Class.forName("org.xembly.CommentDirective");
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+                cls = null;
+            }
+            commentType = cls;
+        }
 
         /**
          * Extract brakes data.
@@ -133,6 +160,11 @@ public class XemblerAugment {
         public static final String XPATH_VERB = "XPATH \"%s\"";
 
         /**
+         * comment verb.
+         */
+        public static final String COMMENT_VERB = "COMMENT \"%s\"";
+
+        /**
          * Origin.
          */
         @Delegate
@@ -143,11 +175,18 @@ public class XemblerAugment {
          * @param func xpath query func
          * @param dirs directives
          */
-        public XPathContextOf(XPathQuery func, Iterable<Directive> dirs) {
-            List<String> verbs = newArrayList(transform(dirs, Object::toString));
+        @SuppressWarnings("UnstableApiUsage")
+        public AugmentedDirs(XPathQuery func, Iterable<Directive> dirs) {
             try {
                 this.dirs = new Directives(
-                        verbs.stream().map(verb -> {
+                        Streams.stream(dirs).map(dir -> {
+                            final String verb = dir.toString();
+                            // this is actually a bug how comments are represented.
+                            if (verb.contains("CDATA") && dir.getClass() == commentType) {
+                                final Matcher matcher = BRAKETS.matcher(verb);
+                                Preconditions.checkState(matcher.find(), "verb %s invalid", verb);
+                                return String.format(COMMENT_VERB, matcher.group(1));
+                            }
                             if (verb.contains(XPATH)) {
                                 final Matcher matcher = BRAKETS.matcher(verb);
                                 Preconditions.checkState(matcher.find(), "verb %s invalid", verb);

@@ -273,7 +273,7 @@ public class PomTest {
                     "      <artifactId>jaxb-core</artifactId>\n" +
                     "    </dependency>\n" +
                     "    <dependency>\n" +
-                    "      <![CDATA[ source by: /x/y/z]]>\n" +
+                    "      <!-- by: /x/y/z -->\n" +
                     "      <groupId>AAA</groupId>\n" +
                     "      <artifactId>BBB</artifactId>\n" +
                     "      <version>0.0.1</version>\n" +

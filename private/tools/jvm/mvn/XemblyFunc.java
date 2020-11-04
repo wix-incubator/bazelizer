@@ -61,7 +61,7 @@ public interface XemblyFunc {
                 depProp.put("scope", dep.scope());
 
                 depsDir.add("dependency")
-                        .comment(" source by: " + dep.source())
+                        .comment(" by: " + dep.source() + " ")
                         .add(depProp)
                         .up();
             }

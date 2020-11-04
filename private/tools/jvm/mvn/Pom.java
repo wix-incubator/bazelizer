@@ -208,20 +208,19 @@ public interface Pom {
             if (!features.contains(XemblyFeature.ENABLED)) {
                 return xml;
             }
-
             final List<XemblyFunc> funcs = Lists.newArrayList(xe);
             if (features.contains(XemblyFeature.NO_DROP_DEPS)) {
                 funcs.removeIf(func -> func instanceof XemblyFunc.PomDropDeps);
             }
 
-            final Iterable<Directive> dirs = new XemblerAugment.XPathContextOf(
+            final Iterable<Directive> dirs = new XemblerAugment.AugmentedDirs(
               xml.getXpathQuery(), concat(transform(funcs, d -> d.dirs(project, xml)))
             );
-            final Node node = XemblerAugment.withinContext(XPATH_CONTEXT, () ->
-                    new Xembler(dirs).apply(
-                        xml.node()
-                    )
-            );
+            final Node node = new XemblerAugment(
+                    new Xembler(dirs),
+                    XPATH_CONTEXT
+            ).applyQuietly(xml.node());
+
             return new SanitizedXML(node);
         }
 
@@ -336,6 +335,9 @@ public interface Pom {
             NodeList children = node.getChildNodes();
             for (int i = 0; i < children.getLength(); ++i) {
                 Node child = children.item(i);
+                if (child.getNodeType() == Node.CDATA_SECTION_NODE) {
+                    System.out.println("");
+                }
                 if (child.getNodeType() == Node.TEXT_NODE) {
                     child.setTextContent(child.getTextContent().trim());
                 }
