@@ -94,8 +94,11 @@ def _run_mvn_impl(ctx):
         srcs_manifest
     ] + deps_ctx.files
 
-    args = ctx.actions.args()
+    input_transitive_files = [
+        f.files for f in ctx.attr.srcs
+    ]
 
+    args = ctx.actions.args()
     args.add("--jvm_flag=-Dtools.jvm.mvn.LogLevel=%s" % (ctx.attr.log_level))
     args.add("--jvm_flag=-Dtools.jvm.mvn.BazelLabelName=%s" % (ctx.label))
 
@@ -118,7 +121,7 @@ def _run_mvn_impl(ctx):
         args.add("-O{dest}={src}".format(dest=file.path, src=out))
 
     ctx.actions.run(
-        inputs = depset(input_files, transitive = [f.files for f in ctx.attr.srcs]),
+        inputs = depset(input_files, transitive = input_transitive_files),
         outputs = output_files,
         arguments = [args],
         executable = ctx.executable._tool,
