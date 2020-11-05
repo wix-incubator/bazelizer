@@ -4,20 +4,14 @@
     <artifactId>myapi-single-v2</artifactId>
     <version>1.0.0</version>
 
+    <!-- xembly:on -->
+
     <properties>
         <maven-compiler-plugin.version>3.7.0</maven-compiler-plugin.version>
         <java-version>1.6</java-version>
     </properties>
 
     <dependencies>
-        {{#deps}}
-        <dependency>
-            <!--  file: {{source}}-->
-            <groupId>{{groupId}}</groupId>
-            <artifactId>{{artifactId}}</artifactId>
-            <version>{{version}}</version>
-        </dependency>
-        {{/deps}}
 
     </dependencies>
 

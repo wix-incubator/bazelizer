@@ -39,24 +39,18 @@ public class ActsTest {
     public void generatePom() throws IOException {
         String pom = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                 "<project>\n" +
+                " <!-- xembly:on -->" +
                 "    <modelVersion>4.0.0</modelVersion>\n" +
-                "    <groupId> {{ groupId }} </groupId>\n" +
-                "    <artifactId> {{ artifactId }} </artifactId>\n" +
+                "    <groupId>BBBB</groupId>\n" +
+                "    <artifactId>AAAA</artifactId>\n" +
                 "    <version>1.0.0-SNAPSHOT</version>\n" +
                 "    <dependencies>\n" +
-                "        {{#deps}}\n" +
-                "        <dependency>\n" +
-                "            <groupId>{{groupId}}</groupId>\n" +
-                "            <artifactId>{{artifactId}}</artifactId>\n" +
-                "            <version>{{version}}</version>\n" +
-                "        </dependency>\n" +
-                "        {{/deps}}\n" +
                 "    </dependencies>\n" +
                 "</project>";
 
         Project p = Project.builder()
-                .artifactId("AAAA")
-                .groupId("BBBB")
+//                .artifactId("AAAA")
+//                .groupId("BBBB")
                 .workDir(tmpWorkDir.toPath())
                 .pomTemplate(ByteSource.wrap(pom.getBytes()))
                 .deps(Lists.newArrayList(new Dep.Simple(null, "xyz", "xyz-aaa", "1.0")))
@@ -65,6 +59,7 @@ public class ActsTest {
         final Act.Iterative act = new Act.Iterative(
                 new Acts.POM()
         );
+
         final Project accept = act.accept(p);
 
         XML xml = new XMLDocument(accept.pom().toFile());
