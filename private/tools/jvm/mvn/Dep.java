@@ -268,7 +268,7 @@ public interface Dep {
 
         @Override
         public Path source() {
-            return file.toPath();
+            return file != null ? file.toPath() : null;
         }
     }
 
