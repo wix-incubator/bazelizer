@@ -10,7 +10,7 @@ install()
 # E2E tests
 #
 
-load("//private/ruls/maven:repository_registry.bzl", "maven_repository_registry")
+load("//maven:defs.bzl", "maven_repository_registry")
 maven_repository_registry(
     name = "maven_e2e",
     modules = [
