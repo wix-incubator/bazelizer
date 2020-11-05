@@ -89,7 +89,7 @@ public class Cli {
 
             new Act.Iterative(
                     new Acts.SettingsXml(
-                            new Repositories.BazelLinkedLocalM2(Paths.get("/Users/bohdans/.m2/repository")) // TODO
+                            new Repositories.BazelLinkedLocalM2(hostMavenCache)
                     ),
                     new ActAssemble(
                             new Builds.DefPomIterable(pomDeclarations),

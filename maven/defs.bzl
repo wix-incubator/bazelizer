@@ -4,12 +4,12 @@
 #_run_mvn_buildpack = "run_mvn_buildpack"
 #)
 
-load(
-"//private/ruls/buildpack:new_buildpack.bzl",
-_create_mvn_buildpack = "new_create_mvn_buildpack",
-_run_mvn_buildpack = "new_run_mvn_buildpack"
-)
-
+#load(
+#"//private/ruls/buildpack:new_buildpack.bzl",
+#_create_mvn_buildpack = "new_create_mvn_buildpack",
+#_run_mvn_buildpack = "new_run_mvn_buildpack"
+#)
+#
 
 load(
 "//private/ruls/maven:repository.bzl",
@@ -21,9 +21,8 @@ load(
 _maven_repository_registry = "maven_repository_registry"
 )
 
-# deprecated
-create_mvn_buildpack = _create_mvn_buildpack
-run_mvn_buildpack = _run_mvn_buildpack
+#create_mvn_buildpack = _create_mvn_buildpack
+#run_mvn_buildpack = _run_mvn_buildpack
 
 # new
 maven_repository_registry = _maven_repository_registry
