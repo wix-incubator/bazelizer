@@ -1,18 +1,19 @@
-<project>
+<project xmlns:xe="http://www.w3.org/1999/xhtml">
     <modelVersion>4.0.0</modelVersion>
     <!--suppress MavenRedundantGroupId -->
     <groupId>com.mavenizer.examples.api</groupId>
     <artifactId>myapi</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
-    {{ #parent 'tests/mvn-parent-pom/pom.xml' }}
+    <!-- xembly:on -->
+    <!-- xembly:no-drop-deps -->
+
     <parent>
         <groupId>com.mavenizer.examples.api</groupId>
         <artifactId>myapi-parent</artifactId>
         <version>1.0.0-SNAPSHOT</version>
         <relativePath>{{ relative_path }}</relativePath>
     </parent>
-    {{ /parent }}
 
     <dependencies>
         <!-- https://mvnrepository.com/artifact/com.google.guava/guava -->
@@ -21,16 +22,6 @@
             <artifactId>guava</artifactId>
             <version>30.0-jre</version>
         </dependency>
-
-
-        {{#deps}}
-        <dependency>
-            <!--  file: {{source}}-->
-            <groupId>{{groupId}}</groupId>
-            <artifactId>{{artifactId}}</artifactId>
-            <version>{{version}}</version>
-        </dependency>
-        {{/deps}}
 
         <!--
             My JAXB bindings, can be passed via Bazel
