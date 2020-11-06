@@ -15,15 +15,8 @@ public class CliTest {
         new CommandLine(command).parseArgs(
                 "-Oxxx=yyy",
                 "--pom=/some/pom.xml",
-                "--repo=/some/repo.tar",
+                "--run-manifest=/some/repo.tar",
                 "--srcs=/some/manifest.xml");
         Assert.assertEquals(command.outputs, Collections.singletonMap("xxx", "yyy"));
-    }
-
-    @Test
-    public void pathS() {
-        System.out.println(SLF4JConfigurer.shortPath(
-                Paths.get("/Users/bohdans/Projects/vespa-services/deviantart/da-searcher-service/src/main/java/com/wixpress/search/deviantart/searcher/services/pom.xml")
-        ));
     }
 }

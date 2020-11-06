@@ -25,7 +25,7 @@ public interface Builds extends Iterable<Builds.BuildNode> {
      * Pom definition.
      */
     @Data
-    class DefPom {
+    class PomDefinition {
         @SerializedName("file")
         private Path file;
         @SerializedName("parent_file")
@@ -34,18 +34,17 @@ public interface Builds extends Iterable<Builds.BuildNode> {
         private List<String> flags;
 
         @SuppressWarnings("unused")
-        public DefPom() {
+        public PomDefinition() {
             super();
         }
 
-        public DefPom(Path path, Path parentFile) {
+        public PomDefinition(Path path, Path parentFile) {
             this.file = path;
             this.parentFile = parentFile;
         }
 
-        public DefPom(String path, String parentFile) {
-            this(Paths.get(path), Optional
-                    .ofNullable(parentFile).map(Paths::get).orElse(null));
+        public PomDefinition(String path, String parentFile) {
+            this(Paths.get(path), Optional.ofNullable(parentFile).map(Paths::get).orElse(null));
         }
 
         /**
@@ -82,8 +81,8 @@ public interface Builds extends Iterable<Builds.BuildNode> {
          * @param line json
          * @return def
          */
-        static DefPom deserialize(String line) {
-            return tools.jvm.mvn.Deps.GSON.fromJson(line, DefPom.class);
+        static PomDefinition deserialize(String line) {
+            return tools.jvm.mvn.Deps.GSON.fromJson(line, PomDefinition.class);
         }
     }
     
@@ -93,7 +92,7 @@ public interface Builds extends Iterable<Builds.BuildNode> {
     @Data
     @Accessors(fluent = true)
     class BuildNode {
-        private final DefPom self;
+        private final PomDefinition self;
         private List<BuildNode> children = Lists.newArrayList();
         private BuildNode parent;
         @Override
@@ -109,23 +108,22 @@ public interface Builds extends Iterable<Builds.BuildNode> {
     /**
      * Source of pom definitions
      */
-    class DefPomIterable implements Iterable<DefPom> {
+    class PomDefinitions implements Iterable<PomDefinition> {
 
         @Delegate
-        private final Iterable<DefPom> iter;
+        private final Iterable<PomDefinition> iter;
 
         @SuppressWarnings("StaticPseudoFunctionalStyleMethod")
-        public DefPomIterable(Path pomDefFile) {
-            this.iter = new Iterable<DefPom>() {
-
+        public PomDefinitions(Path file) {
+            this.iter = new Iterable<PomDefinition>() {
                 @SuppressWarnings("Guava")
                 final Supplier<Iterable<String>> mem = Suppliers.memoize(() ->
-                        Lists.newArrayList(new ManifestFile(pomDefFile)));
+                        Lists.newArrayList(new ManifestFile(file)));
 
                 @SuppressWarnings("NullableProblems")
                 @Override
-                public Iterator<DefPom> iterator() {
-                    return Iterables.transform(mem.get(), DefPom::deserialize).iterator();
+                public Iterator<PomDefinition> iterator() {
+                    return Iterables.transform(mem.get(), PomDefinition::deserialize).iterator();
                 }
             };
         }
@@ -138,7 +136,7 @@ public interface Builds extends Iterable<Builds.BuildNode> {
     @AllArgsConstructor
     class PreOrderGraph implements Iterable<BuildNode> {
 
-        private final Iterable<DefPom> defPoms;
+        private final Iterable<PomDefinition> defPoms;
 
         @SuppressWarnings("NullableProblems")
         @Override
@@ -148,10 +146,10 @@ public interface Builds extends Iterable<Builds.BuildNode> {
 
         @SuppressWarnings({"UnstableApiUsage", "RedundantSuppression"})
         private List<BuildNode> preOrder() {
-            final ArrayList<DefPom> defFiles = Lists.newArrayList(this.defPoms);
+            final ArrayList<PomDefinition> defFiles = Lists.newArrayList(this.defPoms);
             Map<String, BuildNode> lookup = Maps.newHashMap();
             defFiles.forEach(def -> lookup.put(def.id(), new BuildNode(def)));
-            for (DefPom defFile : defFiles) {
+            for (PomDefinition defFile : defFiles) {
                 final BuildNode thisNode = lookup.computeIfAbsent(defFile.id(), i -> new BuildNode(defFile));
                 if (thisNode.self.parentFile != null) {
                     lookup.computeIfPresent(thisNode.self.parentId(), (k, parent) -> {
@@ -162,11 +160,10 @@ public interface Builds extends Iterable<Builds.BuildNode> {
                 }
             }
 
-            return lookup.values().stream().filter(node -> node.parent() == null)
-                    .flatMap(node ->
-                            Streams.concat(Stream.of(node), node.children().stream()
-                        )
-                    ).collect(Collectors.toList());
+            return lookup.values().stream()
+                    .filter(node -> node.parent() == null)
+                    .flatMap(node -> Streams.concat(Stream.of(node), node.children().stream()))
+                    .collect(Collectors.toList());
         }
 
         @SuppressWarnings("ConstantConditions")

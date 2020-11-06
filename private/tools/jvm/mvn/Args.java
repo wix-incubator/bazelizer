@@ -1,13 +1,11 @@
 package tools.jvm.mvn;
 
-import com.google.common.base.Function;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -17,7 +15,6 @@ import picocli.CommandLine;
 
 import java.io.File;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Args.
@@ -26,11 +23,11 @@ import java.util.stream.Collectors;
 public class Args  {
     private final List<String> goals = Lists.newArrayList();
     private final List<String> profiles = Lists.newArrayList();
-    private final Map<SettingsKey, Object> ctx = Maps.newHashMap();
+    private final Map<FlagsKey, Object> ctx = Maps.newHashMap();
 
 
 
-    enum SettingsKey {
+    enum FlagsKey {
         SETTINGS_XML,
         LOCAL_REPOSITORY;
     }
@@ -105,9 +102,19 @@ public class Args  {
      * @return this
      */
     @SuppressWarnings("UnusedReturnValue")
-    public Args tag(SettingsKey key, Object o) {
+    public Args tag(FlagsKey key, Object o) {
         ctx.put(key, o);
         return this;
+    }
+
+    /**
+     * Get settings value.
+     * @param key key
+     * @return value of setting
+     */
+    @SuppressWarnings("UnusedReturnValue")
+    public Object tag(FlagsKey key) {
+        return ctx.get(key);
     }
 
     /**
@@ -148,11 +155,11 @@ public class Args  {
         if (offline) {
             request.setOffline(true);
         }
-        if (ctx.containsKey(SettingsKey.SETTINGS_XML)) {
-            request.setUserSettingsFile((File) ctx.get(SettingsKey.SETTINGS_XML));
+        if (ctx.containsKey(FlagsKey.SETTINGS_XML)) {
+            request.setUserSettingsFile((File) ctx.get(FlagsKey.SETTINGS_XML));
         }
-        if (ctx.containsKey(SettingsKey.LOCAL_REPOSITORY)) {
-            request.setLocalRepositoryDirectory((File) ctx.get(SettingsKey.LOCAL_REPOSITORY));
+        if (ctx.containsKey(FlagsKey.LOCAL_REPOSITORY)) {
+            request.setLocalRepositoryDirectory((File) ctx.get(FlagsKey.LOCAL_REPOSITORY));
         }
         return request;
     }

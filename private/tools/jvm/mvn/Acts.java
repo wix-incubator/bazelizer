@@ -1,12 +1,12 @@
 package tools.jvm.mvn;
 
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
 import com.jcabi.xml.XML;
+import com.jcabi.xml.XMLDocument;
 import lombok.*;
 import lombok.experimental.Accessors;
 import lombok.experimental.UtilityClass;
@@ -15,10 +15,16 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.AbstractFileFilter;
 import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.apache.commons.io.filefilter.IOFileFilter;
+import org.cactoos.Input;
+import org.cactoos.Output;
 import org.cactoos.Text;
 import org.cactoos.func.UncheckedProc;
 import org.cactoos.io.BytesOf;
+import org.cactoos.io.InputOf;
 import org.cactoos.io.InputStreamOf;
+import org.cactoos.io.OutputTo;
+import org.xembly.Directives;
+import org.xembly.Xembler;
 
 import java.io.File;
 import java.nio.file.*;
@@ -120,7 +126,7 @@ public final class Acts {
      * Process pom file from template.
      */
     @Slf4j
-    static class POM implements Act {
+    static class PomFile implements Act {
 
         @Override
         @lombok.SneakyThrows
@@ -146,24 +152,81 @@ public final class Acts {
         }
     }
 
+
+    @AllArgsConstructor
+    static class GlobalSettingsXml implements Act {
+
+        public GlobalSettingsXml(Path settings, Path outputManifest) {
+            this(new InputOf(settings), new OutputTo(outputManifest));
+        }
+
+        private final Input globalSettingsXmlPath;
+
+        private final Output manifestXml;
+
+        @SneakyThrows
+        @Override
+        public Project accept(Project project) {
+
+            final XML settingsXml = new XMLDocument(
+                    new InputStreamOf(globalSettingsXmlPath)
+            );
+
+            final String curLocalRepository = settingsXml.xpath("/settings/localRepository/text()").get(0);
+            final ImmutableMap<String, String> props = ImmutableMap.of(
+                    "id", "global_cache",
+                    "name", "Bazel's global m2 cache",
+                    "url", new File(curLocalRepository).toURI().toString()
+            );
+            final String bazelM2Cache = "bzl_m2_cache";
+            final Directives dirs = new Directives()
+                    .xpath("/settings/localRepository")
+                    .set("{{ localRepository }}")
+                    // profile to refer to global cache repo
+                    .xpath("/settings")
+                        .addIf("profiles")
+                        .add("profile")
+                        .add(ImmutableMap.of("id", bazelM2Cache))
+                            .add("repositories")
+                                .add("repository")
+                                .add(props)
+                                .up()
+                            .up()
+                            .add("pluginRepositories")
+                                .add("pluginRepository")
+                                .add(props)
+                    // activate profile
+                    .xpath("/settings")
+                        .addIf("activeProfiles")
+                        .add(ImmutableMap.of("activeProfile", bazelM2Cache));
+
+            final XMLDocument buildSettingsXmlTpl = new XMLDocument(
+                    new Xembler(dirs).apply(settingsXml.node())
+            );
+
+            final RunManifest runManifest = new RunManifest.Builder()
+                    .settingsXmlTemplate(buildSettingsXmlTpl.toString())
+                    .build();
+
+            project.outputs().add(
+                    new OutputFile.Content(
+                            new InputOf(runManifest.asString()),
+                            manifestXml
+                    )
+            );
+
+            return project;
+        }
+    }
+
     /**
      * Prepare settings xml.
      */
     @Slf4j
     @Accessors(fluent = true)
     static class SettingsXml implements Act {
-        public static final String ACTIVE_PROFILE = "bazelizer";
 
-        /**
-         * Ctor
-         * @param rr repositories to activate
-         */
-        @SafeVarargs
-        public SettingsXml(Iterable<Repositories.Repository>...rr) {
-            for (Iterable<Repositories.Repository> r : rr) {
-                Iterables.addAll(this.repositories, r);
-            }
-        }
+        private final RunManifest manifest;
 
         /**
          * Offline mode.
@@ -172,48 +235,34 @@ public final class Acts {
         @Setter
         private boolean offline = false;
 
-        /**
-         * Repositories.
-         */
-        @Getter
-        private final List<Repositories.Repository> repositories = Lists.newArrayList();
+
+        public SettingsXml(RunManifest manifest) {
+            this.manifest = manifest;
+        }
 
 
         @SneakyThrows
         @Override
-        @SuppressWarnings("UnstableApiUsage")
         public Project accept(Project project) {
-            final Path m2Home = project.m2Home();
+            final Path m2Home = project.m2Directory();
             final Path settingsXml = m2Home.resolve("settings.xml").toAbsolutePath();
             final Path repository = m2Home.resolve("repository").toAbsolutePath();
             Files.createDirectories(repository);
 
-            final ImmutableMap.Builder<String, Object> builder = ImmutableMap.<String, Object>builder()
+            final ImmutableMap<String, Object> props = ImmutableMap.<String, Object>builder()
                     .put("localRepository", repository)
-                    .put("offline", offline);
+                    .put("offline", offline)
+                    .build();
 
-            if (!repositories.isEmpty()) {
-                builder.put("activeProfile", ACTIVE_PROFILE);
-                builder.put("profiles", ImmutableList.of(
-                        ImmutableMap.of(
-                                "profileId", ACTIVE_PROFILE,
-                                "repositories", this.repositories))
-                );
-            }
-
-            final Map<String, Object> props = builder.build();
-            final Text xmlText = new Template.Mustache(
-                    Resources.asByteSource(
-                            Resources.getResource("settings.mustache.xml")
-                    ),
+            final Text xml = new Template.Mustache(
+                    new InputOf(this.manifest.getSettingsXml()),
                     props
             ).eval();
 
-            Files.write(settingsXml, new BytesOf(xmlText).asBytes());
-            log.info("\n{}", xmlText.asString());
+            Files.write(settingsXml, new BytesOf(xml).asBytes());
+            log.info("\n{}", xml.asString());
 
-            project.args().tag(Args.SettingsKey.SETTINGS_XML, settingsXml.toFile());
-
+            project.args().tag(Args.FlagsKey.SETTINGS_XML, settingsXml.toFile());
             return project;
         }
     }
@@ -234,7 +283,7 @@ public final class Acts {
         public Project accept(Project project) {
             final Path repository = project.repository();
             Archive.extractTar(image, repository);
-            project.args().tag(Args.SettingsKey.LOCAL_REPOSITORY, repository.toFile());
+            project.args().tag(Args.FlagsKey.LOCAL_REPOSITORY, repository.toFile());
             if (log.isDebugEnabled()) {
                 log.debug("Repository state: {}", repository);
                 Files.find(repository, 30, (f,attr) -> !attr.isDirectory()).forEach(file ->
@@ -358,8 +407,15 @@ public final class Acts {
 
             if (jar != null) {
                 newOutputFiles.add(
-                        installedJar.<OutputFile>map(f -> new OutputFile.Declared(f, jar.toAbsolutePath().toString()))
-                        .orElseGet(() -> new OutputFile.Simple(pomFileJar, jar.toAbsolutePath().toString()))
+                        installedJar.<OutputFile>map(
+                                contentFile -> new OutputFile.Content(
+                                        new InputOf(contentFile),
+                                        new OutputTo(jar)
+                                )
+                        ).orElseGet(() -> new OutputFile.TargetFolderFile(
+                                pomFileJar,
+                                jar.toAbsolutePath().toString())
+                        )
                 );
             }
 
@@ -375,7 +431,7 @@ public final class Acts {
                 );
 
                 newOutputFiles.add(
-                        new OutputFile.DeclaredProc(archive, artifact.toAbsolutePath().toString())
+                        new OutputFile.ArchiveOf(archive, new OutputTo(artifact.toAbsolutePath()))
                 );
             }
 

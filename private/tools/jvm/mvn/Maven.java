@@ -57,7 +57,7 @@ public interface Maven {
             request.setShowVersion(true);
 
             setLogLevel(request);
-            final String id = SLF4JConfigurer.shortPath(pomFilePath);
+            final String id = SLF4JConfigurer.shortMDC(pomFilePath);
             final InvocationResult result = SLF4JConfigurer.withMDC(id, () -> invoker.execute(request));
             if (result.getExitCode() != 0) {
                 throw new ToolMavenInvocationException(result);

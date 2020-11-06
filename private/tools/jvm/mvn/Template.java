@@ -12,6 +12,7 @@ import org.cactoos.Input;
 import org.cactoos.Scalar;
 import org.cactoos.Text;
 import org.cactoos.io.InputOf;
+import org.cactoos.io.ReaderOf;
 import org.cactoos.text.TextOf;
 
 import java.io.*;
@@ -39,15 +40,15 @@ public interface Template {
      */
     @AllArgsConstructor
     class Mustache implements Template {
-        private final ByteSource source;
+        private static final MustacheFactory mf = new DefaultMustacheFactory();
+
+        private final Input source;
         private final Object bean;
 
         @Override
         @SneakyThrows
         public Text eval() {
-            final CharSource tplSource = source.asCharSource(StandardCharsets.UTF_8);
-            MustacheFactory mf = new DefaultMustacheFactory();
-            try (Reader tpl = tplSource.openStream()) {
+            try (Reader tpl = new ReaderOf(source)) {
                 final StringWriter str = new StringWriter();
                 try (Writer dest = new PrintWriter(str)) {
                     com.github.mustachejava.Mustache mustache = mf.compile(tpl, "template.mustache");

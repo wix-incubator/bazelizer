@@ -52,8 +52,9 @@ _BuildDef = provider(fields={
 
 
 def _maven_repository_impl(ctx):
-    tar_name = ctx.label.name + ".tar"
-    tar = ctx.actions.declare_file(tar_name)
+    #tar_name = ctx.label.name + ".tar"
+    #tar = ctx.actions.declare_file(tar_name)
+    man_xml = ctx.outputs.manifest
 
     reposiotry_def_args = ctx.actions.args()
     pom_providers = [dep[PomDeclarationInfo] for dep in ctx.attr.modules]
@@ -80,13 +81,15 @@ def _maven_repository_impl(ctx):
     # cli options
     args.add('build-repository')
     args.add('--def', build_def.path)
-    args.add('--writeImg', tar.path)
-    args.add('--local-cache', ctx.attr.unsafe_local_cache)
+#    args.add('--writeImg', tar.path)
+    args.add('--global-manifest', man_xml.path)
+#    args.add('--cache', ctx.attr.unsafe_local_cache)
+    args.add('--settings', ctx.attr.unsafe_global_settings)
 
 
     ctx.actions.run(
         inputs = depset([build_def], transitive = [depset(ctx.files.data)] + [d.deps for d in pom_providers]),
-        outputs = [ctx.outputs.img],
+        outputs = [ctx.outputs.manifest],
         arguments = [args],
         executable = ctx.executable._tool,
         mnemonic = "MavenRepositoryMaker"
@@ -94,21 +97,22 @@ def _maven_repository_impl(ctx):
 
     return [
         DefaultInfo(
-            files= depset([tar])
+            files= depset([man_xml])
         ),
         RepositoryInfo(
-           img =  tar
+           img =  man_xml
         )
     ]
 
 maven_repository = rule(
     implementation = _maven_repository_impl,
     outputs = {
-      "img": "%{name}.tar"
+      "manifest": "%{name}.manifest.xml"
     },
     attrs = {
         "modules": attr.label_list(),
         "unsafe_local_cache": attr.string(),
+        "unsafe_global_settings": attr.string(),
         "data": attr.label_list(allow_files = True),
         "_tool": attr.label(default="//private/tools/jvm/mvn", allow_files = True, executable = True, cfg = "host")
     }

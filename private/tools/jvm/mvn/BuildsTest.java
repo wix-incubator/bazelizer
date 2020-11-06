@@ -11,11 +11,11 @@ public class BuildsTest {
     public void gen() {
         final Builds.PreOrderGraph graph = new Builds.PreOrderGraph(
                 Lists.newArrayList(
-                        new Builds.DefPom("/x", null),
-                        new Builds.DefPom("/x/y", "/x"),
-                        new Builds.DefPom("/x/z", "/x"),
-                        new Builds.DefPom("/y", null),
-                        new Builds.DefPom("/x/z/a1", "/x/z")
+                        new Builds.PomDefinition("/x", null),
+                        new Builds.PomDefinition("/x/y", "/x"),
+                        new Builds.PomDefinition("/x/z", "/x"),
+                        new Builds.PomDefinition("/y", null),
+                        new Builds.PomDefinition("/x/z/a1", "/x/z")
                 )
         );
 

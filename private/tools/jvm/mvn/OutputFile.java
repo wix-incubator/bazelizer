@@ -1,11 +1,14 @@
 package tools.jvm.mvn;
 
+import com.google.common.io.Closer;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.ToString;
+import org.apache.commons.io.IOUtils;
 import org.cactoos.*;
 import org.cactoos.func.UncheckedFunc;
 import org.cactoos.func.UncheckedProc;
+import org.cactoos.io.InputOf;
 import org.cactoos.io.OutputTo;
 
 import java.io.File;
@@ -21,187 +24,79 @@ import java.util.function.Function;
 public interface OutputFile {
 
     /**
-     * Marker that can be specified in output arguments to indicate that maven
-     * build default jar should be resolved.
-     */
-    String DEFAULT_TARGET_JAR_OUTPUT_MARKER = "@@TARGET-JAR-OUTPUT@@";
-
-    /**
-     * Marker for tar for whole installed artifact folder.
-     */
-    String ARTIFACT_DIR_TARGET_OUTPUT_MARKER = "@@MVN_ARTIFACT_ALL@@";
-
-    /**
-     * Maven resulting artifact inside target/
-     * @return path
-     */
-    String src();
-
-    /**
-     * Bazel output.
-     * @return path
-     */
-    String dest();
-
-
-    /**
      * Write declared output for the project.
      * @param project project
      */
-    default void exec(Project project)  {
-        OutputFile name = this;
-        final Path workDir = project.workDir();
-        final Path target = workDir.resolve("target").toAbsolutePath();
-        Path src = target.resolve(name.src());
-        Path dest = Paths.get(name.dest());
-        try {
-            Files.copy(src, dest);
-        } catch (java.nio.file.NoSuchFileException e) {
-            throw new ToolOutputNotFoundException(src, target, e);
-        } catch (IOException e) {
-            throw new ToolException(e);
-        }
-    }
+    void exec(Project project);
 
-    /**
-     * Default source and destination resolution logic.
-     */
+
     @AllArgsConstructor
     @ToString
-    class Simple implements OutputFile {
+    class TargetFolderFile implements OutputFile {
         private final String src;
         private final String dest;
 
-        @Override
-        public String src() {
-            return src;
-        }
-
-        @Override
-        public String dest() {
-            return dest;
-        }
-    }
-
-    /**
-     * Declared output of a file.
-     */
-    @AllArgsConstructor
-    @ToString
-    class Declared implements OutputFile {
-
-        private final File src;
-        private final String dest;
-
-        @Override
-        public String src() {
-            throw new UnsupportedOperationException("src");
-        }
-
-        @Override
-        public String dest() {
-            return dest;
-        }
-
-        @Override
-        public void exec(Project project) {
-            final Path source = src.toPath();
+        /**
+         * Write declared output for the project.
+         * @param project project
+         */
+        public void exec(Project project)  {
+            final Path workDir = project.workDir();
+            final Path target = workDir.resolve("target").toAbsolutePath();
+            Path src = target.resolve(this.src);
+            Path dest = Paths.get(this.dest);
             try {
-                Files.copy(source, Paths.get(dest()));
+                Files.copy(src, dest);
             } catch (java.nio.file.NoSuchFileException e) {
-                throw new ToolOutputNotFoundException(src, source.getParent(), e);
+                throw new ToolOutputNotFoundException(src, target, e);
             } catch (IOException e) {
                 throw new ToolException(e);
             }
         }
     }
 
-
-    /**
-     * Declared output.
-     */
     @AllArgsConstructor
     @ToString
-    class DeclaredProc implements OutputFile {
-        private final Proc<Output> src;
-        private final String dest;
+    class Content implements OutputFile {
+        private final Input src;
+        private final Output dest;
 
-        @Override
-        public String src() {
-            throw new UnsupportedOperationException("src");
+        public Content(Bytes src, Output dest) {
+            this(new InputOf(src), dest);
         }
 
-        @Override
-        public String dest() {
-            throw new UnsupportedOperationException("src");
+        public Content(Input src, Path dest) {
+            this(src, new OutputTo(dest));
         }
-
-        @Override
-        public void exec(Project project) {
-            new UncheckedProc<>(src).exec(new OutputTo(new File(dest)));
-        }
-    }
-
-    /**
-     * Some output handler of a project.
-     */
-    @AllArgsConstructor
-    class ProjectFor implements OutputFile {
-        private final Function<Project, Proc<Output>> src;
-        private final String dest;
-
-        @Override
-        public String src() {
-            throw new UnsupportedOperationException("src");
-        }
-
-        @Override
-        public String dest() {
-            throw new UnsupportedOperationException("dest");
-        }
-
-        @Override
-        @SneakyThrows
-        public void exec(Project project) {
-            src.apply(project).exec(new OutputTo(new File(dest)));
-        }
-    }
-
-    /**
-     * Declared tar of the dir.
-     */
-    class DeclaredTarDir extends DeclaredProc implements OutputFile {
 
         /**
-         * Ctor.
-         * @param src dir to archive
-         * @param dest dest of archive
+         * Write declared output for the project.
+         * @param project project
          */
-        public DeclaredTarDir(Path src, String dest) {
-            super(new Archive.TarDirectory(src), dest);
+        @SuppressWarnings("UnstableApiUsage")
+        @SneakyThrows
+        public void exec(Project project)  {
+            try (Closer closer = Closer.create()) {
+                IOUtils.copy(closer.register(src.stream()), closer.register(dest.stream()));
+            } catch (IOException e) {
+                throw new ToolException(e);
+            }
         }
     }
 
-
+    @AllArgsConstructor
     @ToString
-    class TemporaryFileSrc implements OutputFile {
-        private final Path dest;
-        private final Path src;
+    class ArchiveOf implements OutputFile {
+        private final Archive src;
+        private final Output dest;
 
+        /**
+         * Write declared output for the project.
+         * @param project project
+         */
         @SneakyThrows
-        public TemporaryFileSrc(Path dest) {
-            this.dest = dest;
-            this.src = Files.createTempFile("tmp-src", ".dat");
-        }
-
-        @Override
-        public String src() {
-            return src.toString();
-        }
-
-        @Override
-        public String dest() {
-            return dest.toString();
+        public void exec(Project project)  {
+            src.writeTo(dest);
         }
     }
 }

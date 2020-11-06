@@ -17,6 +17,7 @@ import java.io.Closeable;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import java.util.StringJoiner;
 
 public class SLF4JConfigurer extends ContextAwareBase implements Configurator {
     private static ToolLogLevel root = ToolLogLevel.OFF;
@@ -55,27 +56,19 @@ public class SLF4JConfigurer extends ContextAwareBase implements Configurator {
         });
     }
 
-    public static String shortPath(Path p) {
-        try {
-            int len = 26;
-            final List<String> list = Lists.newArrayList();
-            for (int i = 0; i < p.getNameCount() - 1; i++) {
-                String name = p.getName(i).toString();
-                int cap = name.length() - 1;
-                if (len > 0) {
-                    int rmLen = len - cap;
-                    int j = name.length() - rmLen;
-                    len -= j;
-                    list.add(name.substring(0, Math.min(Math.max(1, j), name.length())));
-                } else {
-                    list.add(name);
-                }
+    public static String shortMDC(Path pomFile) {
+        final String[] arr = pomFile.toString().split("/");
+        final StringJoiner joiner = new StringJoiner("/");
+        for (int i = 0; i < arr.length; i++) {
+            String s = arr[i];
+            if (i > arr.length - 2) {
+                joiner.add(s);
+            } else {
+                String part = s.isEmpty() ? s : s.substring(0,1);
+                joiner.add(part);
             }
-            list.add(p.getName(p.getNameCount() - 1).toString());
-            return "[" + String.join("/", list) + "]";
-        } catch (StringIndexOutOfBoundsException e) {
-            return null;
         }
+        return joiner.toString();
     }
 
 

@@ -10,8 +10,6 @@ import lombok.*;
 import lombok.experimental.Delegate;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.io.FilenameUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -21,37 +19,22 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * Extenral dependency.
  */
 public interface Dep {
 
-    /**
-     * Artifact folder layout.
-     */
-    interface Layout {
-        /**
-         * Get relative path to repository
-         * @param dep dep
-         * @return path to repo
-         */
-        Path resolveDep(Dep dep);
-    }
 
-    Layout MAVEN_LAYOUT = new Layout() {
-        @Override
-        public Path resolveDep(Dep dep) {
-            String[] gidParts = dep.groupId().split("\\.");
-            Path thisGroupIdRepo = Paths.get("");
-            for (String gidPart : gidParts) {
-                thisGroupIdRepo = thisGroupIdRepo.resolve(gidPart);
-            }
-            return thisGroupIdRepo.resolve(dep.artifactId()).resolve(dep.version());
+    Function<Dep, Path> MAVEN_LAYOUT = dep -> {
+        String[] gidParts = dep.groupId().split("\\.");
+        Path thisGroupIdRepo = Paths.get("");
+        for (String gidPart : gidParts) {
+            thisGroupIdRepo = thisGroupIdRepo.resolve(gidPart);
         }
+        return thisGroupIdRepo.resolve(dep.artifactId()).resolve(dep.version());
     };
-
-    Logger log = LoggerFactory.getLogger(Dep.class);
 
 
     /**
@@ -84,14 +67,6 @@ public interface Dep {
     }
 
     /**
-     * Maven packaging type.
-     * @return only jar for now
-     */
-    default Map<String,String> tags() {
-        return Collections.emptyMap();
-    }
-
-    /**
      * Install
      */
     @SneakyThrows
@@ -109,51 +84,42 @@ public interface Dep {
      * @return folder
      */
     default Path artifactFolder(Path repo) {
-        return this.relativeTo(MAVEN_LAYOUT, repo);
-    }
-
-    /**
-     * Resolve maven layout, relative to repo
-     * @param repo relative to this
-     * @return artifact folder
-     */
-    default Path relativeTo(Layout layout, Path repo) {
-        return repo.resolve(layout.resolveDep(this));
+        return repo.resolve(MAVEN_LAYOUT.apply(this));
     }
 
 
     @SuppressWarnings("unused")
     @NoArgsConstructor
     @EqualsAndHashCode(of = {"path", "tags"})
-    class DepArtifact implements Dep {
+    class Artifact implements Dep {
         private Path path;
         private Map<String, String> tags = Collections.emptyMap();
 
         @SuppressWarnings("Guava")
         @Getter(AccessLevel.PRIVATE)
-        private final Supplier<Dep> cached = Suppliers.memoize(this::original);
+        private final Supplier<Dep> resolved = Suppliers.memoize(this::original);
 
         /**
          * Ctor. for a path only.
          * @param p path
          */
-        public DepArtifact(Path p) {
+        public Artifact(Path p) {
             this.path = p;
         }
 
         @Override
         public String groupId() {
-            return cached.get().groupId();
+            return resolved.get().groupId();
         }
 
         @Override
         public String artifactId() {
-            return cached.get().artifactId();
+            return resolved.get().artifactId();
         }
 
         @Override
         public String version() {
-            return cached.get().version();
+            return resolved.get().version();
         }
 
         @Override
@@ -163,12 +129,7 @@ public interface Dep {
 
         @Override
         public Install installTo() {
-            return cached.get().installTo();
-        }
-
-        @Override
-        public Map<String, String> tags() {
-            return tags;
+            return resolved.get().installTo();
         }
 
         @Override
@@ -181,10 +142,11 @@ public interface Dep {
             final String extension = FilenameUtils.getExtension(path.getFileName().toString());
             if (extension.endsWith("jar")) {
                 // regular jar, install hashed coordinates
-                return new Dep.DigestCoords(path);
+                return new DigestCoords(path);
             }
             if (extension.endsWith("tar")) {
                 // installed artifact as it was
+                //noinspection UnstableApiUsage
                 return Streams.stream(new Archive.LSTar(path))
                         .filter(entry -> {
                             final String name = entry.getName();
@@ -199,26 +161,18 @@ public interface Dep {
 
         @Override
         public String toString() {
-            return MoreObjects.toStringHelper(DepArtifact.class)
-                    .add("groupId", cached.get().groupId())
-                    .add("artifactId", cached.get().artifactId())
-                    .add("version", cached.get().version())
-                    .add("scope", cached.get().scope())
-                    .add("source", cached.get().source())
-                    .add("tags", cached.get().tags())
+            return MoreObjects.toStringHelper(Artifact.class)
+                    .add("groupId", resolved.get().groupId())
+                    .add("artifactId", resolved.get().artifactId())
+                    .add("version", resolved.get().version())
+                    .add("scope", resolved.get().scope())
+                    .add("source", resolved.get().source())
                     .toString();
         }
     }
 
 
 
-
-    @AllArgsConstructor
-    @ToString
-    class Wrap implements Dep {
-        @Delegate
-        private final Dep dep;
-    }
 
     @EqualsAndHashCode(of = {"gid", "aid", "version"})
     @ToString
@@ -281,11 +235,6 @@ public interface Dep {
         @SneakyThrows
         public DigestCoords(Path path) {
             this.orig = create(path.toFile());
-        }
-
-        @Override
-        public Map<String, String> tags() {
-            return this.orig.tags();
         }
 
         @Override
@@ -356,7 +305,14 @@ public interface Dep {
             final String version = parts.get(parts.size() - 2);
             final String art = parts.get(parts.size() - 3);
             final String gid = Joiner.on(".").join(parts.subList(0, parts.size() - 3));
-            return new Dep.Simple(tar.toFile(), gid, art, version);
+            return new Simple(tar.toFile(), gid, art, version);
         }
+    }
+
+    @AllArgsConstructor
+    @ToString
+    class Wrap implements Dep {
+        @Delegate
+        private final Dep dep;
     }
 }

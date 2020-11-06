@@ -48,7 +48,7 @@ public final class Project {
      * Maven home directory.
      */
     @Builder.Default
-    private Path m2Home = getTmpDirectory();
+    private Path m2Directory = getTmpDirectory();
 
     /**
      * Output files for the project.
@@ -98,7 +98,7 @@ public final class Project {
      */
     public Path repository() {
         if (repositoryCached == null)
-            repositoryCached = this.m2Home().resolve("repository");
+            repositoryCached = this.m2Directory().resolve("repository");
         return repositoryCached;
     }
 
