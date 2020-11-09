@@ -16,7 +16,9 @@ import lombok.SneakyThrows;
 import lombok.experimental.Delegate;
 import org.cactoos.Input;
 import org.cactoos.Scalar;
+import org.cactoos.Text;
 import org.cactoos.scalar.UncheckedScalar;
+import org.cactoos.text.UncheckedText;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -248,7 +250,7 @@ public interface Pom {
     /**
      * Sanitized XML with auto prefixing xpath queries.
      */
-    static class SanitizedXML implements XML {
+    class SanitizedXML implements XML {
 
         /**
          * XML.
@@ -270,7 +272,7 @@ public interface Pom {
          * Ctor
          * @param node original node
          */
-        private SanitizedXML(Node node) {
+        public SanitizedXML(Node node) {
             this(new XMLDocument(node).merge(Pom.XPATH_CONTEXT));
         }
 
@@ -279,14 +281,12 @@ public interface Pom {
          * @param input original xml
          */
         @SuppressWarnings("Guava")
-        private SanitizedXML(XML input) {
+        public SanitizedXML(XML input) {
             XML xml = input;
             XemblerAugment.XPathQuery xPathQuery = null;
-            Supplier<String> asString = Suppliers.memoize(() -> {
-                final Node node = input.node();
-                trimWhitespace(node);
-                return prettyPrint(node);
-            });
+            Supplier<String> asString = Suppliers.memoize(
+                    () -> new PrettyPrintXml(input).asString()
+            );
 
             if (xml instanceof SanitizedXML) {
                 xml = ((SanitizedXML) input).origin;
@@ -328,6 +328,24 @@ public interface Pom {
         @Override
         public String toString() {
             return this.xml.get();
+        }
+    }
+
+    @AllArgsConstructor
+    class PrettyPrintXml implements Text {
+
+        private final XML input;
+
+        @Override
+        public String asString() {
+            final Node node = input.node();
+            trimWhitespace(node);
+            return prettyPrint(node);
+        }
+
+        @Override
+        public int compareTo(@SuppressWarnings("NullableProblems") Text t) {
+            return new UncheckedText(t).compareTo(this);
         }
 
 

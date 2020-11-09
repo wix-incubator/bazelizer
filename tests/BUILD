@@ -14,18 +14,18 @@ sh_library(
 sh_test(
     name = "MavenImageTest",
     srcs = ["test_files_exist.sh"],
-    args = ["external/maven_e2e/pinned_maven_repository.tar"],
+    args = ["external/maven_e2e/pinned_maven_repository.manifest.xml"],
     data = [_buildpack],
     deps = [":MavenImageDummy"]
 )
 
-sh_test(
-    name = "MavenImageTarTest",
-    srcs = ["test_tar_repo.sh"],
-    args = ["external/maven_e2e/pinned_maven_repository.tar"],
-    data = [_buildpack],
-    deps = [":MavenImageDummy"]
-)
+#sh_test(
+#    name = "MavenImageTarTest",
+#    srcs = ["test_tar_repo.sh"],
+#    args = ["external/maven_e2e/pinned_maven_repository.tar"],
+#    data = [_buildpack],
+#    deps = [":MavenImageDummy"]
+#)
 
 #
 # running

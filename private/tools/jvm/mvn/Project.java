@@ -1,12 +1,15 @@
 package tools.jvm.mvn;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.io.ByteSource;
 import lombok.*;
 import lombok.experimental.Accessors;
 import org.cactoos.io.InputOf;
+import org.cactoos.text.TextOf;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -170,6 +173,13 @@ public final class Project {
             pom = syntheticPomFile(workDir);
         }
         return pom;
+    }
+
+
+    public String debug() throws IOException {
+        return MoreObjects.toStringHelper(this)
+                .add("pom", "\n" + new TextOf(pom()).asString())
+                .toString();
     }
 
     @SneakyThrows

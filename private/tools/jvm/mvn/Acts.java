@@ -4,7 +4,6 @@ package tools.jvm.mvn;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.io.Resources;
 import com.jcabi.xml.XML;
 import com.jcabi.xml.XMLDocument;
 import lombok.*;
@@ -67,7 +66,7 @@ public final class Acts {
         @Override
         public Project accept(Project project) {
             project.args()
-                    .offline(true)
+                    .offline(false)
                     .append("clean", "install");
 
             maven.run(project);
@@ -149,73 +148,6 @@ public final class Acts {
             }
 
             return project.toBuilder().pomXML(pom).build();
-        }
-    }
-
-
-    @AllArgsConstructor
-    static class GlobalSettingsXml implements Act {
-
-        public GlobalSettingsXml(Path settings, Path outputManifest) {
-            this(new InputOf(settings), new OutputTo(outputManifest));
-        }
-
-        private final Input globalSettingsXmlPath;
-
-        private final Output manifestXml;
-
-        @SneakyThrows
-        @Override
-        public Project accept(Project project) {
-
-            final XML settingsXml = new XMLDocument(
-                    new InputStreamOf(globalSettingsXmlPath)
-            );
-
-            final String curLocalRepository = settingsXml.xpath("/settings/localRepository/text()").get(0);
-            final ImmutableMap<String, String> props = ImmutableMap.of(
-                    "id", "global_cache",
-                    "name", "Bazel's global m2 cache",
-                    "url", new File(curLocalRepository).toURI().toString()
-            );
-            final String bazelM2Cache = "bzl_m2_cache";
-            final Directives dirs = new Directives()
-                    .xpath("/settings/localRepository")
-                    .set("{{ localRepository }}")
-                    // profile to refer to global cache repo
-                    .xpath("/settings")
-                        .addIf("profiles")
-                        .add("profile")
-                        .add(ImmutableMap.of("id", bazelM2Cache))
-                            .add("repositories")
-                                .add("repository")
-                                .add(props)
-                                .up()
-                            .up()
-                            .add("pluginRepositories")
-                                .add("pluginRepository")
-                                .add(props)
-                    // activate profile
-                    .xpath("/settings")
-                        .addIf("activeProfiles")
-                        .add(ImmutableMap.of("activeProfile", bazelM2Cache));
-
-            final XMLDocument buildSettingsXmlTpl = new XMLDocument(
-                    new Xembler(dirs).apply(settingsXml.node())
-            );
-
-            final RunManifest runManifest = new RunManifest.Builder()
-                    .settingsXmlTemplate(buildSettingsXmlTpl.toString())
-                    .build();
-
-            project.outputs().add(
-                    new OutputFile.Content(
-                            new InputOf(runManifest.asString()),
-                            manifestXml
-                    )
-            );
-
-            return project;
         }
     }
 

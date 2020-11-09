@@ -71,6 +71,7 @@ _run_mvn_attrs = {
     "srcs": attr.label_list(allow_files = True),
     "pom_def": attr.label(mandatory=True),
     "outputs": attr.string_list(),
+    "data": attr.label_list(allow_files = True),
     "log_level": attr.string(default="OFF"),
     "_tool": attr.label(default="//private/tools/jvm/mvn", allow_files = True, executable = True, cfg = "host")
 }
@@ -88,22 +89,20 @@ def _run_mvn_impl(ctx):
 
     output_files = [def_output_jar_file, def_output_artifact_file]
     input_files = [
-        repository_info.img,
+        repository_info.run_manifest,
         pom_def_info.file,
         deps_manifest,
         srcs_manifest
     ] + deps_ctx.files
 
-    input_transitive_files = [
-        f.files for f in ctx.attr.srcs
-    ]
+    input_transitive_files = [f.files for f in ctx.attr.srcs] + [ f.files for f in ctx.attr.data ]
 
     args = ctx.actions.args()
     args.add("--jvm_flag=-Dtools.jvm.mvn.LogLevel=%s" % (ctx.attr.log_level))
     args.add("--jvm_flag=-Dtools.jvm.mvn.BazelLabelName=%s" % (ctx.label))
 
     args.add("run")
-    args.add("--repo", repository_info.img.path)
+    args.add("--run-manifest", repository_info.run_manifest.path)
     args.add("--srcs", srcs_manifest)
     args.add("--deps", deps_manifest)
     args.add("--write-artifact", def_output_artifact_file.path)

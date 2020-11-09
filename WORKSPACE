@@ -21,10 +21,10 @@ maven_repository_registry(
     ]
 )
 
-load("//private/ruls/maven:repository_registry_v2.bzl", maven_repository_registry_v2 = "maven_repository_registry")
-maven_repository_registry_v2(
-    name = "maven_e2e_v2",
-    modules = [
-        "//tests/e2e/mvn-parent-pom:declared_pom",
-    ]
-)
+#load("//private/ruls/maven:repository_registry_v2.bzl", maven_repository_registry_v2 = "maven_repository_registry")
+#maven_repository_registry_v2(
+#    name = "maven_e2e_v2",
+#    modules = [
+#        "//tests/e2e/mvn-parent-pom:declared_pom",
+#    ]
+#)

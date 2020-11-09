@@ -60,6 +60,10 @@ public interface Maven {
             final String id = SLF4JConfigurer.shortMDC(pomFilePath);
             final InvocationResult result = SLF4JConfigurer.withMDC(id, () -> invoker.execute(request));
             if (result.getExitCode() != 0) {
+                log.error("Build failed");
+                log.error("================ Project ===============");
+                log.error("{}", build.debug());
+                log.error("========================================");
                 throw new ToolMavenInvocationException(result);
             }
         }

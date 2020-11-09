@@ -39,8 +39,8 @@ declare_pom = rule(
 )
 
 RepositoryInfo = provider(fields={
-    "img": """
-Consolidated M2 repository for all registered modules
+    "run_manifest": """
+    Consolidated repository manifest
 """
 })
 
@@ -83,7 +83,6 @@ def _maven_repository_impl(ctx):
     args.add('--def', build_def.path)
 #    args.add('--writeImg', tar.path)
     args.add('--global-manifest', man_xml.path)
-#    args.add('--cache', ctx.attr.unsafe_local_cache)
     args.add('--settings', ctx.attr.unsafe_global_settings)
 
 
@@ -100,7 +99,7 @@ def _maven_repository_impl(ctx):
             files= depset([man_xml])
         ),
         RepositoryInfo(
-           img =  man_xml
+           run_manifest =  man_xml
         )
     ]
 
@@ -111,7 +110,6 @@ maven_repository = rule(
     },
     attrs = {
         "modules": attr.label_list(),
-        "unsafe_local_cache": attr.string(),
         "unsafe_global_settings": attr.string(),
         "data": attr.label_list(allow_files = True),
         "_tool": attr.label(default="//private/tools/jvm/mvn", allow_files = True, executable = True, cfg = "host")

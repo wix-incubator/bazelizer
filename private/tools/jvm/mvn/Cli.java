@@ -20,6 +20,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class Cli {
 
+    static {
+        SLF4JConfigurer.setLogLevel(SLF4JConfigurer.ToolLogLevel.DEBUG);
+    }
 
     static class ArgsFactory {
 
@@ -54,9 +57,6 @@ public class Cli {
         @CommandLine.Option(names = {"--def"}, description = "Rule specific output settings")
         public Path pomDeclarations;
 
-        @CommandLine.Option(names = {"--cache"}, description = "M2 host's m2 cache")
-        public Path hostMavenCache;
-
         @CommandLine.Option(names = {"-s", "--settings"}, description = "External settings xml")
         public Path globalSettingsXml;
 
@@ -79,7 +79,7 @@ public class Cli {
                     .build();
 
             new Act.Iterative(
-                    new Acts.GlobalSettingsXml(
+                    new ActGlobalSettings(
                             globalSettingsXml,
                             globalRepositoryManifest
                     ),
@@ -98,9 +98,6 @@ public class Cli {
                     ),
                     new Acts.Outputs()
             ).accept(simple);
-
-            log.info("Consolidated repository archived: "
-                    + FileUtils.byteCountToDisplaySize(globalRepositoryManifest.toFile().length()));
         }
     }
 
@@ -168,12 +165,14 @@ public class Cli {
                     .outputs(outputs)
                     .build();
 
-
             new Act.Iterative(
                     new Acts.SettingsXml(
                             new RunManifest(runManifest)
                     ),
                     new Acts.Deps(),
+                    new Acts.InstallParentPOM(
+                            maven
+                    ),
                     new Acts.ParentPOM(),
                     new Acts.PomFile(),
                     new Acts.MvnBuild(
