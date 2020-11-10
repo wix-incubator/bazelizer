@@ -52,6 +52,10 @@ public class Cli {
     @CommandLine.Command(name = "build-repository")
     public static class MkRepository implements Runnable {
 
+//        static {
+//            SLF4JConfigurer.setLogLevel(SLF4JConfigurer.ToolLogLevel.DEBUG);
+//        }
+
         @CommandLine.Mixin
         public ArgsFactory argsFactory = new ArgsFactory();
 

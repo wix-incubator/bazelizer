@@ -47,7 +47,7 @@ public class ActGlobalSettings implements Act {
     @SneakyThrows
     @Override
     public Project accept(Project project) {
-        final XML currentSettingsXml = new XMLDocument(
+        XML currentSettingsXml = new XMLDocument(
                 new InputStreamOf(this.globalSettingsXml)
         );
         final File bazelLocalRepository = new File(
@@ -55,14 +55,13 @@ public class ActGlobalSettings implements Act {
         );
 
         final RunManifest.Builder builder = new RunManifest.Builder();
-        Project projectNew = project;
         final ImmutableMap.Builder<Object, Object> props = ImmutableMap.builder();
         props.put("localRepository", "{{ localRepository }}");
 
         // use filesystem global repository for each build
         // populate it by repository maker call
         if (repositorySnapshot == null) {
-            projectNew = project.toBuilder()
+            project = project.toBuilder()
                     .m2Directory(bazelLocalRepository.toPath().getParent())
                     .build();
 
@@ -70,8 +69,8 @@ public class ActGlobalSettings implements Act {
             props.put("mirrorUrl", bazelLocalRepository.toURI().toString());
             props.put("mirrorId", SysProps.workspace().orElse("bazel.build"));
 
-            final Project finalProjectNew = projectNew;
-            projectNew.outputs().add(
+            final Project finalProjectNew = project;
+            project.outputs().add(
                     proj -> {
                         final Collection<File> files = FileUtils.listFiles(
                                 finalProjectNew.repository().toFile(),
@@ -90,25 +89,26 @@ public class ActGlobalSettings implements Act {
             props.put("mirroring", false);
             builder.useSnapshot(true);
 
-            final Path m2Directory = projectNew.m2Directory();
+            final Path m2Directory = project.m2Directory();
             final Path newSettingsXml = m2Directory.resolve("settings.xml");
 
-            final XMLDocument currentSettings = new XMLDocument(
+            currentSettingsXml = new XMLDocument(
                     new Xembler(
-                            new Directives().xpath("/settings/localRepository").set(projectNew.repository())
+                            new Directives().xpath("/settings/localRepository")
+                                    .set(project.repository())
                     ).applyQuietly(currentSettingsXml.node())
             );
 
-            Files.copy(new InputStreamOf(new Pom.PrettyPrintXml(currentSettings)), newSettingsXml);
+            Files.copy(new InputStreamOf(new Pom.PrettyPrintXml(currentSettingsXml)), newSettingsXml);
 
-            projectNew.outputs().add(
+            project.outputs().add(
                     new OutputFile.ArchiveOf(
                             new Archive.LocalRepositoryDir(bazelLocalRepository.toPath()),
                             new OutputTo(this.repositorySnapshot)
                     )
             );
 
-            projectNew.args().tag(Args.FlagsKey.SETTINGS_XML, newSettingsXml.toFile());
+            project.args().tag(Args.FlagsKey.SETTINGS_XML, newSettingsXml.toFile());
         }
 
         final Text buildSettings = new Template.Mustache(new ResourceOf("settings.mustache.xml"), props.build()).eval();
@@ -119,13 +119,13 @@ public class ActGlobalSettings implements Act {
                 .settingsXmlTemplate(new Pom.PrettyPrintXml(new XMLDocument(tpl)).asString())
                 .build();
 
-
-        projectNew.outputs().add(
+        project.outputs().add(
                 new OutputFile.Content(
                         runManifest.asBinary(),
                         runManifestOutput
                 )
         );
-        return projectNew;
+
+        return project;
     }
 }
