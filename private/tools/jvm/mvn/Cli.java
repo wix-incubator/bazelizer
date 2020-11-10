@@ -76,8 +76,7 @@ public class Cli {
 
             final Maven maven = new Maven.BazelInvoker();
             final Args args = argsFactory.newArgs();
-            // mvn args flag
-            args.tag(Args.FlagsKey.SETTINGS_XML, globalSettingsXml.toFile());
+
 
             final Project simple = Project.builder()
                     .args(args)
@@ -87,7 +86,7 @@ public class Cli {
                     new ActGlobalSettings(
                             new InputOf(globalSettingsXml),
                             new OutputTo(globalRepositoryManifest),
-                            repositorySnapshot
+                            this.repositorySnapshot
                     ),
                     new ActAssemble(
                             new Builds.PomDefinitions(pomDeclarations),

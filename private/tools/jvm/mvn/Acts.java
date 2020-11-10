@@ -168,8 +168,6 @@ public final class Acts {
         private boolean offline = false;
 
 
-
-
         @SneakyThrows
         @Override
         public Project accept(Project project) {
