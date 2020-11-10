@@ -77,10 +77,9 @@ public class Cli {
         @SneakyThrows
         @Override
         public void run() {
-
             final Maven maven = new Maven.BazelInvoker();
             final Args args = argsFactory.newArgs();
-            args.tag(Args.FlagsKey.SETTINGS_XML, globalSettingsXml);
+            args.tag(Args.FlagsKey.SETTINGS_XML, globalSettingsXml.toFile());
 
             final Project simple = Project.builder()
                     .args(args)
