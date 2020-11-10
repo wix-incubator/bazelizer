@@ -6,6 +6,7 @@ _go_offline_modules(
     visibility = ["//visibility:public"],
     modules = [{go_offline_modules}],
     unsafe_global_settings = "{unsafe_global_settings}",
+    data = [ ":{go_offline_target_name}_metadata" ],
 )
 
 filegroup(
@@ -13,6 +14,14 @@ filegroup(
     visibility = ["//visibility:public"],
     srcs = glob([
         "_m2/repository/**/*"
+    ]),
+)
+
+filegroup(
+    name = "{go_offline_target_name}_metadata",
+    visibility = ["//visibility:public"],
+    srcs = glob([
+        "_m2/settings.xml"
     ]),
 )
 """
@@ -31,28 +40,25 @@ _SETTINGS = """<?xml version="1.0" encoding="UTF-8"?>
 """
 
 _SETTINGS_XML_NEW_REPO_PROFILE = """
-  <profiles>
     <profile>
         <id>{profile}</id>
         <repositories>
             <repository>
               <snapshots><enabled>false</enabled></snapshots>
-              <id>host_m2_cache</id>
+              <id>{profile}_repo</id>
               <name>Host m2 repo</name>
               <url>{url}</url>
             </repository>
         </repositories>
         <pluginRepositories>
             <pluginRepository>
-              <id>host_m2_cache_plgn</id>
+              <id>{profile}_repo_plgn</id>
               <name>Host m2 repo</name>
               <url>{url}</url>
              </pluginRepository>
        </pluginRepositories>
     </profile>
-  </profiles>
 """
-
 
 _RUNNER_BZL_FILE = """
 load("@wix_incubator_bazelizer//private/ruls/maven:runner.bzl", _run_mvn = "run_mvn")
@@ -69,6 +75,8 @@ def execute_build(name, **kwargs):
 _maven_repository_registry_attrs = {
     "modules": attr.label_list(),
     "use_unsafe_local_cache": attr.bool(default = True),
+    "repositories": attr.string_dict(),
+    "_dummy": attr.label(default = Label("//maven:defs.bzl"))
 }
 
 _maven_binary_version = "3.6.3"
@@ -85,17 +93,16 @@ def _maven_repository_registry_impl(repository_ctx):
     settings_xml = repository_ctx.path(m2_dir + "/" + "settings.xml")
     local_repository = repository_ctx.path(m2_dir + "/" + "repository")
 
-    settings_xml_append = ""
-    settings_xml_profiles = []
+    settings_xml_profiles = {}
     user_mvn_repo = repository_ctx.path(repository_ctx.os.environ["HOME"] + "/.m2/repository/")
     if repository_ctx.attr.use_unsafe_local_cache and user_mvn_repo.exists:
         repository_ctx.report_progress("Using host maven repository: %s" % (user_mvn_repo))
-        profile_id = "host_m2_cache"
-        settings_xml_append += _SETTINGS_XML_NEW_REPO_PROFILE.format(
+        profile_id = "__host_m2_cache__"
+
+        settings_xml_profiles[profile_id] = _SETTINGS_XML_NEW_REPO_PROFILE.format(
             url = "file://%s" % (user_mvn_repo),
             profile = profile_id
         )
-        settings_xml_profiles.append(profile_id)
 
     repository_ctx.file(
         "BUILD",
@@ -110,12 +117,19 @@ def _maven_repository_registry_impl(repository_ctx):
         False,  # not executable
     )
 
+    if repository_ctx.attr.repositories:
+        for id, url in repository_ctx.attr.repositories.items():
+            settings_xml_profiles[id] = _SETTINGS_XML_NEW_REPO_PROFILE.format(
+                url = url,
+                profile = id
+            )
+
     repository_ctx.file(
         settings_xml,
         (_SETTINGS).format(
             local_repository = local_repository,
-            payload = settings_xml_append,
-            active_profiles = "\n".join([ "<activeProfile>%s</activeProfile>" % (p) for p in settings_xml_profiles ])
+            payload = "<profiles>%s</profiles>" % ("\n".join([ v for k, v in settings_xml_profiles.items() ])),
+            active_profiles = "\n".join([ "<activeProfile>%s</activeProfile>" % (p) for p, _ in settings_xml_profiles.items() ])
         ),
         False,  # not executable
     )

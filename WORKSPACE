@@ -18,7 +18,10 @@ maven_repository_registry(
         "//tests/e2e/mvn-build-lib:declared_pom",
         "//tests/e2e/mvn-build-lib-one:declared_pom",
         "//tests/e2e/mvn-build-lib-with-profile:declared_pom",
-    ]
+    ],
+    repositories = {
+        "bintray": "https://jcenter.bintray.com"
+    }
 )
 
 #load("//private/ruls/maven:repository_registry_v2.bzl", maven_repository_registry_v2 = "maven_repository_registry")

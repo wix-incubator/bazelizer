@@ -5,6 +5,7 @@ import com.jcabi.xml.XML;
 import com.jcabi.xml.XMLDocument;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.cactoos.Input;
@@ -20,6 +21,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.Collection;
 
+@Slf4j
 @AllArgsConstructor
 public class ActGlobalSettings implements Act {
 
@@ -53,6 +55,8 @@ public class ActGlobalSettings implements Act {
         final File bazelLocalRepository = new File(
                 currentSettingsXml.xpath("/settings/localRepository/text()").get(0)
         );
+
+        log.info("settings.xml:\n{}", new Pom.PrettyPrintXml(currentSettingsXml).asString());
 
         final String tpl = new Template.Mustache(
                 new ResourceOf("settings.mustache.xml"),
