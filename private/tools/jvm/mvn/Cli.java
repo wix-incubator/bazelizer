@@ -6,6 +6,8 @@ import com.google.common.io.Files;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.cactoos.io.InputOf;
+import org.cactoos.io.OutputTo;
 import picocli.CommandLine;
 
 import java.io.File;
@@ -61,8 +63,12 @@ public class Cli {
         public Path globalSettingsXml;
 
         @CommandLine.Option(names = {"-gm", "--global-manifest"},
-                paramLabel = "PATH", description = "desired output for repo snapshot")
+                paramLabel = "PATH", description = "desired output for run manifest")
         public Path globalRepositoryManifest;
+
+        @CommandLine.Option(names = {"-rs", "--mk-snapshot"},
+                paramLabel = "PATH", description = "desired output for repo snapshot")
+        public Path repositorySnapshot;
 
         @SneakyThrows
         @Override
@@ -79,8 +85,9 @@ public class Cli {
 
             new Act.Iterative(
                     new ActGlobalSettings(
-                            globalSettingsXml,
-                            globalRepositoryManifest
+                            new InputOf(globalSettingsXml),
+                            new OutputTo(globalRepositoryManifest),
+                            repositorySnapshot
                     ),
                     new ActAssemble(
                             new Builds.PomDefinitions(pomDeclarations),
@@ -111,6 +118,10 @@ public class Cli {
         @CommandLine.Option(names = {"--pom"}, required = true,
                 paramLabel = "POM", description = "the pom xml template file")
         public Path pom;
+
+        @CommandLine.Option(names = {"--m2-repository"},
+                paramLabel = "REPO", description = "the repository tar")
+        public Path extRepository;
 
         @CommandLine.Option(names = {"--run-manifest"}, required = true,
                 paramLabel = "REPO", description = "the repository tar")
@@ -162,12 +173,14 @@ public class Cli {
                     .workDir(workDir)
                     .pomTemplate(Files.asByteSource(this.pom.toFile()))
                     .outputs(outputs)
+                    .runManifest(new RunManifest(runManifest))
                     .build();
 
             new Act.Iterative(
-                    new Acts.SettingsXml(
-                            new RunManifest(runManifest)
+                    new Acts.Repository(
+                            extRepository
                     ),
+                    new Acts.SettingsXml(),
                     new Acts.Deps(),
                     new Acts.InstallParentPOM(
                             maven

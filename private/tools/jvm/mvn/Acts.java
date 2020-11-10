@@ -158,8 +158,6 @@ public final class Acts {
     @Accessors(fluent = true)
     static class SettingsXml implements Act {
 
-        private final RunManifest manifest;
-
         /**
          * Offline mode.
          */
@@ -168,9 +166,6 @@ public final class Acts {
         private boolean offline = false;
 
 
-        public SettingsXml(RunManifest manifest) {
-            this.manifest = manifest;
-        }
 
 
         @SneakyThrows
@@ -187,7 +182,7 @@ public final class Acts {
                     .build();
 
             final Text xml = new Template.Mustache(
-                    new InputOf(this.manifest.getSettingsXml()),
+                    new InputOf(project.runManifest().getSettingsXml()),
                     props
             ).eval();
 
@@ -207,21 +202,21 @@ public final class Acts {
     @Slf4j
     static class Repository implements Act {
 
-        @NonNull
         private final Path image;
 
         @Override
         @lombok.SneakyThrows
         public Project accept(Project project) {
-            final Path repository = project.repository();
-            Archive.extractTar(image, repository);
-            project.args().tag(Args.FlagsKey.LOCAL_REPOSITORY, repository.toFile());
-            if (log.isDebugEnabled()) {
-                log.debug("Repository state: {}", repository);
-                Files.find(repository, 30, (f,attr) -> !attr.isDirectory()).forEach(file ->
-                        log.debug(" {}", repository.relativize(file) ));
+            if (image != null) {
+                final Path repository = project.repository();
+                Archive.extractTar(image, repository);
+                project.args().tag(Args.FlagsKey.LOCAL_REPOSITORY, repository.toFile());
+                if (log.isDebugEnabled()) {
+                    log.debug("Repository state: {}", repository);
+                    Files.find(repository, 30, (f,attr) -> !attr.isDirectory()).forEach(file ->
+                            log.debug(" {}", repository.relativize(file) ));
+                }
             }
-
             return project;
         }
     }

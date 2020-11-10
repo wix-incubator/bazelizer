@@ -41,7 +41,8 @@ declare_pom = rule(
 RepositoryInfo = provider(fields={
     "run_manifest": """
     Consolidated repository manifest
-"""
+""",
+    "tar": "Snapshot"
 })
 
 _BuildDef = provider(fields={
@@ -52,9 +53,8 @@ _BuildDef = provider(fields={
 
 
 def _maven_repository_impl(ctx):
-    #tar_name = ctx.label.name + ".tar"
-    #tar = ctx.actions.declare_file(tar_name)
-    man_xml = ctx.outputs.manifest
+    tar = None
+    builds_run_manifest = ctx.outputs.manifest
 
     reposiotry_def_args = ctx.actions.args()
     pom_providers = [dep[PomDeclarationInfo] for dep in ctx.attr.modules]
@@ -81,14 +81,21 @@ def _maven_repository_impl(ctx):
     # cli options
     args.add('build-repository')
     args.add('--def', build_def.path)
-#    args.add('--writeImg', tar.path)
-    args.add('--global-manifest', man_xml.path)
-    args.add('--settings', ctx.attr.unsafe_global_settings)
 
+    outputs = [builds_run_manifest]
+
+    args.add('--settings', ctx.attr.unsafe_global_settings)
+    args.add('--global-manifest', builds_run_manifest.path)
+
+    if not ctx.attr.use_global_cache:
+        tar_name = ctx.label.name + ".tar"
+        tar = ctx.actions.declare_file(tar_name)
+        args.add('--mk-snapshot', tar.path)
+        outputs.append(tar)
 
     ctx.actions.run(
         inputs = depset([build_def], transitive = [depset(ctx.files.data)] + [d.deps for d in pom_providers]),
-        outputs = [ctx.outputs.manifest],
+        outputs = outputs,
         arguments = [args],
         executable = ctx.executable._tool,
         mnemonic = "MavenRepositoryMaker"
@@ -96,10 +103,11 @@ def _maven_repository_impl(ctx):
 
     return [
         DefaultInfo(
-            files= depset([man_xml])
+            files= depset(outputs)
         ),
         RepositoryInfo(
-           run_manifest =  man_xml
+           run_manifest =  builds_run_manifest,
+           tar = tar
         )
     ]
 
@@ -111,6 +119,7 @@ maven_repository = rule(
     attrs = {
         "modules": attr.label_list(),
         "unsafe_global_settings": attr.string(),
+        "use_global_cache": attr.bool(),
         "data": attr.label_list(allow_files = True),
         "_tool": attr.label(default="//private/tools/jvm/mvn", allow_files = True, executable = True, cfg = "host")
     }

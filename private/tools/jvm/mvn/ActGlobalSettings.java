@@ -10,6 +10,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.cactoos.Input;
 import org.cactoos.Output;
+import org.cactoos.Text;
 import org.cactoos.io.InputOf;
 import org.cactoos.io.InputStreamOf;
 import org.cactoos.io.OutputTo;
@@ -25,14 +26,6 @@ import java.util.Collection;
 @AllArgsConstructor
 public class ActGlobalSettings implements Act {
 
-    /**
-     * Ctor.
-     * @param settings settings xml
-     * @param outputManifest output build run manifest.
-     */
-    public ActGlobalSettings(Path settings, Path outputManifest) {
-        this(new InputOf(settings), new OutputTo(outputManifest));
-    }
 
     /**
      * Current build manifest.
@@ -44,6 +37,11 @@ public class ActGlobalSettings implements Act {
      */
     private final Output runManifestOutput;
 
+    /**
+     * optional tar archive of a repo.
+     */
+    private Path repositorySnapshot;
+
     @SneakyThrows
     @Override
     public Project accept(Project project) {
@@ -51,32 +49,59 @@ public class ActGlobalSettings implements Act {
         final XML currentSettingsXml = new XMLDocument(
                 new InputStreamOf(globalSettingsXml)
         );
-
         final File bazelLocalRepository = new File(
                 currentSettingsXml.xpath("/settings/localRepository/text()").get(0)
         );
 
+        final RunManifest.Builder builder = new RunManifest.Builder();
+
+        Project projectNew = project.toBuilder()
+                .m2Directory(bazelLocalRepository.toPath().getParent())
+                .build();
+        final ImmutableMap.Builder<Object, Object> props = ImmutableMap.builder();
+        props.put("localRepository", "{{ localRepository }}");
+
+        if (repositorySnapshot == null) {
+            props.put("mirroring", true);
+            props.put("mirrorUrl", bazelLocalRepository.toURI().toString());
+            props.put("mirrorId", SysProps.workspace().orElse("bazel.build"));
+
+            projectNew.outputs().add(
+                    proj -> {
+                        final Collection<File> files = FileUtils.listFiles(
+                                projectNew.repository().toFile(),
+                                FileFilterUtils.suffixFileFilter("_remote.repositories"),
+                                FileFilterUtils.trueFileFilter()
+                        );
+
+                        //System.out.println(files);
+                        //noinspection ResultOfMethodCallIgnored
+                        files.forEach(File::delete);
+                    }
+            );
+
+        } else {
+            props.put("mirroring", false);
+            projectNew.outputs().add(
+                    new OutputFile.ArchiveOf(
+                            new Archive.LocalRepositoryDir(bazelLocalRepository.toPath()),
+                            new OutputTo(this.repositorySnapshot)
+                    )
+            );
+            builder.useSnapshot(true);
+        }
+
+        final Text settings = new Template.Mustache(
+                new ResourceOf("settings.mustache.xml"),
+                props.build()
+        ).eval();
+        final String tpl = settings.asString();
         log.info("settings.xml:\n{}", new Pom.PrettyPrintXml(currentSettingsXml).asString());
 
-        final String tpl = new Template.Mustache(
-                new ResourceOf("settings.mustache.xml"),
-                ImmutableMap.of(
-                        "localRepository", "{{ localRepository }}",
-                        "mirrorUrl", bazelLocalRepository.toURI().toString(),
-                        "mirrorId", SysProps.workspace().orElse("bazel.build")
-                )
-        ).eval().asString();
+        final XML buildSettingsXmlTpl = new XMLDocument(tpl);
 
-        final XML buildSettingsXmlTpl = new XMLDocument(
-                tpl
-        );
-
-        final RunManifest runManifest = new RunManifest.Builder()
+        final RunManifest runManifest = builder
                 .settingsXmlTemplate(new Pom.PrettyPrintXml(buildSettingsXmlTpl).asString())
-                .build();
-
-        final Project projectNew = project.toBuilder()
-                .m2Directory(bazelLocalRepository.toPath().getParent())
                 .build();
 
         projectNew.outputs().add(
@@ -84,20 +109,6 @@ public class ActGlobalSettings implements Act {
                         runManifest.asBinary(),
                         runManifestOutput
                 )
-        );
-
-        projectNew.outputs().add(
-                proj -> {
-                    final Collection<File> files = FileUtils.listFiles(
-                            projectNew.repository().toFile(),
-                            FileFilterUtils.suffixFileFilter("_remote.repositories"),
-                            FileFilterUtils.trueFileFilter()
-                    );
-
-                    //System.out.println(files);
-                    //noinspection ResultOfMethodCallIgnored
-                    files.forEach(File::delete);
-                }
         );
         return projectNew;
     }

@@ -20,8 +20,6 @@ import java.util.List;
 @ToString
 public final class Project {
 
-
-
     interface ProjectView {
         Iterable<Dep> deps();
         String groupId();
@@ -35,6 +33,10 @@ public final class Project {
     private String artifactId;
     @Deprecated
     private String groupId;
+
+
+    @Getter
+    private RunManifest runManifest;
 
     /**
      * Dependencies.

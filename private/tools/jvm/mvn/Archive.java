@@ -74,8 +74,16 @@ public interface Archive {
          * @param project project
          */
         public LocalRepositoryDir(Project project) {
+            this(project.repository());
+        }
+
+        /**
+         * Ctor.
+         * @param repository project local repository
+         */
+        public LocalRepositoryDir(Path repository) {
             this.archive = new TarDirectory(
-                    project.repository(),
+                    repository,
                     FileFilterUtils.and(
                             FileFilterUtils.fileFileFilter(),
                             // SEE: https://stackoverflow.com/questions/16866978/maven-cant-find-my-local-artifacts

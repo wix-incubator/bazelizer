@@ -6,6 +6,7 @@ _go_offline_modules(
     visibility = ["//visibility:public"],
     modules = [{go_offline_modules}],
     unsafe_global_settings = "{unsafe_global_settings}",
+    use_global_cache = {use_global_cache},
     data = [ ":{go_offline_target_name}_metadata" ],
 )
 
@@ -75,6 +76,7 @@ def execute_build(name, **kwargs):
 _maven_repository_registry_attrs = {
     "modules": attr.label_list(),
     "use_unsafe_local_cache": attr.bool(default = True),
+    "use_global_cache": attr.bool(default = True),
     "repositories": attr.string_dict(),
     "_dummy": attr.label(default = Label("//maven:defs.bzl"))
 }
@@ -113,6 +115,7 @@ def _maven_repository_registry_impl(repository_ctx):
                 '"@%s%s"' % (d.workspace_name, d) for d in repository_ctx.attr.modules
             ]),
             unsafe_global_settings = settings_xml,
+            use_global_cache = repository_ctx.attr.use_global_cache
         ),
         False,  # not executable
     )

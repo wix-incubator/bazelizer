@@ -19,13 +19,23 @@ sh_test(
     deps = [":MavenImageDummy"]
 )
 
-#sh_test(
-#    name = "MavenImageTarTest",
-#    srcs = ["test_tar_repo.sh"],
-#    args = ["external/maven_e2e/pinned_maven_repository.tar"],
-#    data = [_buildpack],
-#    deps = [":MavenImageDummy"]
-#)
+#
+# Snap
+#
+
+sh_library(
+    name = "MavenImageDummy2",
+    srcs = ["dummy.sh"],
+    data = ["@maven_e2e//:pinned_maven_repository"],
+)
+
+sh_test(
+    name = "MavenImageTarTest",
+    srcs = ["test_tar_repo.sh"],
+    args = ["external/maven_e2e/pinned_maven_repository.tar"],
+    data = ["@maven_e2e//:pinned_maven_repository"],
+    deps = [":MavenImageDummy2"]
+)
 
 #
 # running

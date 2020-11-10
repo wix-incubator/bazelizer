@@ -13,6 +13,7 @@ import org.xembly.Xembler;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 
 public class RunManifest {
 
@@ -23,14 +24,18 @@ public class RunManifest {
     @Accessors(fluent = true)
     static class Builder {
         private String settingsXmlTemplate;
+        private boolean useSnapshot;
 
         public RunManifest build() {
+            final Directives directives = new Directives()
+                    .add("global")
+                    .add("settings_tpl").set(Xembler.escape(settingsXmlTemplate)).up();
+
+            directives.add("repo-snapshot").set(useSnapshot);
+
             return new RunManifest(
                     new XMLDocument(
-                            new Xembler(new Directives()
-                                    .add("global")
-                                    .add("settings_tpl").set(Xembler.escape(settingsXmlTemplate))
-                            ).domQuietly()
+                            new Xembler(directives).domQuietly()
                     )
             );
         }
@@ -67,6 +72,11 @@ public class RunManifest {
 
     public String getSettingsXml() {
         return xml.xpath("//global/settings_tpl/text()").get(0);
+    }
+
+    public boolean isUseRepoSnapshot() {
+        final List<String> xpath = xml.xpath("//global/repo-snapshot/text()");
+        return "true".equalsIgnoreCase(xpath.isEmpty() ? "" : xpath.get(0));
     }
 
     public XML asXML() {
