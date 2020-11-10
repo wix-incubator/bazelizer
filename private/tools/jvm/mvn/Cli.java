@@ -20,9 +20,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class Cli {
 
-    static {
-        SLF4JConfigurer.setLogLevel(SLF4JConfigurer.ToolLogLevel.DEBUG);
-    }
+//    static {
+//        SLF4JConfigurer.setLogLevel(SLF4JConfigurer.ToolLogLevel.DEBUG);
+//    }
 
     static class ArgsFactory {
 
@@ -63,7 +63,6 @@ public class Cli {
         @CommandLine.Option(names = {"-gm", "--global-manifest"},
                 paramLabel = "PATH", description = "desired output for repo snapshot")
         public Path globalRepositoryManifest;
-
 
         @SneakyThrows
         @Override

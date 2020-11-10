@@ -1,13 +1,16 @@
 
+
+
+
+
 _BUILD = """
 load("@wix_incubator_bazelizer//private/ruls/maven:repository.bzl", _go_offline_modules = "maven_repository")
-
 
 _go_offline_modules(
     name = "{go_offline_target_name}",
     visibility = ["//visibility:public"],
     modules = [{go_offline_modules}],
-    unsafe_global_settings = "{unsafe_global_settings}"
+    unsafe_global_settings = "{unsafe_global_settings}",
 )
 
 filegroup(
@@ -17,7 +20,6 @@ filegroup(
         "_m2/repository/**/*"
     ]),
 )
-
 """
 
 _SETTINGS = """<?xml version="1.0" encoding="UTF-8"?>
