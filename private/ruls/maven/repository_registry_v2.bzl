@@ -1,8 +1,3 @@
-
-
-
-
-
 _BUILD = """
 load("@wix_incubator_bazelizer//private/ruls/maven:repository.bzl", _go_offline_modules = "maven_repository")
 
@@ -14,7 +9,7 @@ _go_offline_modules(
 )
 
 filegroup(
-    name = "{user_m2_repo_name}",
+    name = "{go_offline_target_name}_files",
     visibility = ["//visibility:public"],
     srcs = glob([
         "_m2/repository/**/*"
@@ -111,9 +106,6 @@ def _maven_repository_registry_impl(repository_ctx):
                 '"@%s%s"' % (d.workspace_name, d) for d in repository_ctx.attr.modules
             ]),
             unsafe_global_settings = settings_xml,
-
-            user_m2_repo_name = "m2_files",
-            user_m2_repo = str(m2_dir + "/" + "repository"),
         ),
         False,  # not executable
     )
@@ -133,7 +125,7 @@ def _maven_repository_registry_impl(repository_ctx):
         (_RUNNER_BZL_FILE).format(
             maven_repository_ref = "@%s//:%s" % (repository_name, maven_repository_target_name),
             imports = "",
-            data = "@%s//:%s" % (repository_name, "m2_files"),
+            data = "@%s//:%s" % (repository_name, "%s_files" % (maven_repository_target_name)),
         ),
         False,  # not executable
     )

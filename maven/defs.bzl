@@ -17,11 +17,6 @@ _declare_pom = "declare_pom"
 )
 
 load(
-"//private/ruls/maven:repository_registry.bzl",
-_maven_repository_registry = "maven_repository_registry"
-)
-
-load(
 "//private/ruls/maven:repository_registry_v2.bzl",
 _maven_repository_registry_v2 = "maven_repository_registry"
 )
