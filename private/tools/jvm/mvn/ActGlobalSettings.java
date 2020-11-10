@@ -103,7 +103,7 @@ public class ActGlobalSettings implements Act {
 
             project.outputs().add(
                     new OutputFile.ArchiveOf(
-                            new Archive.LocalRepositoryDir(bazelLocalRepository.toPath()),
+                            new Archive.LocalRepositoryDir(project.repository()),
                             new OutputTo(this.repositorySnapshot)
                     )
             );
