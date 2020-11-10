@@ -8,6 +8,7 @@ import org.apache.maven.shared.invoker.InvocationRequest;
 import org.apache.maven.shared.invoker.InvocationResult;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
 
@@ -63,6 +64,10 @@ public interface Maven {
                 log.error("Build failed");
                 log.error("================ Project ===============");
                 log.error("{}", build.debug());
+                log.error("repository state:");
+                Files.walk(build.repository(), 2).limit(45).forEach(f -> {
+                    log.error("-> {}", f);
+                });
                 log.error("========================================");
                 throw new ToolMavenInvocationException(result);
             }

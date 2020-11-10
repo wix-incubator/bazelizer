@@ -103,6 +103,11 @@ def _run_mvn_impl(ctx):
 
     args.add("run")
     args.add("--run-manifest", repository_info.run_manifest.path)
+
+    if repository_info.tar:
+        args.add("--m2-repository", repository_info.tar.path)
+        input_files.append(repository_info.tar)
+
     args.add("--srcs", srcs_manifest)
     args.add("--deps", deps_manifest)
     args.add("--write-artifact", def_output_artifact_file.path)

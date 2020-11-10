@@ -65,8 +65,10 @@ public final class Acts {
 
         @Override
         public Project accept(Project project) {
+            final boolean useRepoSnapshot = project.runManifest().isUseRepoSnapshot();
+
             project.args()
-                    .offline(false)
+                    .offline(useRepoSnapshot)
                     .append("clean", "install");
 
             maven.run(project);
