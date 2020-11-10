@@ -1,1 +1,0 @@
-exports_files(["TEMPLATE_maven_repository.sh"])

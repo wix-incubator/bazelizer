@@ -22,8 +22,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static com.google.common.collect.Iterables.transform;
-import static com.google.common.collect.Lists.newArrayList;
 
 @AllArgsConstructor
 public class XemblerAugment {
@@ -49,14 +47,14 @@ public class XemblerAugment {
      * @throws Exception if any
      */
     private static Node withinContext(XPathContext context, Scalar<Node> block) throws Exception {
-        final XPathFactory real = FACTORY.get();
+        final XPathFactory real = _org_xembly_XpathDirectiveFactory.get();
         if (!(real instanceof XPathFactoryWrap)) {
-            FACTORY.set(new XPathFactoryWrap(real, context));
+            _org_xembly_XpathDirectiveFactory.set(new XPathFactoryWrap(real, context));
         }
         try {
             return block.value();
         } finally {
-            FACTORY.set(real);
+            _org_xembly_XpathDirectiveFactory.set(real);
         }
     }
 
@@ -254,11 +252,11 @@ public class XemblerAugment {
         } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
             e.printStackTrace();
         }
-        FACTORY = f;
+        _org_xembly_XpathDirectiveFactory = f;
     }
     /**
      * XpathDirective factory ref.
      */
-    private final static ThreadLocal<XPathFactory> FACTORY;
+    private final static ThreadLocal<XPathFactory> _org_xembly_XpathDirectiveFactory;
 
 }

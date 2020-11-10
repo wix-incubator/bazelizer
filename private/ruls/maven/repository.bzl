@@ -39,9 +39,10 @@ declare_pom = rule(
 )
 
 RepositoryInfo = provider(fields={
-    "img": """
-Consolidated M2 repository for all registered modules
-"""
+    "run_manifest": """
+    Consolidated repository manifest
+""",
+    "tar": "Snapshot"
 })
 
 _BuildDef = provider(fields={
@@ -52,8 +53,8 @@ _BuildDef = provider(fields={
 
 
 def _maven_repository_impl(ctx):
-    tar_name = ctx.label.name + ".tar"
-    tar = ctx.actions.declare_file(tar_name)
+    tar = None
+    builds_run_manifest = ctx.outputs.manifest
 
     reposiotry_def_args = ctx.actions.args()
     pom_providers = [dep[PomDeclarationInfo] for dep in ctx.attr.modules]
@@ -80,13 +81,21 @@ def _maven_repository_impl(ctx):
     # cli options
     args.add('build-repository')
     args.add('--def', build_def.path)
-    args.add('--writeImg', tar.path)
-    args.add('--local-cache', ctx.attr.unsafe_local_cache)
 
+    outputs = [builds_run_manifest]
+
+    args.add('--settings', ctx.attr.unsafe_global_settings)
+    args.add('--global-manifest', builds_run_manifest.path)
+
+    if not ctx.attr.use_global_cache:
+        tar_name = ctx.label.name + ".tar"
+        tar = ctx.actions.declare_file(tar_name)
+        args.add('--mk-snapshot', tar.path)
+        outputs.append(tar)
 
     ctx.actions.run(
         inputs = depset([build_def], transitive = [depset(ctx.files.data)] + [d.deps for d in pom_providers]),
-        outputs = [ctx.outputs.img],
+        outputs = outputs,
         arguments = [args],
         executable = ctx.executable._tool,
         mnemonic = "MavenRepositoryMaker"
@@ -94,21 +103,23 @@ def _maven_repository_impl(ctx):
 
     return [
         DefaultInfo(
-            files= depset([tar])
+            files= depset(outputs)
         ),
         RepositoryInfo(
-           img =  tar
+           run_manifest =  builds_run_manifest,
+           tar = tar
         )
     ]
 
 maven_repository = rule(
     implementation = _maven_repository_impl,
     outputs = {
-      "img": "%{name}.tar"
+      "manifest": "%{name}.manifest.xml"
     },
     attrs = {
         "modules": attr.label_list(),
-        "unsafe_local_cache": attr.string(),
+        "unsafe_global_settings": attr.string(),
+        "use_global_cache": attr.bool(),
         "data": attr.label_list(allow_files = True),
         "_tool": attr.label(default="//private/tools/jvm/mvn", allow_files = True, executable = True, cfg = "host")
     }

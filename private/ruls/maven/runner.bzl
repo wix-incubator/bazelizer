@@ -71,6 +71,7 @@ _run_mvn_attrs = {
     "srcs": attr.label_list(allow_files = True),
     "pom_def": attr.label(mandatory=True),
     "outputs": attr.string_list(),
+    "data": attr.label_list(allow_files = True),
     "log_level": attr.string(default="OFF"),
     "_tool": attr.label(default="//private/tools/jvm/mvn", allow_files = True, executable = True, cfg = "host")
 }
@@ -88,19 +89,25 @@ def _run_mvn_impl(ctx):
 
     output_files = [def_output_jar_file, def_output_artifact_file]
     input_files = [
-        repository_info.img,
+        repository_info.run_manifest,
         pom_def_info.file,
         deps_manifest,
         srcs_manifest
     ] + deps_ctx.files
 
-    args = ctx.actions.args()
+    input_transitive_files = [f.files for f in ctx.attr.srcs] + [ f.files for f in ctx.attr.data ]
 
+    args = ctx.actions.args()
     args.add("--jvm_flag=-Dtools.jvm.mvn.LogLevel=%s" % (ctx.attr.log_level))
     args.add("--jvm_flag=-Dtools.jvm.mvn.BazelLabelName=%s" % (ctx.label))
 
     args.add("run")
-    args.add("--repo", repository_info.img.path)
+    args.add("--run-manifest", repository_info.run_manifest.path)
+
+    if repository_info.tar:
+        args.add("--m2-repository", repository_info.tar.path)
+        input_files.append(repository_info.tar)
+
     args.add("--srcs", srcs_manifest)
     args.add("--deps", deps_manifest)
     args.add("--write-artifact", def_output_artifact_file.path)
@@ -118,7 +125,7 @@ def _run_mvn_impl(ctx):
         args.add("-O{dest}={src}".format(dest=file.path, src=out))
 
     ctx.actions.run(
-        inputs = depset(input_files, transitive = [f.files for f in ctx.attr.srcs]),
+        inputs = depset(input_files, transitive = input_transitive_files),
         outputs = output_files,
         arguments = [args],
         executable = ctx.executable._tool,

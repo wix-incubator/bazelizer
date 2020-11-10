@@ -27,7 +27,9 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.function.Function;
 
-public interface Archive extends Proc<Output> {
+public interface Archive {
+
+    void writeTo(Output out) throws Exception;
 
     /**
      * Tar.
@@ -41,7 +43,7 @@ public interface Archive extends Proc<Output> {
 
 
         @Override
-        public void exec(Output out) throws Exception {
+        public void writeTo(Output out) throws Exception {
             final Closer closer = Closer.create();
             final TarArchiveOutputStream aos = closer.register(new TarArchiveOutputStream(out.stream()));
             aos.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
@@ -72,8 +74,16 @@ public interface Archive extends Proc<Output> {
          * @param project project
          */
         public LocalRepositoryDir(Project project) {
+            this(project.repository());
+        }
+
+        /**
+         * Ctor.
+         * @param repository project local repository
+         */
+        public LocalRepositoryDir(Path repository) {
             this.archive = new TarDirectory(
-                    project.repository(),
+                    repository,
                     FileFilterUtils.and(
                             FileFilterUtils.fileFileFilter(),
                             // SEE: https://stackoverflow.com/questions/16866978/maven-cant-find-my-local-artifacts
@@ -117,14 +127,14 @@ public interface Archive extends Proc<Output> {
          * @param filesFilter files predicate
          */
         public TarDirectory(Path dir, IOFileFilter filesFilter)  {
-            archive = in -> new Archive.TAR(
+            archive = output -> new Archive.TAR(
                     FileUtils.listFiles(
                             dir.toFile(),
                             filesFilter,
                             FileFilterUtils.directoryFileFilter() // recursive
                     ),
                     file -> dir.relativize(file.toPath())
-            ).exec(in);
+            ).writeTo(output);
         }
     }
 

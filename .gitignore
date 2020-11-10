@@ -51,3 +51,6 @@ tools/2nd_party_resolved_dependencies/*
 # Eclipse IDE
 .project
 
+
+tests/e2e/mvn-build-lib-just/
+

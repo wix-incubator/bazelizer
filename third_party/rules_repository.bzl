@@ -12,6 +12,7 @@ _maven_binary_version = "3.6.3"
 _maven_binary_sha256 = "26ad91d751b3a9a53087aefa743f4e16a17741d3915b219cf74112bf87a438c5"
 
 MAVEN_BINARY_NAME = "wix_incubator_bazelizer_maven_binary_tool"
+MAVEN_BINARY_NAME_CLI = "wix_incubator_bazelizer_maven_binary_tool"
 
 def _jvm_external_deps(deps):
     return [ "@" + _jvm_external_name( x ) for x in  deps ]
@@ -37,17 +38,25 @@ def _jvm_import(name,artifact,server_urls,fetch_sources,**kwargs):
         actual = "@%s" % (_id)
     )
 
+
+_MAVEN_BUILD_FILE = """
+
+filegroup(
+    name = "{mvn_files_target}",
+    visibility = ["//visibility:public"],
+    srcs = glob(["bin/**", "boot/**", "conf/**", "lib/**"]),
+)
+"""
+
 def install(server_urls = _def_server_urls):
 
     if native.existing_rule(MAVEN_BINARY_NAME) == None:
         http_archive(
            name = MAVEN_BINARY_NAME,
            url = "https://www2.apache.paket.ua/maven/maven-3/" + _maven_binary_version + "/binaries/apache-maven-" + _maven_binary_version + "-bin.tar.gz",
-           build_file_content = "\n".join([
-               'filegroup(name = "' + MAVEN_BINARY_NAME + '", visibility = ["//visibility:public"],',
-               '  srcs = glob(["bin/**", "boot/**", "conf/**", "lib/**"])',
-               ")"
-           ]),
+           build_file_content = _MAVEN_BUILD_FILE.format(
+               mvn_files_target=MAVEN_BINARY_NAME
+            ),
            sha256 = _maven_binary_sha256,
            strip_prefix = "apache-maven-" + _maven_binary_version
         )
@@ -133,7 +142,6 @@ def install(server_urls = _def_server_urls):
         testonly = 1,
         artifact_sha256 = "66fdef91e9739348df7a096aa384a5685f4e875584cce89386a7a47251c4d8e9",
     )
-
 
     _jvm_import(
 	    name = "org_hamcrest_hamcrest_library",

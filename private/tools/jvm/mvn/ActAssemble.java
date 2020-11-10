@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.file.Path;
+import java.util.StringJoiner;
 
 import static com.google.common.io.Files.asByteSource;
 
@@ -15,7 +16,7 @@ public class ActAssemble implements Act {
     /**
      * Definition of all builds.
      */
-    private final Iterable<Builds.DefPom> def;
+    private final Iterable<Builds.PomDefinition> def;
 
     /**
      * Target action for each build.
@@ -30,11 +31,11 @@ public class ActAssemble implements Act {
         log.info("Evaluate build graph:\n{}", builds);
 
         for (Builds.BuildNode node : builds) {
-            final Builds.DefPom pom = node.self();
+            final Builds.PomDefinition pom = node.self();
             final Path pomFile = pom.getFile();
             final Path parent = pomFile.getParent();
 
-            final String id = SLF4JConfigurer.shortPath(pomFile);
+            final String id = SLF4JConfigurer.shortMDC(pomFile);
             SLF4JConfigurer.withMDC(id, () -> {
 
                 final Project build = Project.builder()
@@ -50,13 +51,14 @@ public class ActAssemble implements Act {
                 log.info("running build {}", node);
 
                 act.accept(
-                        build.toBuilder().m2Home(simple.m2Home()).build()
+                        build.toBuilder().m2Directory(simple.m2Directory()).build()
                 );
             });
         }
 
         return simple;
     }
+
 
     private String mdc(Path pomFile) {
         final int count = pomFile.getNameCount();

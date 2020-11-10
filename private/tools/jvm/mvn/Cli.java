@@ -2,17 +2,16 @@ package tools.jvm.mvn;
 
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.cactoos.io.InputOf;
+import org.cactoos.io.OutputTo;
 import picocli.CommandLine;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,6 +22,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class Cli {
 
+//    static {
+//        SLF4JConfigurer.setLogLevel(SLF4JConfigurer.ToolLogLevel.DEBUG);
+//    }
 
     static class ArgsFactory {
 
@@ -50,24 +52,27 @@ public class Cli {
     @CommandLine.Command(name = "build-repository")
     public static class MkRepository implements Runnable {
 
+//        static {
+//            SLF4JConfigurer.setLogLevel(SLF4JConfigurer.ToolLogLevel.DEBUG);
+//        }
+
         @CommandLine.Mixin
         public ArgsFactory argsFactory = new ArgsFactory();
-
-        @CommandLine.Option(names = {"-pt", "--pomFile"},
-                paramLabel = "POM", description = "the pom xml template file")
-        public Path runPom;
-
-        @CommandLine.Option(names = {"-wi", "--writeImg"},
-                paramLabel = "PATH", description = "desired output for repo snapshot")
-        public Path writeImg;
 
 
         @CommandLine.Option(names = {"--def"}, description = "Rule specific output settings")
         public Path pomDeclarations;
 
+        @CommandLine.Option(names = {"-s", "--settings"}, description = "External settings xml")
+        public Path globalSettingsXml;
 
-        @CommandLine.Option(names = {"--local-cache"}, description = "M2 host's m2 cache")
-        public Path hostMavenCache;
+        @CommandLine.Option(names = {"-gm", "--global-manifest"},
+                paramLabel = "PATH", description = "desired output for run manifest")
+        public Path globalRepositoryManifest;
+
+        @CommandLine.Option(names = {"-rs", "--mk-snapshot"},
+                paramLabel = "PATH", description = "desired output for repo snapshot")
+        public Path repositorySnapshot;
 
         @SneakyThrows
         @Override
@@ -75,30 +80,26 @@ public class Cli {
 
             final Maven maven = new Maven.BazelInvoker();
             final Args args = argsFactory.newArgs();
+            args.tag(Args.FlagsKey.SETTINGS_XML, globalSettingsXml);
 
             final Project simple = Project.builder()
                     .args(args)
                     .build();
 
-            simple.outputs().add(
-                    new OutputFile.ProjectFor(
-                            Archive.LocalRepositoryDir::new,
-                            writeImg.toString()
-                    )
-            );
-
             new Act.Iterative(
-                    new Acts.SettingsXml(
-                            new Repositories.BazelLinkedLocalM2(Paths.get("/Users/bohdans/.m2/repository")) // TODO
+                    new ActGlobalSettings(
+                            new InputOf(globalSettingsXml),
+                            new OutputTo(globalRepositoryManifest),
+                            this.repositorySnapshot
                     ),
                     new ActAssemble(
-                            new Builds.DefPomIterable(pomDeclarations),
+                            new Builds.PomDefinitions(pomDeclarations),
                             new Act.Iterative(
                                     new Acts.InstallParentPOM(
                                             maven
                                     ),
                                     new Acts.ParentPOM(),
-                                    new Acts.POM(),
+                                    new Acts.PomFile(),
                                     new Acts.MvnGoOffline(
                                             maven
                                     )
@@ -106,14 +107,6 @@ public class Cli {
                     ),
                     new Acts.Outputs()
             ).accept(simple);
-
-            log.info("Consolidated repository archived: "
-                    + FileUtils.byteCountToDisplaySize(writeImg.toFile().length()));
-        }
-
-        @SuppressWarnings("UnstableApiUsage")
-        private ByteSource getPomXmlSrc() {
-            return Files.asByteSource(runPom.toFile());
         }
     }
 
@@ -129,9 +122,13 @@ public class Cli {
                 paramLabel = "POM", description = "the pom xml template file")
         public Path pom;
 
-        @CommandLine.Option(names = {"--repo"}, required = true,
+        @CommandLine.Option(names = {"--m2-repository"},
                 paramLabel = "REPO", description = "the repository tar")
-        public Path repository;
+        public Path extRepository;
+
+        @CommandLine.Option(names = {"--run-manifest"}, required = true,
+                paramLabel = "REPO", description = "the repository tar")
+        public Path runManifest;
 
         @CommandLine.Option(names = {"--deps"}, paramLabel = "DEPS", description = "the deps manifest")
         public File deps;
@@ -157,7 +154,6 @@ public class Cli {
         @Override
         @lombok.SneakyThrows
         public void run() {
-
             final Path workDir = getWorkDir();
             final Path pom = Project.syntheticPomFile(workDir);
             final Args args = argsFactory.newArgs();
@@ -168,7 +164,7 @@ public class Cli {
                     .map(entry -> {
                         final String declared = entry.getKey();
                         final String buildFile = entry.getValue();
-                        return new OutputFile.Simple(buildFile, declared);
+                        return new OutputFile.TargetFolderFile(buildFile, declared);
                     })
                     .collect(Collectors.toList());
 
@@ -180,17 +176,20 @@ public class Cli {
                     .workDir(workDir)
                     .pomTemplate(Files.asByteSource(this.pom.toFile()))
                     .outputs(outputs)
+                    .runManifest(new RunManifest(runManifest))
                     .build();
-
 
             new Act.Iterative(
                     new Acts.Repository(
-                            repository
+                            extRepository
                     ),
                     new Acts.SettingsXml(),
                     new Acts.Deps(),
+                    new Acts.InstallParentPOM(
+                            maven
+                    ),
                     new Acts.ParentPOM(),
-                    new Acts.POM(),
+                    new Acts.PomFile(),
                     new Acts.MvnBuild(
                             maven
                     ),
@@ -203,9 +202,7 @@ public class Cli {
         }
 
         private Set<Dep> getDeps() {
-            return new Deps.Manifest(deps)
-                    .stream()
-                    .collect(Collectors.toSet());
+            return new Deps.Manifest(deps).stream().collect(Collectors.toSet());
         }
 
         private Path getWorkDir() {
@@ -226,7 +223,7 @@ public class Cli {
         int exitCode = new CommandLine(new Tool()).execute(args);
         log.info("*** {}", exitCode == 0 ? "DONE" : "FAIL");
         LocalDateTime to = LocalDateTime.now();
-        log.info("***  Time elapsed: {}s", Duration.between(from, to).getSeconds());
+        log.info("***  time elapsed: {}s", Duration.between(from, to).getSeconds());
         System.exit(exitCode);
     }
 }

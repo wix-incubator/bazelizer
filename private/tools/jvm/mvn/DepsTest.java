@@ -71,7 +71,7 @@ public class DepsTest {
         return new Deps() {
             @Override
             public Iterator<Dep> iterator() {
-                return Iterators.transform(of.iterator(), Dep.DepArtifact::new);
+                return Iterators.transform(of.iterator(), Dep.Artifact::new);
             }
         };
     }

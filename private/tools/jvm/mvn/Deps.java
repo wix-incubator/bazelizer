@@ -117,7 +117,7 @@ public interface Deps extends Iterable<Dep> {
                         }
                         return base;
                     })
-                    .map(p -> GSON.fromJson(p, Dep.DepArtifact.class))
+                    .map(p -> GSON.fromJson(p, Dep.Artifact.class))
                     .collect(Collectors.toCollection(Sets::newLinkedHashSet));
         }
 

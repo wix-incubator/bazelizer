@@ -1,5 +1,3 @@
-load("//maven:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
-
 
 #
 # tar
@@ -16,17 +14,27 @@ sh_library(
 sh_test(
     name = "MavenImageTest",
     srcs = ["test_files_exist.sh"],
-    args = ["external/maven_e2e/pinned_maven_repository.tar"],
+    args = ["external/maven_e2e/pinned_maven_repository.manifest.xml"],
     data = [_buildpack],
     deps = [":MavenImageDummy"]
+)
+
+#
+# Snap
+#
+
+sh_library(
+    name = "MavenImageDummy2",
+    srcs = ["dummy.sh"],
+    data = ["@maven_e2e//:pinned_maven_repository"],
 )
 
 sh_test(
     name = "MavenImageTarTest",
     srcs = ["test_tar_repo.sh"],
     args = ["external/maven_e2e/pinned_maven_repository.tar"],
-    data = [_buildpack],
-    deps = [":MavenImageDummy"]
+    data = ["@maven_e2e//:pinned_maven_repository"],
+    deps = [":MavenImageDummy2"]
 )
 
 #
