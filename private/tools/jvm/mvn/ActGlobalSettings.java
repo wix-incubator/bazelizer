@@ -48,12 +48,11 @@ public class ActGlobalSettings implements Act {
     @Override
     public Project accept(Project project) {
         final XML currentSettingsXml = new XMLDocument(
-                new InputStreamOf(globalSettingsXml)
+                new InputStreamOf(this.globalSettingsXml)
         );
         final File bazelLocalRepository = new File(
                 currentSettingsXml.xpath("/settings/localRepository/text()").get(0)
         );
-
 
         final RunManifest.Builder builder = new RunManifest.Builder();
         Project projectNew = project;
@@ -108,6 +107,8 @@ public class ActGlobalSettings implements Act {
                             new OutputTo(this.repositorySnapshot)
                     )
             );
+
+            projectNew.args().tag(Args.FlagsKey.SETTINGS_XML, newSettingsXml.toFile());
         }
 
         final Text buildSettings = new Template.Mustache(new ResourceOf("settings.mustache.xml"), props.build()).eval();

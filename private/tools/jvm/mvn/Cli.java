@@ -76,7 +76,7 @@ public class Cli {
 
             final Maven maven = new Maven.BazelInvoker();
             final Args args = argsFactory.newArgs();
-
+            args.tag(Args.FlagsKey.SETTINGS_XML, globalSettingsXml);
 
             final Project simple = Project.builder()
                     .args(args)
