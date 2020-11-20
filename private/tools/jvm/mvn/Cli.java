@@ -59,19 +59,17 @@ public class Cli {
         @CommandLine.Mixin
         public ArgsFactory argsFactory = new ArgsFactory();
 
-
-        @CommandLine.Option(names = {"--def"}, description = "Rule specific output settings")
+        @CommandLine.Option(names = {"--def"})
         public Path pomDeclarations;
 
-        @CommandLine.Option(names = {"-s", "--settings"}, description = "External settings xml")
+        @CommandLine.Option(names = {"-s", "--settings"})
         public Path globalSettingsXml;
 
         @CommandLine.Option(names = {"-gm", "--global-manifest"},
                 paramLabel = "PATH", description = "desired output for run manifest")
         public Path globalRepositoryManifest;
 
-        @CommandLine.Option(names = {"-rs", "--mk-snapshot"},
-                paramLabel = "PATH", description = "desired output for repo snapshot")
+        @CommandLine.Option(names = {"-rs", "--mk-snapshot"}, paramLabel = "PATH")
         public Path repositorySnapshot;
 
         @SneakyThrows
