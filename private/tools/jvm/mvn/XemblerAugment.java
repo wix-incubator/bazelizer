@@ -130,7 +130,7 @@ public class XemblerAugment {
      */
     public static class AugmentedDirs implements Iterable<Directive> {
 
-        private static final Class<?> commentType;
+        private static final Class<?> _commentType;
         static {
             Class<?> cls;
             try {
@@ -139,7 +139,7 @@ public class XemblerAugment {
                 e.printStackTrace();
                 cls = null;
             }
-            commentType = cls;
+            _commentType = cls;
         }
 
         /**
@@ -180,7 +180,7 @@ public class XemblerAugment {
                         Streams.stream(dirs).map(dir -> {
                             final String verb = dir.toString();
                             // this is actually a bug how comments are represented.
-                            if (verb.contains("CDATA") && dir.getClass() == commentType) {
+                            if (verb.contains("CDATA") && dir.getClass() == _commentType) {
                                 final Matcher matcher = BRAKETS.matcher(verb);
                                 Preconditions.checkState(matcher.find(), "verb %s invalid", verb);
                                 return String.format(COMMENT_VERB, matcher.group(1));

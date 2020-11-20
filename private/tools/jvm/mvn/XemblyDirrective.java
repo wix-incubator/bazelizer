@@ -9,19 +9,19 @@ import org.xembly.Directives;
 
 import java.util.Map;
 
-public interface XemblyFunc {
+public interface XemblyDirrective {
 
     Iterable<Directive> dirs(Project project, XML xml);
 
 
-    class PomDefaultStruc implements XemblyFunc {
+    class PomDefaultStruc implements XemblyDirrective {
         @Override
         public Iterable<Directive> dirs(Project project, XML xml) {
             return new Directives().xpath("/project").addIf("dependencies");
         }
     }
 
-    class PomParentRelPath implements XemblyFunc {
+    class PomParentRelPath implements XemblyDirrective {
         @Override
         public Iterable<Directive> dirs(Project project, XML xml) {
             final Project.ProjectView view = project.toView();
@@ -34,7 +34,7 @@ public interface XemblyFunc {
         }
     }
 
-    class PomDropDeps implements XemblyFunc {
+    class PomDropDeps implements XemblyDirrective {
         @Override
         public Iterable<Directive> dirs(Project project, XML xml) {
             return new Directives()
@@ -43,7 +43,7 @@ public interface XemblyFunc {
         }
     }
 
-    class AppendDeps implements XemblyFunc {
+    class AppendDeps implements XemblyDirrective {
         @Override
         public Iterable<Directive> dirs(Project project, XML xml) {
             final Iterable<Dep> deps = project.deps();

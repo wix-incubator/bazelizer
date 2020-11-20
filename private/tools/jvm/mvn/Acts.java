@@ -5,8 +5,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.jcabi.xml.XML;
-import com.jcabi.xml.XMLDocument;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.experimental.Accessors;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
@@ -14,20 +15,20 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.AbstractFileFilter;
 import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.apache.commons.io.filefilter.IOFileFilter;
-import org.cactoos.Input;
-import org.cactoos.Output;
 import org.cactoos.Text;
 import org.cactoos.func.UncheckedProc;
 import org.cactoos.io.BytesOf;
 import org.cactoos.io.InputOf;
 import org.cactoos.io.InputStreamOf;
 import org.cactoos.io.OutputTo;
-import org.xembly.Directives;
-import org.xembly.Xembler;
 
 import java.io.File;
-import java.nio.file.*;
-import java.util.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 
 @UtilityClass
 public final class Acts {
@@ -129,16 +130,17 @@ public final class Acts {
     @Slf4j
     static class PomFile implements Act {
 
+        private final PomTransformer transformer = new PomTransformer.Xembly();
+
         @Override
         @lombok.SneakyThrows
         public Project accept(Project project) {
             final Path syntheticPom = project.pom();
 
-            final Pom pom = new Pom.Cached(
-                    new Pom.PomXembly(
-                            new Pom.Standard(project.pomTemplate()),
-                            project
-                    )
+            final Pom pom = transformer.apply(
+                    new Pom.Cached(
+                            new Pom.Standard(project.pomTemplate())),
+                    project
             );
 
             final XML pomXml = pom.xml();

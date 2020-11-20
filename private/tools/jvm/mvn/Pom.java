@@ -2,9 +2,6 @@ package tools.jvm.mvn;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.common.io.ByteSource;
 import com.jcabi.xml.XML;
 import com.jcabi.xml.XMLDocument;
@@ -15,31 +12,28 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.experimental.Delegate;
 import org.cactoos.Input;
-import org.cactoos.Scalar;
 import org.cactoos.Text;
-import org.cactoos.scalar.UncheckedScalar;
 import org.cactoos.text.UncheckedText;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.xembly.Directive;
-import org.xembly.Xembler;
 
-import javax.xml.transform.*;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.InputStream;
 import java.io.StringWriter;
-import java.util.*;
-
-import static com.google.common.collect.Iterables.concat;
-import static com.google.common.collect.Iterables.transform;
+import java.util.List;
 
 public interface Pom {
 
     String NAMESPACE_XPATH = "/*/namespace::*[name()='']";
     String POM_NS_URI = "http://maven.apache.org/POM/4.0.0";
     String POM_NS = "pom";
+
 
     /**
      * Global xpath context.
@@ -48,12 +42,12 @@ public interface Pom {
             .add(POM_NS, POM_NS_URI)
             .add("xe", "http://www.w3.org/1999/xhtml");
 
+
     /**
      * Pom as XMP
      * @return xml
      */
     XML xml();
-
     /**
      * Group id
      * @return str
@@ -115,7 +109,7 @@ public interface Pom {
 
         @Override
         public String toString() {
-            return xml.toString();
+            return xml().toString();
         }
     }
 
@@ -126,12 +120,7 @@ public interface Pom {
             this((Supplier<XML>) pom::xml);
         }
 
-        @SuppressWarnings("unused")
-        public Cached(Scalar<XML> xml) {
-            this((Supplier<XML>) () -> new UncheckedScalar<>(xml).value());
-        }
-
-        private Cached(Supplier<XML> xml) {
+        public Cached(Supplier<XML> xml) {
             this.xml = Suppliers.memoize(xml);
         }
 
@@ -144,108 +133,8 @@ public interface Pom {
         public XML xml() {
             return xml.get();
         }
-
-        @Override
-        public String toString() {
-            return xml().toString();
-        }
     }
 
-    /**
-     * POM xml with specific transformations like xslt.
-     */
-    @SuppressWarnings({"StaticPseudoFunctionalStyleMethod","ConstantConditions"})
-    @AllArgsConstructor
-    class PomXembly implements Pom {
-
-        /**
-         * Transformer factory.
-         */
-        private static final TransformerFactory TFACTORY =
-                TransformerFactory.newInstance();
-
-        @AllArgsConstructor
-        enum XemblyFeature {
-            ENABLED("xembly:on"),
-            NO_DROP_DEPS("xembly:no-drop-deps");
-
-            private final String qname;
-        }
-
-        /**
-         * Ctor.
-         * @param input input
-         * @param project project
-         */
-        public PomXembly(Input input, Project project) {
-            this(new Standard(input), project);
-        }
-
-        /**
-         * Pom.
-         */
-        private final Pom pom;
-
-        /**
-         * Project.
-         */
-        private final Project project;
-
-        /**
-         * Xembly directives.
-         */
-        private final List<XemblyFunc> xe = ImmutableList.of(
-                new XemblyFunc.PomDefaultStruc(),
-                new XemblyFunc.PomParentRelPath(),
-                new XemblyFunc.PomDropDeps(),
-                new XemblyFunc.AppendDeps()
-        );
-
-        @SneakyThrows
-        @Override
-        public XML xml()  {
-            final XML origXML = pom.xml();
-            final SanitizedXML xml = new SanitizedXML(origXML);
-            final Set<XemblyFeature> features = getFeatures(xml);
-            if (!features.contains(XemblyFeature.ENABLED)) {
-                return xml;
-            }
-            final List<XemblyFunc> funcs = Lists.newArrayList(xe);
-            if (features.contains(XemblyFeature.NO_DROP_DEPS)) {
-                funcs.removeIf(func -> func instanceof XemblyFunc.PomDropDeps);
-            }
-
-            final Iterable<Directive> dirs = new XemblerAugment.AugmentedDirs(
-              xml.getXpathQuery(), concat(transform(funcs, d -> d.dirs(project, xml)))
-            );
-            final Node node = new XemblerAugment(
-                    new Xembler(dirs),
-                    XPATH_CONTEXT
-            ).applyQuietly(xml.node());
-
-            return new SanitizedXML(node);
-        }
-
-
-        /**
-         * Xemlby features.
-         * @return features
-         */
-        @SuppressWarnings("StaticPseudoFunctionalStyleMethod")
-        private Set<PomXembly.XemblyFeature> getFeatures(XML xml) {
-            Set<PomXembly.XemblyFeature> ll = Sets.newHashSet();
-            final List<String> xpath1 = Lists.transform(xml.nodes("/project/comment()"), Objects::toString);
-            final List<String> xpath2 = Lists.transform(xml.nodes("/comment()"), Objects::toString);
-            concat(xpath1, xpath2).forEach(comment -> {
-                for (PomXembly.XemblyFeature value : PomXembly.XemblyFeature.values()) {
-                    if (comment.contains(value.qname)) {
-                        ll.add(value);
-                    }
-                }
-            });
-            return ll;
-        }
-    }
 
     /**
      * Sanitized XML with auto prefixing xpath queries.
@@ -336,6 +225,10 @@ public interface Pom {
     @AllArgsConstructor
     class PrettyPrintXml implements Text {
 
+        private static final TransformerFactory TFACTORY =
+                TransformerFactory.newInstance();
+
+
         private final XML input;
 
         @Override
@@ -368,7 +261,7 @@ public interface Pom {
         private static String prettyPrint(Node node) {
             final StringWriter writer = new StringWriter();
             try {
-                final Transformer trans = PomXembly.TFACTORY.newTransformer();
+                final Transformer trans = TFACTORY.newTransformer();
                 trans.setOutputProperty(OutputKeys.INDENT, "yes");
                 trans.setOutputProperty(OutputKeys.VERSION, "1.0");
                 trans.setOutputProperty(OutputPropertiesFactory.S_KEY_INDENT_AMOUNT, "2");

@@ -338,9 +338,8 @@ public class PomTest {
                 .parentPom(tempDir.toPath().resolve("parent-pom.xml"))
                 .build();
 
-        return new Pom.PomXembly(
-                new InputOf(xmlStr),
-                build
-        ).xml();
+        return new PomTransformer.Xembly().apply(new Pom.Standard(
+                new InputOf(xmlStr)
+        ), build).xml();
     }
 }
