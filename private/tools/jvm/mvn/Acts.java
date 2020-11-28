@@ -17,10 +17,7 @@ import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.apache.commons.io.filefilter.IOFileFilter;
 import org.cactoos.Text;
 import org.cactoos.func.UncheckedProc;
-import org.cactoos.io.BytesOf;
-import org.cactoos.io.InputOf;
-import org.cactoos.io.InputStreamOf;
-import org.cactoos.io.OutputTo;
+import org.cactoos.io.*;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -66,10 +63,9 @@ public final class Acts {
 
         @Override
         public Project accept(Project project) {
-            final boolean useRepoSnapshot = project.runManifest().isUseRepoSnapshot();
 
             project.args()
-                    .offline(useRepoSnapshot)
+                    .offline(true)
                     .append("clean", "install");
 
             maven.run(project);
@@ -184,7 +180,7 @@ public final class Acts {
                     .build();
 
             final Text xml = new Template.Mustache(
-                    new InputOf(project.runManifest().getSettingsXml()),
+                    new ResourceOf("settings.mustache.xml"),
                     props
             ).eval();
 
