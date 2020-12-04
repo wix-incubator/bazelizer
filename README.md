@@ -29,7 +29,9 @@ Use bazel deps, depends on bazel target and event doing it efficiently.
 ![Alt text](assets/ci.png?raw=true "Title")
 
 
-## Usage
+# Usage
+
+Registering the tool
 
 ```
 # in your WORKSPACE
@@ -48,115 +50,154 @@ http_archive(
 
 load("@wix_incubator_bazelizer//third_party:rules_repository.bzl", "install")
 install()
-
-# in your BUILD files
-
-load("@wix_incubator_bazelizer//maven:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
-
-
 ```
 
+## declare_pom
+Declare a maven module that you want to lift into bazel
 
-## Design
+```
+# in BUILD file at the root of maven module
 
-This tools assume that pom.xml (e.g. build configurations) will be updated **rarely**. In this case tool represent 2 ruls:
+load("@wix_incubator_bazelizer//maven:defs.bzl", "declare_pom")
 
-- create_mvn_buildpack
-- run_mvn_buildpack
+declare_pom(
+    name = "declared_pom",
+    pom_file = ":pom.xml",
+    visibility = ["//visibility:public"]
+)
+```
+
+Where:
+
+| attr name  | description                                                        |
+|    ---     | ---                                                                |
+| name       | string; A unique name for this target.                             |
+| pom_file   | File; Reference to an maven pom file.                              |
+| parent     | Label; (optional) Reference to the _declare_pom_ target as maven parent pom. Support supported only via `<parent>...<relativePath>../path/to/parent</relativePath> </parent>` block.     |
 
 
-### create_mvn_buildpack
+### maven_repository_registry
+ 
+Repository rule, that register all pom modules and doing centralized dependencies fetch for it. 
+This repository generates an executor file that can be used for launching maven builds for particular modules. 
+
+ ```
+# in WORKSPACE file
+
+load("@wix_incubator_bazelizer//maven:defs.bzl", "maven_repository_registry")
+
+maven_repository_registry(
+    name = "bazelized_maven",
+    modules = [
+        "//tests/e2e/mvn-parent-pom:declared_pom",
+        "//tests/e2e/mvn-build-lib:declared_pom",
+        "//tests/e2e/mvn-build-lib-one:declared_pom",
+        "//tests/e2e/mvn-build-lib-with-profile:declared_pom",
+    ]
+)
+```
+
+Where:
+
+| attr name  | description                                                                |
+|    ---     | ---                                                                        |
+| name       | string; A unique name for the **repository**                                     |
+| modules    | List labels; Lavels of all maven modules that should be lifted into bazel  |
+
+
+
  
 This rule generates tarball as a snapshot of m2 repository that resolve everything this project is dependent on (dependencies, plugins, reports) in preparation for going offline. 
 Created tarball + initial pom = a `buildpack`. Image that can be reused for all consequent builds. 
                                                            
 
-Usage
+
+## execute_build
+
+Rule created by `maven_repository_registry` repository rule. Responsible for launching particular maven modules.
+
+
 ```
-create_mvn_buildpack(
-    name = "MyMavenImage",
-    pom_file = "pom.xml"
+load("@bazelized_maven//:execute_build.bzl", "execute_build")
+
+
+# Example of fetching everething from maven workspace
+filegroup(
+    name = "sources",
+    srcs = glob(["**/*"], exclude=["target/**/*"]),
+    visibility = ["//visibility:public"]
+)
+
+execute_build(
+    name = "my-maven-lib",
+    pom_def = ":declared_pom", # see: declare_pom rule
+    srcs = [":sources"],
+    visibility = ["//visibility:public"],
+    deps = [
+         # my bazel deps
+         "//tests/e2e/mvn-build-lib-one",
+        "//tests/e2e/lib/src/com/mavenizer/examples/subliby",
+    ]
 )
 ```
   
-| attr name  | description  |
-|---|---|
-| name  | Name; required. A unique name for this target.  |
-| pom_file  | File; Reference to an skeleton pom.     |
+Where:
+
+| attr name  | description                                                                                                         |
+|    ---     | ---                                                                                                                 |
+| name       | string; A unique name for the target                                                                                |
+| pom_def    | Label; declared maven module definition (see  `declare_pom` rule)                                                   |
+| srcs       | List files; Files that will be lined into bazel sandbox for execution. Have to contains at least `src` dir.         |
+| deps       | List labels; Bazel dependencies with JavaInfo provider.                                                             |
+| outputs    | List string; (optional) Files inside target dedicatory that should be additionally registered as output for target. |
+
+###### Notes:
+1. Tool support only direct dependencies. All transitive dependencies are **excluded**. 
+2. Default rule outputs is the jar file that current maven build produce. So, `outputs` can be usefull some additional result binaries  needed. 
+3. Another maven module can be a dependency for current module. In this case it is the same as module was published into maven repository, and this is **cool**.
 
 
-**Important to know**: this rule execute dry run of a build by empty project directory + given pom.
-This is done to eagerly fetch all plugin's and there dependencies and reuse for any build. In this case pom file have to be ready to be executed with empty workspace directory.
-Any change in pom file will trigger rebuilding a tarball.
+## pom.xml 
 
+TBD
 
-
-### run_mvn_buildpack
-
-Represent subsequent maven build. Executed in offline mode, as expects that all needed for maven was fetched via `create_mvn_buildpack`. Can consume java based bazel deps.
-
-Usage
-```
-run_mvn_buildpack(
-    name = "MyMavenBuild",
-    deps = [
-        "//examples/targetA",
-        "//examples/targetB"
-    ], # test lib
-    srcs = ["//examples/maven_project:sources"],
-    buildpack = ":MyMavenImage",
-    group_id = "my",
-    artifact_id = "lib",
-    outputs = ["lib-1.0.0-SNAPSHOT.jar"]
-)
-```
-
-
-| attr name  | description  |
-|---|---|
-| name  | Name; required. A unique name for this target.  |
-| deps  | Labels; Dependencies for maven build. Support only direct dependencies with JavaInfo provider.     |
-| srcs  | filegroup that represent all workspace of maven project as is     |
-| buildpack  | Reference to a buildpack that was created via  create_mvn_buildpack rule    |
-| group_id  | (Optional) group id that passed into build. Available as placeholder (see below)   |
-| artifact_id  | (Optional) artifact id that passed into build. Available as placeholder (see below)   |
-| outputs  | List of files. Each file is relative to the maven target _folder_. Same files will be registered as an output of the target.   |
-
-
-###### Important notes
-
-1. This tool **not support** transitive dependencies. Only direct compile dependencies as [full_compile_jars](https://docs.bazel.build/versions/master/skylark/lib/JavaInfo.html#full_compile_jars) will be used.    
-
-###### pom.xml 
-
-Pom file supports  [mustache](https://mustache.github.io/) templating. Minimal example of pom with supported placeholders.
+Pom file support special set of XML transformations to be able to use it both in bazel and in maven transparently. By default 
+tool:
+- tries to cleanup all dependencies in `<dependencies>` and append rule deps from bazel 
+(installed into tmp local repository for each execution run)
+- inject sandbox relative path to parent pom, if it provided
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    
+
+    <!-- Here we enabling this transformations -->
+
+    <!-- xembly:on -->
+
     <modelVersion>4.0.0</modelVersion>
-    <groupId>{{ groupId }}</groupId>
-    <artifactId>{{ artifactId }}</artifactId>
+    <groupId>yyy</groupId>
+    <artifactId>xxxx</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
     <dependencies>
-        {{#deps}}
         <dependency>
-            <groupId>{{groupId}}</groupId>
-            <artifactId>{{artifactId}}</artifactId>
-            <version>{{version}}</version>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
         </dependency>
-        {{/deps}}
     </dependencies>
 
 </project>
 ```
 
-Where:
-- groupId - `run_mvn_buildpack` attr or autogenerated string
-- artifactId - `run_mvn_buildpack` attr or autogenerated string
-- deps - bazel dependencies that will be installed during `run_mvn_buildpack` build. Each entity will have (groupId, artifactId, version) properties.
+Supported flags:
+
+| flag      | description |
+| ----      | ---- |
+| xembly:on | Enabling support of transformations. By default all  |
+| xembly:no-drop-deps | Disable cleanup of deps |
 
 
 
@@ -164,7 +205,10 @@ Where:
 
 By default tool will not print default maven output to minimaze rules output. If it neede log level can be changed by 
 ```
-run_mvn_buildpack(
+
+
+
+execute_build(
     ...
     log_level="INFO"
 )
@@ -175,10 +219,3 @@ Supported levels:
 - **INFO** - print maven default output + info messages by a tool;
 - **DEBUG** - print maven default output + debug messages by a tool (for example generate pom);
 - **TRACE** - print maven debug output + debug messages by a tool;
-
-###### Support of custom template properties:
-
-TBD
-
-
-## Features
