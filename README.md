@@ -139,8 +139,6 @@ execute_build(
         "//tests/e2e/lib/src/com/mavenizer/examples/subliby",
     ]
 )
-
-
 ```
   
 Where:
@@ -161,7 +159,13 @@ Where:
 
 ## pom.xml 
 
-Pom file support special set of XML transformations to be able to use it both in bazel and in maven transparently. 
+TBD
+
+Pom file support special set of XML transformations to be able to use it both in bazel and in maven transparently. By default 
+tool:
+- tries to cleanup all dependencies in `<dependencies>` and append rule deps from bazel 
+(installed into tmp local repository for each execution run)
+- inject sandbox relative path to parent pom, if it provided
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -170,21 +174,19 @@ Pom file support special set of XML transformations to be able to use it both in
     
 
     <!-- Here we enabling this transformations -->
+
     <!-- xembly:on -->
 
     <modelVersion>4.0.0</modelVersion>
-    <groupId>{{ groupId }}</groupId>
-    <artifactId>{{ artifactId }}</artifactId>
+    <groupId>yyy</groupId>
+    <artifactId>xxxx</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
     <dependencies>
-        {{#deps}}
         <dependency>
-            <groupId>{{groupId}}</groupId>
-            <artifactId>{{artifactId}}</artifactId>
-            <version>{{version}}</version>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
         </dependency>
-        {{/deps}}
     </dependencies>
 
 </project>
@@ -195,7 +197,7 @@ Supported flags:
 | flag      | description |
 | ----      | ---- |
 | xembly:on | Enabling support of transformations. By default all  |
-| xembly:on | Enabling support of transformations |
+| xembly:no-drop-deps | Disable cleanup of deps |
 
 
 
@@ -203,7 +205,10 @@ Supported flags:
 
 By default tool will not print default maven output to minimaze rules output. If it neede log level can be changed by 
 ```
-run_mvn_buildpack(
+
+
+
+execute_build(
     ...
     log_level="INFO"
 )
@@ -214,10 +219,3 @@ Supported levels:
 - **INFO** - print maven default output + info messages by a tool;
 - **DEBUG** - print maven default output + debug messages by a tool (for example generate pom);
 - **TRACE** - print maven debug output + debug messages by a tool;
-
-###### Support of custom template properties:
-
-TBD
-
-
-## Features
