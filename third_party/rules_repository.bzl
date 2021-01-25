@@ -48,7 +48,31 @@ filegroup(
 )
 """
 
+skylib_version = "1.0.3"
+skylib_name = "bazel_skylib"
+
+rules_scala_version = "5df8033f752be64fbe2cedfd1bdbad56e2033b15"
+rules_scala_sha256 = "b7fa29db72408a972e6b6685d1bc17465b3108b620cb56d9b1700cf6f70f624a"
+rules_scala_name = "io_bazel_rules_scala"
+
 def install(server_urls = _def_server_urls):
+    if native.existing_rule(skylib_name) == None:
+        http_archive(
+            name = skylib_name,
+            sha256 = "1c531376ac7e5a180e0237938a2536de0c54d93f5c278634818e0efc952dd56c",
+            type = "tar.gz",
+            url = "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/{}/bazel-skylib-{}.tar.gz"
+                .format(skylib_version, skylib_version),
+        )
+
+    if native.existing_rule(rules_scala_name) == None:
+        http_archive(
+            name = rules_scala_name,
+            sha256 = rules_scala_sha256,
+            strip_prefix = "rules_scala-%s" % rules_scala_version,
+            type = "zip",
+            url = "https://github.com/bazelbuild/rules_scala/archive/%s.zip" % rules_scala_version,
+        )
 
     if native.existing_rule(MAVEN_BINARY_NAME) == None:
         http_archive(
@@ -60,6 +84,9 @@ def install(server_urls = _def_server_urls):
            sha256 = _maven_binary_sha256,
            strip_prefix = "apache-maven-" + _maven_binary_version
         )
+
+
+    # deps
 
     _jvm_import(
         name = "org_apache_maven_shared_maven_invoker",

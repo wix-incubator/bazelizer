@@ -1,0 +1,60 @@
+load("//private/ruls:tests.bzl", "run_tests")
+load("//third_party:rules_repository.bzl", _maven_bin_name = "MAVEN_BINARY_NAME")
+
+_deps = [
+    "//external:wix_incubator_bazelizer_rules/dependency/org_projectlombok_lombok",
+    "//external:wix_incubator_bazelizer_rules/dependency/com_google_guava_guava",
+    "//external:wix_incubator_bazelizer_rules/dependency/info_picocli_picocli",
+    "//external:wix_incubator_bazelizer_rules/dependency/org_apache_maven_shared_maven_invoker",
+    "//external:wix_incubator_bazelizer_rules/dependency/org_apache_maven_shared_maven_shared_utils",
+    "//external:wix_incubator_bazelizer_rules/dependency/com_github_spullara_mustache_java_compiler",
+    "//external:wix_incubator_bazelizer_rules/dependency/com_jcabi_jcabi_xml",
+    "//external:wix_incubator_bazelizer_rules/dependency/org_cactoos_cactoos",
+    "//external:wix_incubator_bazelizer_rules/dependency/com_jcabi_jcabi_log",
+    "//external:wix_incubator_bazelizer_rules/dependency/commons_io_commons_io",
+    "//external:wix_incubator_bazelizer_rules/dependency/org_apache_commons_commons_compress",
+    "//external:wix_incubator_bazelizer_rules/dependency/org_slf4j_slf4j_api",
+    "//external:wix_incubator_bazelizer_rules/dependency/ch_qos_logback_logback_classic",
+    "//external:wix_incubator_bazelizer_rules/dependency/ch_qos_logback_logback_core",
+    "//external:wix_incubator_bazelizer_rules/dependency/com_google_code_gson_gson",
+    "//external:wix_incubator_bazelizer_rules/dependency/com_jcabi_incubator_xembly",
+    # bazel infra support
+    "@bazel_tools//tools/java/runfiles"
+]
+
+_jopts = ["-source","8","-target","8",]
+
+java_binary(
+    name = "mvn",
+    srcs = glob(["*.java"], exclude = ["*Test.java"]),
+    javacopts = _jopts,
+    resources = ["//private/tools/jvm/mvn/java:java_resources"],
+    jvm_flags = ["--illegal-access=permit", "-Dtools.jvm.mvn.MavenBin=\"%s\"" % _maven_bin_name],
+    deps = _deps,
+    data = ["@%s//:%s" % (_maven_bin_name, _maven_bin_name)],
+    plugins = [":lombok_plugin"],
+    main_class = "tools.jvm.v2.mvn.Main",
+    visibility = ["//visibility:public"],
+    licenses = ["notice"],  # Apache 2.0
+)
+
+run_tests(
+    name = "mvn_test",
+    package = "tools.jvm.mvn",
+    srcs = glob(["*Test.java"]),
+    data = glob(["**"],exclude = ["*.java"]),
+    deps = [
+        ":mvn",
+        "//external:wix_incubator_bazelizer_rules/dependency/junit_junit",
+        "//external:wix_incubator_bazelizer_rules/dependency/org_hamcrest_hamcrest_core",
+        "//external:wix_incubator_bazelizer_rules/dependency/org_hamcrest_hamcrest_library",
+    ] + _deps,
+)
+
+
+java_plugin(
+    name = "lombok_plugin",
+    processor_class = "lombok.launch.AnnotationProcessorHider$AnnotationProcessor",
+    deps = ["//external:wix_incubator_bazelizer_rules/dependency/org_projectlombok_lombok"],
+    generates_api = 1,
+)
