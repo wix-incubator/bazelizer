@@ -4,20 +4,25 @@ import com.jcabi.xml.XML;
 import org.xembly.Directive;
 import org.xembly.Directives;
 
-public interface PomDir {
-    Iterable<Directive> dirs(XML xml);
+public interface PomXe {
+    Iterable<Directive> apply(XML xml);
 
-
-    class PomStruc implements PomDir {
+    /**
+     * The PomStruc.
+     */
+    class PomStruc implements PomXe {
         @Override
-        public Iterable<Directive> dirs(XML xml) {
+        public Iterable<Directive> apply(XML xml) {
             return new Directives().xpath("/project").addIf("dependencies");
         }
     }
 
-    class PomDropDeps implements PomDir {
+    /**
+     * The PomDropDeps.
+     */
+    class PomDropDeps implements PomXe {
         @Override
-        public Iterable<Directive> dirs( XML xml) {
+        public Iterable<Directive> apply(XML xml) {
             return new Directives()
                     .xpath("/project/dependencies/dependency[not(@bz:remove=\"never\")]")
                     .remove();

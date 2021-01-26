@@ -2,16 +2,24 @@ package tools.jvm.v2.mvn;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.Streams;
 import com.jcabi.xml.XML;
 import com.jcabi.xml.XMLDocument;
 import com.jcabi.xml.XPathContext;
-import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.SneakyThrows;
 import org.cactoos.Input;
+import org.cactoos.Text;
+import org.cactoos.io.InputOf;
+import org.cactoos.text.TextOf;
+import org.xembly.Directive;
 
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public abstract class Pom {
 
@@ -31,8 +39,13 @@ public abstract class Pom {
      * Parent pom.
      * @return maybe pom
      */
-    public Optional<Pom> parent() {
-        return Optional.empty();
+    public Optional<String> relativePath() {
+        final XML xml = xml();
+        List<String> text = xml.xpath("/project/parent/relativePath/text()");
+        if (text.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(text.get(0));
     }
 
 
@@ -41,6 +54,14 @@ public abstract class Pom {
      * @return xml
      */
     public abstract XML xml();
+
+    /**
+     * Update pom.
+     * @param dir
+     * @return pom
+     */
+    public abstract Pom withDirectives(PomXe... dir);
+
 
     /**
      * Group id
@@ -71,7 +92,14 @@ public abstract class Pom {
         return xml().xpath("/project/version/text()").get(0);
     }
 
-    
+
+    public Text asText() {
+        return new TextOf(
+                new XemblerXML(xml()).toString()
+        );
+    }
+
+
     @SuppressWarnings("Guava")
     static class Std extends Pom {
 
@@ -93,8 +121,20 @@ public abstract class Pom {
         @SneakyThrows
         private static XML get(Input i) {
             try (InputStream is = i.stream()) {
-                return new XMLDocument(is);
+                return new XemblerXML(new XMLDocument(is));
             }
+        }
+
+        @SuppressWarnings("UnstableApiUsage")
+        @Override
+        public Pom withDirectives(PomXe... dir) {
+            return new Std(() -> {
+                final XML xml = xml();
+                final Iterable<Directive> dirs = Stream.of(dir)
+                        .flatMap(pomDir -> Streams.stream(pomDir.apply(xml)))
+                        .collect(Collectors.toList());
+                return XemblerAug.applyQuietly(xml, XPATH_CONTEXT, dirs);
+            });
         }
     }
 }

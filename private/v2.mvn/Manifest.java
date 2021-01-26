@@ -15,6 +15,11 @@ public class Manifest {
 
     private final Path text;
 
+    public <T> List<T> items(Class<? extends T> clz) {
+        return lines().stream().map(json -> Main.GSON.fromJson(json, clz)).collect(Collectors.toList());
+    }
+
+
     @SneakyThrows
     public List<String> lines() {
         try (Stream<String> s = Files.lines(text)) {
