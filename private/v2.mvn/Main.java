@@ -53,10 +53,6 @@ public class Main {
                     new InputOf(repo)
             );
 
-            final Build build = maven.buildOf(pom);
-            build.addDeps(Dep.deps(new Manifest(deps)));
-
-            build.exec();
         }
     }
 

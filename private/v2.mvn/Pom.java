@@ -31,12 +31,7 @@ public abstract class Pom {
             .add(POM_NS, POM_NS_URI)
             .add("bz", "https://github.com/wix-incubator/bazelizer");
 
-
-    interface EffectFS {
-        File asFile();
-    }
-
-
+    
     public static Pom open(Path absFile) {
         return new Pom.Std(new InputOf(absFile));
     }
@@ -59,12 +54,6 @@ public abstract class Pom {
      * @return xml
      */
     public abstract XML xml();
-
-    /**
-     * File system effect.
-     * @return fs
-     */
-    public abstract EffectFS toEffect();
 
     /**
      * Update pom.
@@ -135,11 +124,6 @@ public abstract class Pom {
             try (InputStream is = i.stream()) {
                 return new XemblerXML(new XMLDocument(is));
             }
-        }
-
-        @Override
-        public EffectFS toEffect() {
-            return null;
         }
     }
 }
