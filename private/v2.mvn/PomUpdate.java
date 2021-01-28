@@ -1,11 +1,15 @@
 package tools.jvm.v2.mvn;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import lombok.AllArgsConstructor;
 import org.xembly.Directive;
 import org.xembly.Directives;
 
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 
 public interface PomUpdate {
@@ -40,7 +44,6 @@ public interface PomUpdate {
     class NewRelativeParent implements PomUpdate {
         private final String filename;
 
-
         @Override
         public Iterable<Directive> apply(Pom xml) {
             final Optional<String> aName = xml.relativePath()
@@ -59,34 +62,25 @@ public interface PomUpdate {
 
         @Override
         public Iterable<Directive> apply(Pom xml) {
-            return null;
+            if (Iterables.isEmpty(deps)) {
+                return ImmutableList.of();
+            }
+            final Directives depsDir = new Directives()
+                    .xpath("/project/dependencies");
+            for (Dep dep : deps) {
+                final Map<Object, Object> depProp = Maps.newLinkedHashMap();
+                depProp.put("groupId", dep.getGroupId());
+                depProp.put("artifactId", dep.getArtifactId());
+                depProp.put("version", dep.getVersion());
+                depProp.put("scope", dep.scope());
+
+                depsDir.add("dependency")
+                        .comment(" by: " + dep.getSource() + " ")
+                        .add(depProp)
+                        .up();
+            }
+            return depsDir;
         }
     }
 
-//
-//    class AppendDeps implements XemblyDirrective {
-//        @Override
-//        public Iterable<Directive> dirs(Project project, XML xml) {
-//            final Iterable<Dep> deps = project.deps();
-//            if (Iterables.isEmpty(deps)) {
-//                return ImmutableList.of();
-//            }
-//
-//            final Directives depsDir = new Directives()
-//                    .xpath("/project/dependencies");
-//            for (Dep dep : deps) {
-//                final Map<Object, Object> depProp = Maps.newLinkedHashMap();
-//                depProp.put("groupId", dep.groupId());
-//                depProp.put("artifactId", dep.artifactId());
-//                depProp.put("version", dep.version());
-//                depProp.put("scope", dep.scope());
-//
-//                depsDir.add("dependency")
-//                        .comment(" by: " + dep.source() + " ")
-//                        .add(depProp)
-//                        .up();
-//            }
-//            return depsDir;
-//        }
-//    }
 }

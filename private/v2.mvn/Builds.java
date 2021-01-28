@@ -1,13 +1,9 @@
 package tools.jvm.v2.mvn;
 
 import com.google.common.hash.Hashing;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.shared.invoker.DefaultInvocationRequest;
-import org.apache.maven.shared.invoker.DefaultInvoker;
-import org.apache.maven.shared.invoker.InvocationRequest;
 import org.cactoos.Input;
 import org.cactoos.Scalar;
 import org.cactoos.io.BytesOf;
@@ -23,12 +19,10 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 @SuppressWarnings("UnstableApiUsage")
 @Slf4j
-public class Maven {
+public class Builds {
     public static final String PREF = "tools.jvm.mvn.";
     private static final String BZL_NAME_SYS_PROP = PREF + "BazelLabelName";
 
@@ -41,15 +35,11 @@ public class Maven {
         MAVEN_TOOL = new File("");
     }
 
-    interface InvocationRequests extends Supplier<InvocationRequest> {
-    }
-
-
     /**
      * Ctor.
      * @throws IOException if any
      */
-    public Maven() throws IOException {
+    public Builds() throws IOException {
         this(new DeadInput());
     }
 
@@ -58,7 +48,7 @@ public class Maven {
      * @param repositoryTar repository snapshot
      * @throws IOException on any error
      */
-    public Maven(Input repositoryTar) throws IOException {
+    public Builds(Input repositoryTar) throws IOException {
         this.m2 = memoize(() -> {
             Path m2HomeDir = Files.createTempDirectory("M2_HOME@_" + LABEL + "_@");
             Path repository = repository();
@@ -74,42 +64,45 @@ public class Maven {
      */
     private final Scalar<Path> m2;
 
-
-    public Build buildOf(Path srcPomFile) {
-        return new Build() {
-
-            private Pom pom;
-
-            @SneakyThrows
-            @Override
-            public void exec() {
-                Path pomFile = srcPomFile.getParent().resolve(
-                        "pom." + LABEL + ".xml"
-                );
-                if (Files.notExists(pomFile)) {
-                    Files.write(pomFile, pom.toString().getBytes());
-                }
-
-                DefaultInvoker invoker = new DefaultInvoker();
-                invoker.setMavenHome(MAVEN_TOOL);
-                invoker.setWorkingDirectory(pomFile.getParent().toFile());
-
-                final DefaultInvocationRequest request = newRequest();
-                request.setPomFile(pomFile.toFile());
-                invoker.execute(request);
-            }
-
-            @Override
-            public void addDeps(Iterable<Dep> deps) {
-                installDeps(deps);
-                pom = pom.withDirectives(
-                        new PomUpdate.PomStruc(),
-                        new PomUpdate.PomDropDeps(),
-                        new PomUpdate.AppendDeps(deps)
-                );
-            }
-        };
-    }
+//
+//    /**
+//     * New Build.
+//     * @param srcPomFile pom
+//     * @return Build
+//     */
+//    public Build build(Path srcPomFile) {
+//        return new Build() {
+//
+//            private Pom pom;
+//
+//            @SneakyThrows
+//            @Override
+//            public Outputs exec() {
+//
+//                if (Files.notExists(pomFile)) {
+//                    Files.write(pomFile, pom.toString().getBytes());
+//                }
+//
+//                DefaultInvoker invoker = new DefaultInvoker();
+//                invoker.setMavenHome(MAVEN_TOOL);
+//                invoker.setWorkingDirectory(pomFile.getParent().toFile());
+//
+//                final DefaultInvocationRequest request = newRequest();
+//                request.setPomFile(pomFile.toFile());
+//                invoker.execute(request);
+//            }
+//
+//            @Override
+//            public void addDeps(Iterable<Dep> deps) {
+//                installDeps(deps);
+//                pom = pom.update(
+//                        new PomUpdate.PomStruc(),
+//                        new PomUpdate.PomDropDeps(),
+//                        new PomUpdate.AppendDeps(deps)
+//                );
+//            }
+//        };
+//    }
 
     /**
      * Settings xml location.
@@ -153,24 +146,24 @@ public class Maven {
      * Install deps
      * @param deps deps
      */
-    private void installDeps(Iterable<Dep> deps) {
-        Function<Dep, Path> mvnLayout = dep -> {
-            String[] gidParts = dep.getGroupId().split("\\.");
-            Path thisGroupIdRepo = Paths.get("");
-            for (String gidPart : gidParts) {
-                thisGroupIdRepo = thisGroupIdRepo.resolve(gidPart);
-            }
-            return thisGroupIdRepo.resolve(dep.getArtifactId()).resolve(dep.getVersion());
-        };
-
+    public void installDeps(Iterable<Dep> deps) {
         for (Dep dep : deps) {
-            Path artifactFolder = repository().resolve(mvnLayout.apply(dep));
+            Path artifactFolder = repository().resolve(mvnLayout(dep));
             //noinspection ResultOfMethodCallIgnored
             artifactFolder.toFile().mkdirs();
             addPom(artifactFolder, dep);
             copyJar(artifactFolder, dep);
         }
     }
+
+    public static Path mvnLayout(Dep dep) {
+        String[] gidParts = dep.getGroupId().split("\\.");
+        Path thisGroupIdRepo = Paths.get("");
+        for (String gidPart : gidParts) {
+            thisGroupIdRepo = thisGroupIdRepo.resolve(gidPart);
+        }
+        return thisGroupIdRepo.resolve(dep.getArtifactId()).resolve(dep.getVersion());
+    };
 
 
     @SneakyThrows
@@ -224,5 +217,9 @@ public class Maven {
             }
             return val;
         };
+    }
+
+    public void execute() {
+
     }
 }

@@ -8,7 +8,6 @@ import lombok.SneakyThrows;
 import org.cactoos.io.InputOf;
 import picocli.CommandLine;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -26,7 +25,7 @@ public class Main {
 
         @CommandLine.Option(names = {"--pom"}, required = true,
                 paramLabel = "POM", description = "the pom xml template file")
-        public Path pom;
+        public Path pomFile;
 
         @CommandLine.Option(names = {"--m2-repository"},
                 paramLabel = "REPO", description = "the repository tar")
@@ -49,9 +48,16 @@ public class Main {
         @SneakyThrows
         @Override
         public void run() {
-            final Maven maven = new Maven(
+            final Builds maven = new Builds(
                     new InputOf(repo)
             );
+
+            final Build build = new Build(
+                    maven, pomFile
+            );
+
+
+
 
         }
     }

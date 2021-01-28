@@ -12,17 +12,7 @@ import java.util.stream.Collectors;
 
 public interface Dep {
 
-    @AllArgsConstructor
-    class Deps implements Iterable<Dep> {
-        private final Manifest manifest;
-
-        @Override
-        public Iterator<Dep> iterator() {
-            return deps(manifest).iterator();
-        }
-    }
-
-    static Collection<Dep> deps(Manifest manifest) {
+    static Collection<Dep> load(Manifest manifest) {
         return manifest.lines()
                 .stream()
                 .map(json -> Main.GSON.fromJson(json, DepDTO.class).toDep())

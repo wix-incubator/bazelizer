@@ -2,12 +2,16 @@ package tools.jvm.v2.mvn;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Lists;
+import com.google.common.io.Closer;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
+import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.cactoos.Input;
+import org.cactoos.Output;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,8 +20,10 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Function;
 
 @UtilityClass
 @SuppressWarnings("ResultOfMethodCallIgnored")
@@ -41,6 +47,25 @@ public class TarUtils {
             iter.forEachRemaining(tarEntry -> {
                 mkFile(ais, destFile, tarEntry);
             });
+        }
+    }
+
+    @SuppressWarnings({"DuplicatedCode", "unused", "UnstableApiUsage"})
+    @SneakyThrows
+    public void tar(Collection<File> files, Output out, Function<File, Path> tarPath) {
+        final Closer closer = Closer.create();
+        final TarArchiveOutputStream aos = closer.register(new TarArchiveOutputStream(out.stream()));
+        aos.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
+        try {
+            for (File file : files) {
+                final ArchiveEntry entry = aos.createArchiveEntry(file, tarPath.apply(file).toString());
+                aos.putArchiveEntry(entry);
+                com.google.common.io.Files.asByteSource(file).copyTo(aos);
+                aos.closeArchiveEntry();
+            }
+            aos.finish();
+        } finally {
+            closer.close();
         }
     }
 

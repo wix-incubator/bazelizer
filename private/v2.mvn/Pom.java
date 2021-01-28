@@ -4,7 +4,10 @@ import com.google.common.collect.Streams;
 import com.jcabi.xml.XML;
 import com.jcabi.xml.XMLDocument;
 import com.jcabi.xml.XPathContext;
+import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
+import org.apache.maven.shared.invoker.DefaultInvocationRequest;
+import org.apache.maven.shared.invoker.DefaultInvoker;
 import org.cactoos.Input;
 import org.cactoos.Scalar;
 import org.cactoos.io.InputOf;
@@ -12,6 +15,7 @@ import org.xembly.Directive;
 
 import java.io.File;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -31,9 +35,12 @@ public abstract class Pom {
             .add(POM_NS, POM_NS_URI)
             .add("bz", "https://github.com/wix-incubator/bazelizer");
 
-    
-    public static Pom open(Path absFile) {
-        return new Pom.Std(new InputOf(absFile));
+
+    public static Build open(Path absFile) {
+        return new Build(
+                absFile,
+                new Pom.Std(new InputOf(absFile))
+        );
     }
 
     /**
@@ -61,7 +68,7 @@ public abstract class Pom {
      * @return pom
      */
     @SuppressWarnings("UnstableApiUsage")
-    public Pom withDirectives(PomUpdate... dir) {
+    public Pom update(PomUpdate... dir) {
         return new Std(() -> {
             final XML xml = xml();
             final Iterable<Directive> dirs = Stream.of(dir)
@@ -101,6 +108,50 @@ public abstract class Pom {
     }
 
 
+    @AllArgsConstructor
+    static class Build {
+        private final Path file;
+        private final Pom pom;
+
+        /**
+         * Update pom.
+         * @param dir dirs
+         * @return pom
+         */
+        @SuppressWarnings("UnstableApiUsage")
+        public Build update(PomUpdate... dir) {
+            Pom newPom = new Std(() -> {
+                final XML xml = pom.xml();
+                final Iterable<Directive> dirs = Stream.of(dir)
+                        .flatMap(pomDir -> Streams.stream(pomDir.apply(pom)))
+                        .collect(Collectors.toList());
+                return XemblerAug.applyQuietly(xml, XPATH_CONTEXT, dirs);
+            });
+            return new Build(file, newPom);
+        }
+
+        @SneakyThrows
+        public File toFile() {
+            final Path abs = file.getParent().resolve("pom." + Builds.LABEL + ".xml");
+            if (Files.notExists(abs)) {
+                Files.write(abs, pom.toString().getBytes());
+            }
+            return abs.toFile();
+        }
+
+        @SneakyThrows
+        public void exec(Builds maven) {
+            final Path pomFile = toFile().toPath();
+            DefaultInvoker invoker = new DefaultInvoker();
+            invoker.setMavenHome(Builds.MAVEN_TOOL);
+            invoker.setWorkingDirectory(pomFile.getParent().toFile());
+
+            final DefaultInvocationRequest request = maven.newRequest();
+            request.setPomFile(pomFile.toFile());
+            invoker.execute(request);
+        }
+    }
+
     static class Std extends Pom {
 
         public Std(Input in) {
@@ -108,7 +159,7 @@ public abstract class Pom {
         }
 
         public Std(Scalar<XML> input) {
-            this.input = Maven.memoize(input);
+            this.input = Builds.memoize(input);
         }
 
         private final Scalar<XML> input;
