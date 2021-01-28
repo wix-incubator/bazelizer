@@ -1,18 +1,22 @@
 package tools.jvm.v2.mvn;
 
-import com.jcabi.xml.XML;
+import lombok.AllArgsConstructor;
 import org.xembly.Directive;
 import org.xembly.Directives;
 
-public interface PomXe {
-    Iterable<Directive> apply(XML xml);
+import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.Optional;
+
+public interface PomUpdate {
+    Iterable<Directive> apply(Pom xml);
 
     /**
      * The PomStruc.
      */
-    class PomStruc implements PomXe {
+    class PomStruc implements PomUpdate {
         @Override
-        public Iterable<Directive> apply(XML xml) {
+        public Iterable<Directive> apply(Pom xml) {
             return new Directives().xpath("/project").addIf("dependencies");
         }
     }
@@ -20,14 +24,45 @@ public interface PomXe {
     /**
      * The PomDropDeps.
      */
-    class PomDropDeps implements PomXe {
+    class PomDropDeps implements PomUpdate {
         @Override
-        public Iterable<Directive> apply(XML xml) {
+        public Iterable<Directive> apply(Pom xml) {
             return new Directives()
                     .xpath("/project/dependencies/dependency[not(@bz:remove=\"never\")]")
                     .remove();
         }
     }
+
+    /**
+     * The PomStruc.
+     */
+    @AllArgsConstructor
+    class NewRelativeParent implements PomUpdate {
+        private final String filename;
+
+
+        @Override
+        public Iterable<Directive> apply(Pom xml) {
+            final Optional<String> aName = xml.relativePath()
+                    .map(p -> Paths.get(p).getParent().resolve(filename).toString());
+            return aName.map(s -> (Iterable<Directive>) new Directives()
+                    .xpath("/project/parent/relativePath")
+                    .set(s))
+                    .orElseGet(Collections::emptyList);
+
+        }
+    }
+
+    @AllArgsConstructor
+    class AppendDeps implements PomUpdate {
+        private final Iterable<Dep> deps;
+
+        @Override
+        public Iterable<Directive> apply(Pom xml) {
+            return null;
+        }
+    }
+
 //
 //    class AppendDeps implements XemblyDirrective {
 //        @Override

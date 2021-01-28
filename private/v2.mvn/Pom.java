@@ -1,19 +1,16 @@
 package tools.jvm.v2.mvn;
 
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.Streams;
 import com.jcabi.xml.XML;
 import com.jcabi.xml.XMLDocument;
 import com.jcabi.xml.XPathContext;
-import lombok.Getter;
 import lombok.SneakyThrows;
 import org.cactoos.Input;
-import org.cactoos.Text;
+import org.cactoos.Scalar;
 import org.cactoos.io.InputOf;
-import org.cactoos.text.TextOf;
 import org.xembly.Directive;
 
+import java.io.File;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.List;
@@ -35,6 +32,15 @@ public abstract class Pom {
             .add("bz", "https://github.com/wix-incubator/bazelizer");
 
 
+    interface EffectFS {
+        File asFile();
+    }
+
+
+    public static Pom open(Path absFile) {
+        return new Pom.Std(new InputOf(absFile));
+    }
+
     /**
      * Parent pom.
      * @return maybe pom
@@ -48,7 +54,6 @@ public abstract class Pom {
         return Optional.ofNullable(text.get(0));
     }
 
-
     /**
      * Pom as XMP
      * @return xml
@@ -56,18 +61,32 @@ public abstract class Pom {
     public abstract XML xml();
 
     /**
+     * File system effect.
+     * @return fs
+     */
+    public abstract EffectFS toEffect();
+
+    /**
      * Update pom.
-     * @param dir
+     * @param dir dirs
      * @return pom
      */
-    public abstract Pom withDirectives(PomXe... dir);
-
+    @SuppressWarnings("UnstableApiUsage")
+    public Pom withDirectives(PomUpdate... dir) {
+        return new Std(() -> {
+            final XML xml = xml();
+            final Iterable<Directive> dirs = Stream.of(dir)
+                    .flatMap(pomDir -> Streams.stream(pomDir.apply(this)))
+                    .collect(Collectors.toList());
+            return XemblerAug.applyQuietly(xml, XPATH_CONTEXT, dirs);
+        });
+    }
 
     /**
      * Group id
      * @return str
      */
-    public final String groupId() {
+    public  String groupId() {
         final XML xml = xml();
         List<String> text = xml.xpath("/project/groupId/text()");
         if (text.isEmpty()) {
@@ -80,7 +99,7 @@ public abstract class Pom {
      * Artifact id
      * @return str
      */
-    public final String artifactId() {
+    public  String artifactId() {
         return xml().xpath("/project/artifactId/text()").get(0);
     }
 
@@ -88,34 +107,27 @@ public abstract class Pom {
      * Version
      * @return str
      */
-    public final String version() {
+    public  String version() {
         return xml().xpath("/project/version/text()").get(0);
     }
 
 
-    public Text asText() {
-        return new TextOf(
-                new XemblerXML(xml()).toString()
-        );
-    }
-
-
-    @SuppressWarnings("Guava")
     static class Std extends Pom {
 
         public Std(Input in) {
             this(() -> get(in));
         }
 
-        public Std(Supplier<XML> input) {
-            this.input = Suppliers.memoize(input);
+        public Std(Scalar<XML> input) {
+            this.input = Maven.memoize(input);
         }
 
-        private final Supplier<XML> input;
+        private final Scalar<XML> input;
 
+        @SneakyThrows
         @Override
         public XML xml() {
-            return input.get();
+            return input.value();
         }
 
         @SneakyThrows
@@ -125,16 +137,9 @@ public abstract class Pom {
             }
         }
 
-        @SuppressWarnings("UnstableApiUsage")
         @Override
-        public Pom withDirectives(PomXe... dir) {
-            return new Std(() -> {
-                final XML xml = xml();
-                final Iterable<Directive> dirs = Stream.of(dir)
-                        .flatMap(pomDir -> Streams.stream(pomDir.apply(xml)))
-                        .collect(Collectors.toList());
-                return XemblerAug.applyQuietly(xml, XPATH_CONTEXT, dirs);
-            });
+        public EffectFS toEffect() {
+            return null;
         }
     }
 }

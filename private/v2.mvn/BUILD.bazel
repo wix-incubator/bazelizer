@@ -40,7 +40,7 @@ java_binary(
 
 run_tests(
     name = "mvn_test",
-    package = "tools.jvm.mvn",
+    package = "tools.jvm.v2.mvn",
     srcs = glob(["*Test.java"]),
     data = glob(["**"],exclude = ["*.java"]),
     deps = [
