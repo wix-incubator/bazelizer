@@ -1,12 +1,11 @@
 package tools.jvm.v2.mvn;
 
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.jcabi.xml.XML;
 import com.jcabi.xml.XMLDocument;
 import com.sun.org.apache.xml.internal.serializer.OutputPropertiesFactory;
 import lombok.Getter;
 import lombok.experimental.Delegate;
+import org.cactoos.Scalar;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -34,9 +33,10 @@ public class XemblerXML implements XML {
     @Getter
     private final XPathTypo xpathTypo;
 
-
-    @SuppressWarnings("Guava")
-    private final Supplier<String> xml;
+    /**
+     * String repr.
+     */
+    private final Scalar<String> xmlStr;
 
     /**
      * Ctor
@@ -65,19 +65,19 @@ public class XemblerXML implements XML {
     public XemblerXML(final XML input, XPathTypo typo) {
         XML xml = input;
         XPathTypo xPathQuery = typo;
-        Supplier<String> asString = Suppliers.memoize(
-                () -> getString(input)
+        Scalar<String> asString = Mvn.memoize(
+                () -> sanitize(input)
         );
 
         if (xml instanceof XemblerXML) {
             xml = ((XemblerXML) input).origin;
             xPathQuery = ((XemblerXML) input).xpathTypo;
-            asString = ((XemblerXML) input).xml;
+            asString = ((XemblerXML) input).xmlStr;
         }
 
         this.origin = xml;
         this.xpathTypo = xPathQuery != null ? xPathQuery : newXPathQuery(xml);
-        this.xml = asString;
+        this.xmlStr = asString;
     }
 
     private static XPathTypo newXPathQuery(XML orig) {
@@ -101,18 +101,17 @@ public class XemblerXML implements XML {
 
     @Override
     public String toString() {
-        return getString(this.origin);
+        return sanitize(this.origin);
     }
 
     @SuppressWarnings("unused")
     public interface WithXPath {
         List<String> xpath(String query);
-
         List<XML> nodes(String query);
     }
 
 
-    private static String getString(XML xml) {
+    private static String sanitize(XML xml) {
         final Node node = xml.node();
         trimWhitespace(node);
         return prettyPrint(node);

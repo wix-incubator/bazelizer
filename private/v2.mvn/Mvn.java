@@ -4,6 +4,7 @@ import com.google.common.hash.Hashing;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.shared.invoker.DefaultInvocationRequest;
+import org.apache.maven.shared.invoker.DefaultInvoker;
 import org.cactoos.Input;
 import org.cactoos.Scalar;
 import org.cactoos.io.BytesOf;
@@ -22,7 +23,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 @SuppressWarnings("UnstableApiUsage")
 @Slf4j
-public class Builds {
+public class Mvn {
     public static final String PREF = "tools.jvm.mvn.";
     private static final String BZL_NAME_SYS_PROP = PREF + "BazelLabelName";
 
@@ -37,18 +38,16 @@ public class Builds {
 
     /**
      * Ctor.
-     * @throws IOException if any
      */
-    public Builds() throws IOException {
+    public Mvn() {
         this(new DeadInput());
     }
 
     /**
      * Ctor.
      * @param repositoryTar repository snapshot
-     * @throws IOException on any error
      */
-    public Builds(Input repositoryTar) throws IOException {
+    public Mvn(Input repositoryTar) {
         this.m2 = memoize(() -> {
             Path m2HomeDir = Files.createTempDirectory("M2_HOME@_" + LABEL + "_@");
             Path repository = repository();
@@ -64,45 +63,20 @@ public class Builds {
      */
     private final Scalar<Path> m2;
 
-//
-//    /**
-//     * New Build.
-//     * @param srcPomFile pom
-//     * @return Build
-//     */
-//    public Build build(Path srcPomFile) {
-//        return new Build() {
-//
-//            private Pom pom;
-//
-//            @SneakyThrows
-//            @Override
-//            public Outputs exec() {
-//
-//                if (Files.notExists(pomFile)) {
-//                    Files.write(pomFile, pom.toString().getBytes());
-//                }
-//
-//                DefaultInvoker invoker = new DefaultInvoker();
-//                invoker.setMavenHome(MAVEN_TOOL);
-//                invoker.setWorkingDirectory(pomFile.getParent().toFile());
-//
-//                final DefaultInvocationRequest request = newRequest();
-//                request.setPomFile(pomFile.toFile());
-//                invoker.execute(request);
-//            }
-//
-//            @Override
-//            public void addDeps(Iterable<Dep> deps) {
-//                installDeps(deps);
-//                pom = pom.update(
-//                        new PomUpdate.PomStruc(),
-//                        new PomUpdate.PomDropDeps(),
-//                        new PomUpdate.AppendDeps(deps)
-//                );
-//            }
-//        };
-//    }
+
+    @SneakyThrows
+    public void exec(File pomFile, List<String> cmd, List<String> profiles) {
+        DefaultInvoker invoker = new DefaultInvoker();
+        invoker.setMavenHome(Mvn.MAVEN_TOOL);
+        invoker.setWorkingDirectory(new File(pomFile.getParent()));
+
+        final DefaultInvocationRequest request = this.newRequest();
+        request.setPomFile(pomFile);
+        request.setGoals(cmd);
+        request.setProfiles(profiles);
+        invoker.execute(request);
+    }
+
 
     /**
      * Settings xml location.
@@ -188,16 +162,13 @@ public class Builds {
     }
 
 
-    public DefaultInvocationRequest newRequest() {
+    private DefaultInvocationRequest newRequest() {
         final DefaultInvocationRequest request = new DefaultInvocationRequest();
-        // request.setGoals(Lists.newArrayList(Sets.newLinkedHashSet(goals)));
-        // request.setProfiles(Lists.newArrayList(Sets.newLinkedHashSet(profiles)));
         request.setUserSettingsFile(settingsXml().toFile());
         request.setLocalRepositoryDirectory(repository().toFile());
         request.setJavaHome(new File(System.getProperty("java.home")));
         request.setBatchMode(true);
         request.setShowVersion(true);
-
         return request;
     }
 

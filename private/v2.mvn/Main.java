@@ -1,17 +1,21 @@
 package tools.jvm.v2.mvn;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
-import lombok.SneakyThrows;
-import org.cactoos.io.InputOf;
+import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Map;
+import java.time.Duration;
+import java.time.LocalDateTime;
 
+@Slf4j
+@CommandLine.Command(subcommands = {
+        CmdRepository.class,
+        CmdBuild.class
+})
 public class Main {
     public static final Gson GSON = new GsonBuilder()
             .setPrettyPrinting()
@@ -20,49 +24,13 @@ public class Main {
                 return Paths.get(asString);
             }).create();
 
-    @CommandLine.Command(name = "run")
-    public static class Run implements Runnable {
-
-        @CommandLine.Option(names = {"--pom"}, required = true,
-                paramLabel = "POM", description = "the pom xml template file")
-        public Path pomFile;
-
-        @CommandLine.Option(names = {"--m2-repository"},
-                paramLabel = "REPO", description = "the repository tar")
-        public Path repo;
-
-        @CommandLine.Option(names = {"--deps"}, paramLabel = "DEPS", description = "the deps manifest")
-        public Path deps;
-
-        @CommandLine.Option(names = {"-O"}, description = "declared bazel output -> relatice file path /target")
-        public Map<String, String> outputs = ImmutableMap.of();
-
-        @CommandLine.Option(names = {"-wid", "--write-artifact"}, paramLabel = "P",
-                description = "write archived artifact from repo, except default jar")
-        public Path writeInstalledArtifact;
-
-        @CommandLine.Option(names = {"-wdj", "--write-jar"}, paramLabel = "P",
-                description = "write default jar")
-        public Path writeDefaultJar;
-
-        @SneakyThrows
-        @Override
-        public void run() {
-            final Builds maven = new Builds(
-                    new InputOf(repo)
-            );
-
-            final Build build = new Build(
-                    maven, pomFile
-            );
-
-
-
-
-        }
-    }
 
     public static void main(String[] args) {
-
+        LocalDateTime from = LocalDateTime.now();
+        int exitCode = new CommandLine(new Main()).execute(args);
+        log.info(">> {}", exitCode == 0 ? "DONE" : "FAIL");
+        LocalDateTime to = LocalDateTime.now();
+        log.info(">>  time elapsed: {}s", Duration.between(from, to).getSeconds());
+        System.exit(exitCode);
     }
 }
