@@ -28,7 +28,7 @@ java_binary(
     name = "mvn",
     srcs = glob(["*.java"], exclude = ["*Test.java"]),
     javacopts = _jopts,
-    resources = ["//private/tools/jvm/mvn/java:java_resources"],
+    resources = ["//private/v2.mvn/java:java_resources"],
     jvm_flags = ["--illegal-access=permit", "-Dtools.jvm.mvn.MavenBin=\"%s\"" % _maven_bin_name],
     deps = _deps,
     data = ["@%s//:%s" % (_maven_bin_name, _maven_bin_name)],
@@ -43,6 +43,7 @@ run_tests(
     package = "tools.jvm.v2.mvn",
     srcs = glob(["*Test.java"]),
     data = glob(["**"],exclude = ["*.java"]),
+    jvm_flags = ['-Dtools.jvm.mvn.BazelLabelName=testcase'],
     deps = [
         ":mvn",
         "//external:wix_incubator_bazelizer_rules/dependency/junit_junit",

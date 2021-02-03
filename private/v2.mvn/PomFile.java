@@ -27,7 +27,7 @@ public interface PomFile {
      * Pom file location.
      * @return location
      */
-    File location();
+    File persisted(boolean write);
 
 
     class Just implements PomFile {
@@ -56,8 +56,8 @@ public interface PomFile {
 
         @SneakyThrows
         @Override
-        public File location() {
-            if (!dest.exists()) {
+        public File persisted(boolean w) {
+            if (!dest.exists() && w) {
                 Files.write(dest.toPath(), pom.bytes().asBytes());
                 return dest;
             }

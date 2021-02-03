@@ -31,7 +31,7 @@ public class Mvn {
     public static final File MAVEN_TOOL;
     static {
         LABEL = Optional.ofNullable(System.getProperty(BZL_NAME_SYS_PROP))
-                .map(name -> Hashing.murmur3_32().hashString(name, StandardCharsets.UTF_8).toString())
+                .map(name -> Hashing.murmur3_32().hashString(name, StandardCharsets.UTF_8).toString().toUpperCase())
                 .orElseThrow(() -> new IllegalStateException("no sys prp: " + BZL_NAME_SYS_PROP));
         MAVEN_TOOL = new File("");
     }
