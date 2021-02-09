@@ -1,6 +1,7 @@
 package tools.jvm.v2.mvn;
 
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.cactoos.io.InputOf;
 import org.xembly.Directive;
 
@@ -23,6 +24,15 @@ public interface PomFile {
      */
     PomFile update(PomUpdate...upd);
 
+
+    /**
+     * Pom file location.
+     * @return location
+     */
+    default File persisted() {
+        return persisted(true);
+    }
+
     /**
      * Pom file location.
      * @return location
@@ -30,11 +40,12 @@ public interface PomFile {
     File persisted(boolean write);
 
 
-    class Just implements PomFile {
+    @Slf4j
+    class Simple implements PomFile {
         private Pom pom;
         private final File dest;
 
-        public Just(File src) {
+        public Simple(File src) {
             this.pom = new Pom.Std(new InputOf(src));
             this.dest = src.toPath().getParent().resolve("pom." + Mvn.LABEL + ".xml").toFile();
         }
@@ -59,6 +70,10 @@ public interface PomFile {
         public File persisted(boolean w) {
             if (!dest.exists() && w) {
                 Files.write(dest.toPath(), pom.bytes().asBytes());
+                if (log.isInfoEnabled()) {
+                    log.info("Writing pom.xml {}", dest);
+                    log.info("{}", pom.asString());
+                }
                 return dest;
             }
 

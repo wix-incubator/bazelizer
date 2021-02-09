@@ -20,6 +20,7 @@ import java.io.StringWriter;
 import java.util.List;
 
 public class XemblerXML implements XML {
+    public static final String NAMESPACE_XPATH = "/*/namespace::*[name()='']";
 
     /**
      * XML.
@@ -44,7 +45,7 @@ public class XemblerXML implements XML {
      * @param node original node
      */
     public XemblerXML(Node node, XPathTypo typo) {
-        this(new XMLDocument(node).merge(Pom.XPATH_CONTEXT));
+        this(new XMLDocument(node).merge(Pom.XPATH_CONTEXT), typo);
     }
 
     /**
@@ -61,7 +62,6 @@ public class XemblerXML implements XML {
      *
      * @param input original xml
      */
-    @SuppressWarnings("Guava")
     public XemblerXML(final XML input, XPathTypo typo) {
         XML xml = input;
         XPathTypo xPathQuery = typo;
@@ -82,7 +82,7 @@ public class XemblerXML implements XML {
 
     private static XPathTypo newXPathQuery(XML orig) {
         XPathTypo queryMap = s -> s;
-        final List<String> namespaces = orig.xpath(Pom.NAMESPACE_XPATH);
+        final List<String> namespaces = orig.xpath(NAMESPACE_XPATH);
         if (namespaces.contains(Pom.POM_NS_URI)) {
             queryMap = new XPathTypo.Prefix(Pom.POM_NS);
         }

@@ -31,14 +31,15 @@ import java.util.function.Function;
 public class CmdBuild implements Runnable {
 
     @CommandLine.Option(names = {"--pom"}, required = true,
-            paramLabel = "POM", description = "the pom xml template file")
+            paramLabel = "POM", description = "The pom xml file")
     public Path pomFile;
 
     @CommandLine.Option(names = {"--m2-repository"},
-            paramLabel = "REPO", description = "the repository tar")
+            paramLabel = "REPO", description = "The repository tar")
     public Path repositoryTar;
 
-    @CommandLine.Option(names = {"--deps"}, paramLabel = "DEPS", description = "the deps manifest")
+    @CommandLine.Option(names = {"--deps"}, paramLabel = "DEPS",
+            description = "The deps manifest")
     public Path deps;
 
     @CommandLine.Option(names = {"-O"}, description = "declared bazel output -> relatice file path /target")
@@ -60,34 +61,28 @@ public class CmdBuild implements Runnable {
         );
 
         final Mvn builds = new Mvn(
-                new InputOf(repositoryTar)
+                new InputOf(repositoryTar),
+                new SettingsXml.Default()
         );
 
         builds.installDeps(deps);
 
-        final Pom pom = new Pom.Std(new InputOf(pomFile));
-//                .update(
-//                new PomUpdate.PomStruc(),
-//                new PomUpdate.PomDropDeps(),
-//                new PomUpdate.AppendDeps(deps)
-//                );
+        final PomFile aPomFile = new PomFile.Simple(pomFile.toFile()).update(
+                new PomUpdate.PomStruc(),
+                new PomUpdate.PomDropDeps(),
+                new PomUpdate.AppendDeps(deps)
+        );
 
-        builds.exec(saveFile(pom), Arrays.asList("clean", "install"), Collections.emptyList());
+        builds.exec(
+                aPomFile.persisted(),
+                Arrays.asList("clean", "install"),
+                Collections.emptyList()
+        );
 
-        final Path target = pomFile.getParent().resolve("target");
-        writeJar(target, pom);
+        final Path target = pomFile.toAbsolutePath().getParent().resolve("target");
+        writeJar(target, aPomFile.pom());
         writeCustom(target);
-        writeArchivedFolder(builds, pom);
-    }
-
-
-    @SneakyThrows
-    private File saveFile(Pom pom) {
-        final Path abs = pomFile.getParent().resolve("pom." + Mvn.LABEL + ".xml");
-        if (Files.notExists(abs)) {
-            Files.write(abs, pom.toString().getBytes());
-        }
-        return abs.toFile();
+        writeArchivedFolder(builds, aPomFile.pom());
     }
 
     private void writeCustom(Path target) {
@@ -102,10 +97,7 @@ public class CmdBuild implements Runnable {
 
     @SneakyThrows
     private void writeJar(Path target, Pom pom) {
-        Files.copy(
-                target.resolve(String.format("%s-%s.jar", pom.artifactId(), pom.version())),
-                writeDefaultJar
-        );
+        Files.copy(target.resolve(String.format("%s-%s.jar", pom.artifactId(), pom.version())), writeDefaultJar);
     }
 
     @SneakyThrows

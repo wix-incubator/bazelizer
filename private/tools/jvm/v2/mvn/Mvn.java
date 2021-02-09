@@ -1,18 +1,18 @@
 package tools.jvm.v2.mvn;
 
 import com.google.common.hash.Hashing;
+import com.google.devtools.build.runfiles.Runfiles;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.maven.shared.invoker.DefaultInvocationRequest;
 import org.apache.maven.shared.invoker.DefaultInvoker;
+import org.apache.maven.shared.invoker.InvocationResult;
 import org.cactoos.Input;
 import org.cactoos.Scalar;
 import org.cactoos.io.BytesOf;
-import org.cactoos.io.DeadInput;
 import org.cactoos.io.InputOf;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,36 +24,65 @@ import java.util.concurrent.atomic.AtomicReference;
 @SuppressWarnings("UnstableApiUsage")
 @Slf4j
 public class Mvn {
-    public static final String PREF = "tools.jvm.mvn.";
+    private static final String PREF = "tools.jvm.mvn.";
     private static final String BZL_NAME_SYS_PROP = PREF + "BazelLabelName";
+    private static final String BZL_MVN_TOOL_SYS_PROP = PREF + "MavenBin";
 
     public static final String LABEL;
     public static final File MAVEN_TOOL;
+
+    private static Runfiles _sRunfiles;
+
     static {
+        _sRunfiles = runfiles();
+
         LABEL = Optional.ofNullable(System.getProperty(BZL_NAME_SYS_PROP))
                 .map(name -> Hashing.murmur3_32().hashString(name, StandardCharsets.UTF_8).toString().toUpperCase())
-                .orElseThrow(() -> new IllegalStateException("no sys prp: " + BZL_NAME_SYS_PROP));
-        MAVEN_TOOL = new File("");
+                .orElseThrow(() -> new IllegalStateException("no sys prop: " + BZL_NAME_SYS_PROP));
+
+        MAVEN_TOOL = Optional.ofNullable(System.getProperty(BZL_MVN_TOOL_SYS_PROP))
+                .map(runfilesPath -> new File(_sRunfiles.rlocation(runfilesPath)))
+                .orElseThrow(() -> new IllegalStateException("no sys prop " + BZL_MVN_TOOL_SYS_PROP));
+    }
+
+    /**
+     * Bazel runfiles.
+     */
+    @SneakyThrows
+    private static Runfiles runfiles()  {
+        return Runfiles.create();
+    }
+
+    /**
+     * Error.
+     */
+    public static class MvnException extends RuntimeException {
+        public MvnException(String message) {
+            super(message);
+        }
     }
 
     /**
      * Ctor.
+     * @param xml settings xml
      */
-    public Mvn() {
-        this(new DeadInput());
+    public Mvn(SettingsXml xml) {
+        this(null, xml);
     }
 
     /**
      * Ctor.
      * @param repositoryTar repository snapshot
      */
-    public Mvn(Input repositoryTar) {
+    public Mvn(Input repositoryTar, SettingsXml settingsXml) {
         this.m2 = memoize(() -> {
             Path m2HomeDir = Files.createTempDirectory("M2_HOME@_" + LABEL + "_@");
-            Path repository = repository();
+            Path repository = m2HomeDir.resolve("repository").toAbsolutePath();
             Files.createDirectories(repository);
-            generateSettingsXml();
-            TarUtils.untar(repositoryTar, repository);
+            Path settingsXmlFile = m2HomeDir.resolve("settings.xml").toAbsolutePath();
+            Files.write(settingsXmlFile, new BytesOf(settingsXml.render(repository)).asBytes());
+            if (repositoryTar != null)
+                TarUtils.untar(repositoryTar, repository);
             return m2HomeDir;
         });
     }
@@ -66,6 +95,7 @@ public class Mvn {
 
     @SneakyThrows
     public void exec(File pomFile, List<String> cmd, List<String> profiles) {
+        log.info("running {}", cmd);
         DefaultInvoker invoker = new DefaultInvoker();
         invoker.setMavenHome(Mvn.MAVEN_TOOL);
         invoker.setWorkingDirectory(new File(pomFile.getParent()));
@@ -74,7 +104,11 @@ public class Mvn {
         request.setPomFile(pomFile);
         request.setGoals(cmd);
         request.setProfiles(profiles);
-        invoker.execute(request);
+        final InvocationResult execute = invoker.execute(request);
+        if (execute.getExitCode() != 0) {
+            throw new MvnException("exit code " + execute.getExitCode() + "; "
+                    + execute.getExecutionException().getMessage());
+        }
     }
 
 
@@ -92,13 +126,6 @@ public class Mvn {
         return m2HomeDir().resolve("repository").toAbsolutePath();
     }
 
-
-    @SneakyThrows
-    private void generateSettingsXml()  {
-        Path settingsXml = settingsXml();
-        final String xml = ""; // TODO
-        Files.write(settingsXml, new BytesOf(xml).asBytes());
-    }
 
     /**
      * M2 HOME.
@@ -188,9 +215,5 @@ public class Mvn {
             }
             return val;
         };
-    }
-
-    public void execute() {
-
     }
 }

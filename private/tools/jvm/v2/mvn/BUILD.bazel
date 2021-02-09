@@ -28,7 +28,7 @@ java_binary(
     name = "mvn",
     srcs = glob(["*.java"], exclude = ["*Test.java"]),
     javacopts = _jopts,
-    resources = ["//private/v2.mvn/java:java_resources"],
+    resources = ["//private/tools/jvm/v2/mvn/java:java_resources"],
     jvm_flags = ["--illegal-access=permit", "-Dtools.jvm.mvn.MavenBin=\"%s\"" % _maven_bin_name],
     deps = _deps,
     data = ["@%s//:%s" % (_maven_bin_name, _maven_bin_name)],

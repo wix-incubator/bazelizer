@@ -12,7 +12,7 @@
         <groupId>com.mavenizer.examples.api</groupId>
         <artifactId>myapi-parent</artifactId>
         <version>1.0.0-SNAPSHOT</version>
-        <relativePath>../mvn-parent-pom/pom.xml</relativePath>
+        <relativePath>../mvn-lib-parent/pom.xml</relativePath>
     </parent>
 
     <dependencies>

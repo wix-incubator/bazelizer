@@ -11,7 +11,7 @@ import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-public class PomFiles {
+public class Builds {
     private final Map<String, PomFileHolder> buildMap = new HashMap<>();
 
 
@@ -25,13 +25,15 @@ public class PomFiles {
 
     /**
      * Add pom file.
-     * @param file pom file location
+     * @param path pom file location
      */
-    public void registerFile(Path file) {
+    public void registerFile(Path path) {
+        final Path file = path.toAbsolutePath();
         final PomFileHolder holder = buildMap.computeIfAbsent(getKey(file), (k) -> {
-            PomFile f = new PomFile.Just(file.toFile());
+            PomFile f = new PomFile.Simple(file.toFile());
             return new PomFileHolder(f, k);
         });
+        System.out.println(file);
         walk(file, holder, buildMap);
     }
 
@@ -49,7 +51,7 @@ public class PomFiles {
                 .relativePath().map(rel -> orig.getParent().resolve(rel).normalize());
         parentPath.ifPresent(p -> {
             final PomFileHolder parentHolder = buildMap.computeIfAbsent(getKey(p), (k) -> {
-                PomFile parent = new PomFile.Just(p.toFile());
+                PomFile parent = new PomFile.Simple(p.toFile());
                 PomFileHolder parentBuild = new PomFileHolder(parent, k);
                 parentBuild._children.add(current);
                 current._parent = parentBuild;

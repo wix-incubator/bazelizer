@@ -20,7 +20,6 @@ import java.util.stream.Stream;
 
 public abstract class Pom {
 
-    public static final String NAMESPACE_XPATH = "/*/namespace::*[name()='']";
     public static final  String POM_NS_URI = "http://maven.apache.org/POM/4.0.0";
     public static final  String POM_NS = "pom";
 
@@ -141,7 +140,7 @@ public abstract class Pom {
         @SneakyThrows
         private static XML get(Input i) {
             try (InputStream is = i.stream()) {
-                return new XemblerXML(new XMLDocument(is));
+                return new XemblerXML(new XMLDocument(is).merge(XPATH_CONTEXT));
             }
         }
     }

@@ -1,6 +1,6 @@
-load("//private/ruls/maven:repository.bzl", "declare_pom")
-load("//private/ruls/maven:repository.bzl", "maven_repository")
-load("//private/ruls/maven:runner.bzl", "run_mvn")
+
+load("//maven:defs.bzl", "declare_module")
+load("@maven_e2e_v2//:execute_build.bzl", "execute_build")
 
 
 #declare_pom(
