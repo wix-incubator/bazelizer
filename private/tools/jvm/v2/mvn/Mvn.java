@@ -122,8 +122,8 @@ public class Mvn {
     private final Scalar<Path> m2;
 
 
-    public void execOffline(File pomFile, List<String> cmd, List<String> profiles) {
-        execute(pomFile, cmd, profiles, true);
+    public void execOffline(File pomFile, List<String> cmd, Arg arg) {
+        execute(pomFile, cmd, arg.getProfiles(), true);
     }
 
     public void exec(File pomFile, List<String> cmd, List<String> profiles) {

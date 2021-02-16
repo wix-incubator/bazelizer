@@ -24,6 +24,10 @@ import static org.apache.commons.io.filefilter.FileFilterUtils.*;
 @CommandLine.Command(name = "run")
 public class CmdBuild implements Runnable {
 
+    @CommandLine.Option(names = {"--args"}, required = true,
+            paramLabel = "args", description = "The extra arguments")
+    public String arg;
+
     @CommandLine.Option(names = {"--pom"}, required = true,
             paramLabel = "POM", description = "The pom xml file")
     public Path pomFile;
@@ -70,7 +74,7 @@ public class CmdBuild implements Runnable {
         builds.execOffline(
                 aPomFile.persisted(),
                 Arrays.asList("clean", "install"),
-                Collections.emptyList()
+                new Arg(arg)
         );
 
         final Path target = pomFile.getParent().resolve("target");

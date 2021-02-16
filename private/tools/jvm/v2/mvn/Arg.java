@@ -17,7 +17,25 @@ public class Arg {
     private List<String> goals = Lists.newArrayList();
 
     public Arg(String cmdLine) {
-        final String[] flags = cmdLine.split(" ");
+        this(cmdLine != null ? format(cmdLine) : new String[0]);
+    }
+
+    private static String[] format(String argsLine) {
+        String line = argsLine;
+        if (line.startsWith("'") || line.startsWith("\"")) {
+            line = line.substring(1);
+        }
+        if (line.endsWith("'") || line.endsWith("\"")) {
+            line = line.substring(0, line.length() - 1);
+        }
+        return line.split(" ");
+    }
+
+    public Arg(List<String> cmdLine) {
+        this(cmdLine.toArray(new String[0]));
+    }
+
+    public Arg(String[] flags) {
         try {
             final CommandLine.ParseResult result = new CommandLine(this).parseArgs(flags);
             Preconditions.checkState(!result.isUsageHelpRequested());

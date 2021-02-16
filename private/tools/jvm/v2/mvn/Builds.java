@@ -44,9 +44,17 @@ public class Builds {
      */
     public void registerFile(BuildInfo info) {
         final Path file = info.file.toAbsolutePath();
-        final BuildImpl holder = buildMap.computeIfAbsent(getKey(file), (k) -> {
-            PomFile f = new PomFile.Simple(file.toFile());
-            return new BuildImpl(f, k);
+        final BuildImpl holder = buildMap.compute(getKey(file), (k, maybeBuild) -> {
+            final BuildImpl build;
+            if (maybeBuild == null) {
+                build = new BuildImpl(new PomFile.Simple(file.toFile()), k);
+            } else {
+                build = maybeBuild;
+            }
+            if (build._args == null && info.flags != null) {
+                build._args = new Arg(info.flags);
+            }
+            return build;
         });
         System.out.println(file);
         walk(file, holder, buildMap);
@@ -83,6 +91,7 @@ public class Builds {
     private static class BuildImpl implements Build {
         private final String id;
         private final PomFile origin;
+        private Arg _args;
 
         @AllArgsConstructor
         private class WrapFile implements PomFile {
@@ -116,7 +125,7 @@ public class Builds {
 
         @Override
         public Optional<Arg> arg() {
-            return Optional.empty();
+            return Optional.ofNullable(_args);
         }
 
 
