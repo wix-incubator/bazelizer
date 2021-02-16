@@ -9,3 +9,9 @@ e2e_has_jar_test(
 )
 
 
+e2e_has_jar_test(
+    name = "mvn-lib-a__jar-test",
+    dep = "//tests/e2e/mvn-lib-a",
+    jar = "tests/e2e/mvn-lib-a/libmvn-lib-a.jar"
+)
+

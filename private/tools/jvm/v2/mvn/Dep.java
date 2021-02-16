@@ -15,7 +15,7 @@ public interface Dep {
     static Collection<Dep> load(Manifest manifest) {
         return manifest.lines()
                 .stream()
-                .map(json -> Main.GSON.fromJson(json, DepDTO.class).toDep())
+                .map(json -> Main.GSON.fromJson(json, DepInfo.class).toDep())
                 .collect(Collectors.toSet());
     }
 
@@ -81,7 +81,7 @@ public interface Dep {
     @NoArgsConstructor
     @EqualsAndHashCode(of = {"path", "tags"})
     @Getter @Setter
-    class DepDTO {
+    class DepInfo {
         private Path path;
         private Map<String, String> tags = Collections.emptyMap();
 
@@ -89,13 +89,15 @@ public interface Dep {
         public Dep toDep() {
             final String extension = FilenameUtils
                     .getExtension(path.getFileName().toString());
+
+            // regular jar, install hashed coordinates
             if (extension.endsWith("jar")) {
-                // regular jar, install hashed coordinates
                 return hashed(path);
             }
+
+            // archived maven installed folder, try unpack and install it as is.
             if (extension.endsWith("tar")) {
-                // installed artifact as it was
-                TarUtils.list(path).stream()
+                return TarUtils.list(path).stream()
                         .filter(name -> name.endsWith(".jar"))
                         .map(pathWithinTar -> {
                             final List<String> parts = Arrays.asList(pathWithinTar.split("/"));
@@ -105,7 +107,8 @@ public interface Dep {
                             return new Simple(path, gid, art, version);
                         })
                         .findFirst()
-                        .orElseThrow(() -> new IllegalStateException("tar has not resolvable content in " + path));
+                        .orElseThrow(() -> new IllegalStateException("tar has not resolvable content in "
+                                + path + ": " + TarUtils.list(path)));
             }
             throw new IllegalStateException("not supported extension for " + path);
         }

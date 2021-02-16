@@ -45,7 +45,7 @@ public class BuildsTest {
         Files.write(aFile, pomStr.getBytes());
         pomFiles.registerFile(aFile);
 
-        final Builds.BuildsOrder builds = pomFiles.builds();
+        final Builds.BuildsOrder builds = pomFiles.travers();
         System.out.println(builds);
 
         builds.each(pf -> {

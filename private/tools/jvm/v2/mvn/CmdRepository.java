@@ -12,9 +12,10 @@ import picocli.CommandLine;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+
+import static tools.jvm.v2.mvn.Mvn.REPOSITORY_FILES_FILTER;
 
 @CommandLine.Command(name = "build-repository")
 @Slf4j
@@ -55,11 +56,11 @@ public class CmdRepository implements Runnable {
                 new SettingsXml.Json(settingsXmlToUse)
         );
         final Builds pomFiles = new Builds();
-        new Manifest(pomDeclarations).items(PomFileDTO.class).forEach(dto -> {
+        new Manifest(pomDeclarations).items(PomFileInfo.class).forEach(dto -> {
             pomFiles.registerFile(dto.file);
         });
 
-        final Builds.BuildsOrder builds = pomFiles.builds();
+        final Builds.BuildsOrder builds = pomFiles.travers();
         log.info("Build order:\n{}", builds);
 
         builds.each(pomFile -> {
@@ -80,22 +81,9 @@ public class CmdRepository implements Runnable {
 
     public void writeSnapshot(Mvn maven) throws IOException {
         final Path repository = maven.repository();
-        final IOFileFilter filter = FileFilterUtils.and(
-                FileFilterUtils.fileFileFilter(),
-                // SEE: https://stackoverflow.com/questions/16866978/maven-cant-find-my-local-artifacts
-                //
-                //So with Maven 3.0.x, when an artifact is downloaded from a repository,
-                // maven leaves a _maven.repositories file to record where the file was resolved from.
-                //
-                //Namely: when offline, maven 3.0.x thinks there are no repositories, so will always
-                // find a mismatch against the _maven.repositories file
-                FileFilterUtils.notFileFilter(
-                        FileFilterUtils.prefixFileFilter("_remote.repositories")
-                )
-        );
         final Collection<File> files = FileUtils.listFiles(
                 repository.toFile(),
-                filter,
+                REPOSITORY_FILES_FILTER,
                 FileFilterUtils.directoryFileFilter() // recursive
         );
         TarUtils.tar(files, new OutputTo(writeRepositoryDest), file -> repository.relativize(file.toPath()));
@@ -103,7 +91,7 @@ public class CmdRepository implements Runnable {
     }
 
     @Data
-    private static class PomFileDTO {
+    private static class PomFileInfo {
         @SerializedName("file")
         private Path file;
         @SerializedName("flags_line")

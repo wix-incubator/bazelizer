@@ -13,6 +13,8 @@ import org.xembly.Directive;
 
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -23,12 +25,15 @@ public abstract class Pom {
     public static final  String POM_NS_URI = "http://maven.apache.org/POM/4.0.0";
     public static final  String POM_NS = "pom";
 
+    public static final String NS = "bz";
+    public static final String NS_URI = "https://github.com/wix-incubator/bazelizer";
+
     /**
      * Global xpath context.
      */
     public static final  XPathContext XPATH_CONTEXT = new XPathContext()
             .add(POM_NS, POM_NS_URI)
-            .add("bz", "https://github.com/wix-incubator/bazelizer");
+            .add(NS, NS_URI);
 
 
     /**
@@ -60,6 +65,19 @@ public abstract class Pom {
             final XML xml = xml();
             return XemblerAug.applyQuietly(xml, XPATH_CONTEXT, dirs);
         });
+    }
+
+    /**
+     * Helper function to update.
+     * @param upd pom updates
+     * @return new pom
+     */
+    public Pom update(PomUpdate... upd) {
+        final Collection<Directive> dirs = new ArrayList<>();
+        for (PomUpdate u : upd) {
+            u.apply(this).forEach(dirs::add);
+        }
+        return this.update(dirs);
     }
 
     /**

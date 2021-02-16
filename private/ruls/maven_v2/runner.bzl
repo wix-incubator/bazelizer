@@ -1,4 +1,4 @@
-load(":module.bzl", "PomDeclarationInfo", "GoOfflineMavenInfo", "CLI_TOOL")
+load(":module.bzl", "PomModuleInfo", "GoOfflineMavenInfo", "CLI_TOOL")
 
 MvnArtifactInfo = provider(fields = {
     "pkg": """
@@ -78,7 +78,7 @@ _run_mvn_attrs = {
 
 def _run_mvn_impl(ctx):
     repository_info = ctx.attr.repository[GoOfflineMavenInfo]
-    pom_def_info = ctx.attr.pom_def[PomDeclarationInfo]
+    pom_module_provider = ctx.attr.pom_def[PomModuleInfo]
 
     deps_ctx = _collect_jars(ctx)
     deps_manifest = _create_manifest_file("deps_%s" % (ctx.label.name), ctx, deps_ctx.manifests)
@@ -88,7 +88,7 @@ def _run_mvn_impl(ctx):
 
     output_files = [def_output_jar_file, def_output_artifact_file]
     input_files = [
-        pom_def_info.file,
+        pom_module_provider.file,
         deps_manifest,
         repository_info.tar
     ] + deps_ctx.files
@@ -105,12 +105,12 @@ def _run_mvn_impl(ctx):
     args.add("--deps", deps_manifest)
     args.add("--write-artifact", def_output_artifact_file.path)
     args.add("--write-jar", def_output_jar_file.path)
-    args.add("--pom", pom_def_info.file.path)
-#    if pom_def_info.parent_file:
-#        args.add("--parent-pom", pom_def_info.parent_file.path)
-#        input_files.append(pom_def_info.parent_file)
-    if pom_def_info.flags_line:
-        args.add("--args", _foramt_flags_as_escape_str(pom_def_info.flags_line))
+    args.add("--pom", pom_module_provider.file.path)
+
+    if pom_module_provider.parent_file:
+        input_files.append(pom_module_provider.parent_file)
+    if pom_module_provider.flags_line:
+        args.add("--args", _foramt_flags_as_escape_str(pom_module_provider.flags_line))
 
     for out in ctx.attr.outputs:
         file = ctx.actions.declare_file(out)

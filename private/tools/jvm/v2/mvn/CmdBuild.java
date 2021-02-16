@@ -1,7 +1,6 @@
 package tools.jvm.v2.mvn;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.Closer;
 import lombok.SneakyThrows;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
@@ -26,6 +25,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.function.Function;
+
+import static org.apache.commons.io.filefilter.FileFilterUtils.*;
+
 
 @CommandLine.Command(name = "run")
 public class CmdBuild implements Runnable {
@@ -73,7 +75,7 @@ public class CmdBuild implements Runnable {
                 new PomUpdate.AppendDeps(deps)
         );
 
-        builds.exec(
+        builds.execOffline(
                 aPomFile.persisted(),
                 Arrays.asList("clean", "install"),
                 Collections.emptyList()
@@ -104,37 +106,17 @@ public class CmdBuild implements Runnable {
     private void writeArchivedFolder(Mvn mvn, Pom pom) {
         final Output output = new OutputTo(writeInstalledArtifact);
         final Path installedFolder = pom.folder();
-        final IOFileFilter artifactFilter = FileFilterUtils.and(
-                new AbstractFileFilter() {
-                    @Override
-                    public boolean accept(File file) {
-                        final Path path = file.toPath();
-                        return path.startsWith(installedFolder);
-                    }
-                },
-                FileFilterUtils.notFileFilter(FileFilterUtils.suffixFileFilter(".pom")) // exclude pom from a pkg
+        final Path repository = mvn.repository();
+        final Collection<File> files = FileUtils.listFiles(
+                repository.resolve(installedFolder).toFile(),
+                and(Mvn.REPOSITORY_FILES_FILTER, notFileFilter(suffixFileFilter("pom"))),
+                trueFileFilter()
         );
 
-        final Collection<File> files = FileUtils.listFiles(
-                mvn.repository().toFile(), artifactFilter, FileFilterUtils.trueFileFilter()
-        );
-        final Function<File, Path> tarPath = aFile -> {
-            final Path filePath = aFile.toPath();
-            //log.debug("tar: {} as {}", aFile, filePathInRepo);
-            return mvn.repository().relativize(filePath);
-        };
-        try(TarArchiveOutputStream aos = new TarArchiveOutputStream(output.stream())) {
-            aos.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
-            for (File file : files) {
-                final ArchiveEntry entry = aos.createArchiveEntry(file, tarPath.apply(file).toString());
-                aos.putArchiveEntry(entry);
-                try (InputStream is = Files.newInputStream(file.toPath())) {
-                    IOUtils.copy(is, aos);
-                }
-                aos.closeArchiveEntry();
-            }
-            aos.finish();
-        }
+        TarUtils.tar(files, output, aFile -> {
+            final Path filePath = aFile.toPath().toAbsolutePath();
+            return filePath.subpath(repository.getNameCount(), filePath.getNameCount());
+        });
     }
 
 

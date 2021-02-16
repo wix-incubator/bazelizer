@@ -27,6 +27,11 @@
                 <artifactId>jaxb2-basics-runtime</artifactId>
                 <version>1.11.1</version>
             </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>30.0-jre</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 </project>

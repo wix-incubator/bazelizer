@@ -48,7 +48,6 @@ public interface SettingsXml {
                     );
                     mustache.execute(dest, props);
                 }
-                log.info("settings.xml:\n{}", str);
                 return new InputOf(str.toString());
             }
         }

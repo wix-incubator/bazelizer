@@ -10,19 +10,6 @@ install()
 # E2E tests
 #
 
-load("//maven:defs.bzl", "maven_repository_registry")
-maven_repository_registry(
-    name = "maven_e2e",
-    modules = [
-        "//tests/e2e/mvn-parent-pom:declared_pom",
-        "//tests/e2e/mvn-build-lib:declared_pom",
-        "//tests/e2e/mvn-build-lib-one:declared_pom",
-        "//tests/e2e/mvn-build-lib-with-profile:declared_pom",
-    ],
-    use_global_cache = False
-)
-
-
 load("//maven:defs.bzl", "maven_repository_registry_v2")
 maven_repository_registry_v2(
     name = "maven_e2e_v2",
@@ -30,7 +17,7 @@ maven_repository_registry_v2(
         "//tests/e2e/mvn-lib-a:module",
         "//tests/e2e/mvn-lib-parent:module",
         "//tests/e2e/mvn-build-lib-one:module",
-#        "//tests/e2e/mvn-build-lib-with-profile:declared_pom",
+        "//tests/e2e/mvn-lib-b:module",
     ],
     use_global_cache = False
 )

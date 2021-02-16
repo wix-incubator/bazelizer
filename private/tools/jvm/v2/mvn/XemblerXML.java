@@ -76,11 +76,11 @@ public class XemblerXML implements XML {
         }
 
         this.origin = xml;
-        this.xpathTypo = xPathQuery != null ? xPathQuery : newXPathQuery(xml);
+        this.xpathTypo = xPathQuery != null ? xPathQuery : newXPathTypo(xml);
         this.xmlStr = asString;
     }
 
-    private static XPathTypo newXPathQuery(XML orig) {
+    private static XPathTypo newXPathTypo(XML orig) {
         XPathTypo queryMap = s -> s;
         final List<String> namespaces = orig.xpath(NAMESPACE_XPATH);
         if (namespaces.contains(Pom.POM_NS_URI)) {

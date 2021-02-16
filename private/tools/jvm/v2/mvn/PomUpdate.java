@@ -8,11 +8,15 @@ import org.xembly.Directive;
 import org.xembly.Directives;
 
 import java.nio.file.Paths;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 public interface PomUpdate {
+
+    /**
+     * Dirs.
+     * @param xml pom
+     * @return dirs.
+     */
     Iterable<Directive> apply(Pom xml);
 
     /**
@@ -29,10 +33,38 @@ public interface PomUpdate {
      * The PomDropDeps.
      */
     class PomDropDeps implements PomUpdate {
+
+        public static final String ATTR = "@" + Pom.NS + ":drop";
+
+
+        public static final String SINGLE_DEP_EXCLUDE_MARKED = String.format(
+                "/project/dependencies/dependency[not(%s=\"never\")]",
+                ATTR
+        );
+
+        public static final String SINGLE_DEP_DROP_MARKED = String.format(
+                "/project/dependencies/dependency[%s=\"true\"]",
+                ATTR
+        );
+
+        public static final String DEPS_GET_ATTR = String.format(
+                "/project/dependencies/%s",
+                ATTR
+        );
+
         @Override
-        public Iterable<Directive> apply(Pom xml) {
+        public Iterable<Directive> apply(Pom pom) {
+            final List<String> attrs = pom.xml().xpath(DEPS_GET_ATTR);
+            if (!attrs.isEmpty()) {
+                final String s = attrs.get(0).trim().toLowerCase();
+                if ("never".equals(s)) {
+                    return new Directives()
+                            .xpath(SINGLE_DEP_DROP_MARKED)
+                            .remove();
+                }
+            }
             return new Directives()
-                    .xpath("/project/dependencies/dependency[not(@bz:remove=\"never\")]")
+                    .xpath(SINGLE_DEP_EXCLUDE_MARKED)
                     .remove();
         }
     }

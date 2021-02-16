@@ -4,6 +4,8 @@ import com.google.common.hash.Hashing;
 import com.google.devtools.build.runfiles.Runfiles;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.filefilter.FileFilterUtils;
+import org.apache.commons.io.filefilter.IOFileFilter;
 import org.apache.maven.shared.invoker.DefaultInvocationRequest;
 import org.apache.maven.shared.invoker.DefaultInvoker;
 import org.apache.maven.shared.invoker.InvocationResult;
@@ -11,6 +13,8 @@ import org.cactoos.Input;
 import org.cactoos.Scalar;
 import org.cactoos.io.BytesOf;
 import org.cactoos.io.InputOf;
+import org.cactoos.scalar.UncheckedScalar;
+import org.cactoos.text.TextOf;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -18,7 +22,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
 
 @SuppressWarnings("UnstableApiUsage")
@@ -28,21 +35,40 @@ public class Mvn {
     private static final String BZL_NAME_SYS_PROP = PREF + "BazelLabelName";
     private static final String BZL_MVN_TOOL_SYS_PROP = PREF + "MavenBin";
 
-    public static final String LABEL;
-    public static final File MAVEN_TOOL;
+    public static final UncheckedScalar<String> LABEL;
+    public static final UncheckedScalar<File> MAVEN_TOOL;
 
-    private static Runfiles _sRunfiles;
+    private static Scalar<Runfiles> _sRunfiles;
+
+
+    public static IOFileFilter REPOSITORY_FILES_FILTER = FileFilterUtils.and(
+            FileFilterUtils.fileFileFilter(),
+            // SEE: https://stackoverflow.com/questions/16866978/maven-cant-find-my-local-artifacts
+            //
+            //So with Maven 3.0.x, when an artifact is downloaded from a repository,
+            // maven leaves a _maven.repositories file to record where the file was resolved from.
+            //
+            //Namely: when offline, maven 3.0.x thinks there are no repositories, so will always
+            // find a mismatch against the _maven.repositories file
+            FileFilterUtils.notFileFilter(
+                    FileFilterUtils.prefixFileFilter("_remote.repositories")
+            )
+    );
 
     static {
-        _sRunfiles = runfiles();
+        _sRunfiles = memoize(Mvn::runfiles);
 
-        LABEL = Optional.ofNullable(System.getProperty(BZL_NAME_SYS_PROP))
-                .map(name -> Hashing.murmur3_32().hashString(name, StandardCharsets.UTF_8).toString().toUpperCase())
-                .orElseThrow(() -> new IllegalStateException("no sys prop: " + BZL_NAME_SYS_PROP));
+        LABEL = new UncheckedScalar<>(
+                memoize(() -> Optional.ofNullable(System.getProperty(BZL_NAME_SYS_PROP))
+                        .map(name -> Hashing.murmur3_32().hashString(name, StandardCharsets.UTF_8).toString().toUpperCase())
+                        .orElseThrow(() -> new IllegalStateException("no sys prop: " + BZL_NAME_SYS_PROP)))
+        );
 
-        MAVEN_TOOL = Optional.ofNullable(System.getProperty(BZL_MVN_TOOL_SYS_PROP))
-                .map(runfilesPath -> new File(_sRunfiles.rlocation(runfilesPath)))
-                .orElseThrow(() -> new IllegalStateException("no sys prop " + BZL_MVN_TOOL_SYS_PROP));
+        MAVEN_TOOL = new UncheckedScalar<>(
+                memoize(() -> Optional.ofNullable(System.getProperty(BZL_MVN_TOOL_SYS_PROP))
+                        .map(runfilesPath -> new File(new UncheckedScalar<>(_sRunfiles).value().rlocation(runfilesPath)))
+                        .orElseThrow(() -> new IllegalStateException("no sys prop " + BZL_MVN_TOOL_SYS_PROP)))
+        );
     }
 
     /**
@@ -76,11 +102,15 @@ public class Mvn {
      */
     public Mvn(Input repositoryTar, SettingsXml settingsXml) {
         this.m2 = memoize(() -> {
-            Path m2HomeDir = Files.createTempDirectory("M2_HOME@_" + LABEL + "_@");
+            Path m2HomeDir = Files.createTempDirectory("M2_HOME@_" + LABEL.value() + "_@");
             Path repository = m2HomeDir.resolve("repository").toAbsolutePath();
             Files.createDirectories(repository);
             Path settingsXmlFile = m2HomeDir.resolve("settings.xml").toAbsolutePath();
-            Files.write(settingsXmlFile, new BytesOf(settingsXml.render(repository)).asBytes());
+            final Input settingsXmlContent = settingsXml.render(repository);
+            log.info(" [settings.xml]  {}", settingsXmlFile);
+            log.info(" [settings.xml] \n{}", new TextOf(settingsXmlContent).asString());
+
+            Files.write(settingsXmlFile, new BytesOf(settingsXmlContent).asBytes());
             if (repositoryTar != null)
                 TarUtils.untar(repositoryTar, repository);
             return m2HomeDir;
@@ -93,24 +123,39 @@ public class Mvn {
     private final Scalar<Path> m2;
 
 
-    @SneakyThrows
+    public void execOffline(File pomFile, List<String> cmd, List<String> profiles) {
+        execute(pomFile, cmd, profiles, true);
+    }
+
     public void exec(File pomFile, List<String> cmd, List<String> profiles) {
-        log.info("running {}", cmd);
+        execute(pomFile, cmd, profiles, false);
+    }
+
+    @SneakyThrows
+    private void execute(File pomFile, List<String> cmd, List<String> profiles, boolean offline) {
         DefaultInvoker invoker = new DefaultInvoker();
-        invoker.setMavenHome(Mvn.MAVEN_TOOL);
+        invoker.setMavenHome(Mvn.MAVEN_TOOL.value());
         invoker.setWorkingDirectory(new File(pomFile.getParent()));
 
         final DefaultInvocationRequest request = this.newRequest();
         request.setPomFile(pomFile);
         request.setGoals(cmd);
         request.setProfiles(profiles);
+        request.setOffline(offline);
+        Properties properties = request.getProperties();
+        if (properties == null) {
+            properties = new Properties();
+        }
+        properties.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "WARN");
+        request.setProperties(properties);
+
+        log.info("running {}", cmd);
+        log.info("");
         final InvocationResult execute = invoker.execute(request);
         if (execute.getExitCode() != 0) {
-            throw new MvnException("exit code " + execute.getExitCode() + "; "
-                    + execute.getExecutionException().getMessage());
+            throw new MvnException("exit code " + execute.getExitCode() + ";");
         }
     }
-
 
     /**
      * Settings xml location.
@@ -139,6 +184,7 @@ public class Mvn {
      * Install archive content into repository.
      * @param tar tar archive
      */
+    @SuppressWarnings("unused")
     private void installRepo(Path tar) {
         TarUtils.untar(new InputOf(tar), repository());
     }
@@ -164,7 +210,7 @@ public class Mvn {
             thisGroupIdRepo = thisGroupIdRepo.resolve(gidPart);
         }
         return thisGroupIdRepo.resolve(dep.getArtifactId()).resolve(dep.getVersion());
-    };
+    }
 
 
     @SneakyThrows
@@ -179,7 +225,7 @@ public class Mvn {
                 "<description>Generated by " + this.getClass() + " for " + dep + "</description>\n" +
                 "</project>";
         Files.write(pomFile, pom.getBytes(StandardCharsets.UTF_8));
-        log.debug("write pom {}\n{}", pomFile, pom);
+        log.debug("[deps] install {}\n{}", pomFile, pom);
     }
 
     @SneakyThrows

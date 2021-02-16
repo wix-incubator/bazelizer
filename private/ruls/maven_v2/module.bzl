@@ -1,5 +1,5 @@
 
-PomDeclarationInfo = provider(fields = {
+PomModuleInfo = provider(fields = {
     "file": "",
     "parent_file": "",
     "flags_line": "mvn flags, specific for each execution",
@@ -16,13 +16,13 @@ def _declare_pom_impl(ctx):
     transitive_deps = []
 
     if ctx.attr.parent:
-        mvn_module_info = ctx.attr.parent[PomDeclarationInfo]
+        mvn_module_info = ctx.attr.parent[PomModuleInfo]
         parent_file = mvn_module_info.file
         transitive_deps = [mvn_module_info.deps]
 
     return [
         DefaultInfo(files = depset([pom_file])),
-        PomDeclarationInfo(
+        PomModuleInfo(
             file = pom_file,
             parent_file = parent_file,
             flags_line = ctx.attr.mvn_flags,
@@ -53,7 +53,7 @@ _BuildDef = provider(fields={
 
 def _go_offline_impl(ctx):
     reposiotry_def_args = ctx.actions.args()
-    pom_providers = [dep[PomDeclarationInfo] for dep in ctx.attr.modules]
+    pom_providers = [dep[PomModuleInfo] for dep in ctx.attr.modules]
     for pom_provider in pom_providers:
         reposiotry_def_args.add(
             _BuildDef(

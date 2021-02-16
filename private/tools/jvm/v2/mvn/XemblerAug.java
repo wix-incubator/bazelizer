@@ -28,7 +28,7 @@ public class XemblerAug {
     @SneakyThrows
     public static XML applyQuietly(XML xml, XPathContext context, Iterable<Directive> dirs) {
         final XemblerXML input = new XemblerXML(xml);
-        final Iterable<Directive> directives = fixXPath(input.getXpathTypo(), dirs);
+        final Iterable<Directive> directives = updateXPathTypo(input.getXpathTypo(), dirs);
         final Node dom = withinContext(context,
                 () -> new Xembler(directives).applyQuietly(input.node())
         );
@@ -55,10 +55,8 @@ public class XemblerAug {
     }
 
 
-
-
     @SuppressWarnings("UnstableApiUsage")
-    private static Iterable<Directive> fixXPath(XPathTypo func, Iterable<Directive> dirs) {
+    private static Iterable<Directive> updateXPathTypo(XPathTypo func, Iterable<Directive> dirs) {
         try {
             return new Directives(
                     Streams.stream(dirs).map(dir -> {
@@ -120,7 +118,7 @@ public class XemblerAug {
             //noinspection unchecked
             f = (ThreadLocal<XPathFactory>) factory.get(clz);
         } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("org.xembly", e);
         }
         _org_xembly_XpathDirectiveFactory = f;
 
@@ -128,8 +126,7 @@ public class XemblerAug {
         try {
             cls = Class.forName("org.xembly.CommentDirective");
         } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-            cls = null;
+            throw new IllegalStateException("org.xembly", e);
         }
         _org_xembly_CommentDirective_Type = cls;
     }

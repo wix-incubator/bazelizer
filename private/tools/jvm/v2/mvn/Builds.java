@@ -41,7 +41,7 @@ public class Builds {
      * Get builds order.
      * @return builds.
      */
-    public BuildsOrder builds() {
+    public BuildsOrder travers() {
         return new PreOrderBuilds(buildMap.values());
     }
 
@@ -70,8 +70,6 @@ public class Builds {
     private static class PomFileWrap implements PomFile {
         private final PomFileHolder h;
 
-
-
         @Override
         public Pom pom() {
             return h.pomFile.pom();
@@ -85,9 +83,9 @@ public class Builds {
         @Override
         public File persisted(boolean w) {
             final File location = h.pomFile.persisted(w);
-            h._children.forEach(dep -> {
-                dep.pomFile.update(new PomUpdate.NewRelativeParent(location.getName()));
-            });
+            h._children.forEach(dep ->
+                    dep.pomFile.update(new PomUpdate.NewRelativeParent(location.getName()))
+            );
             return location;
         }
     }
