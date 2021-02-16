@@ -56,15 +56,17 @@ public class CmdRepository implements Runnable {
                 new SettingsXml.Json(settingsXmlToUse)
         );
         final Builds pomFiles = new Builds();
-        new Manifest(pomDeclarations).items(PomFileInfo.class).forEach(dto -> {
-            pomFiles.registerFile(dto.file);
-        });
+        new Manifest(pomDeclarations).items(Builds.BuildInfo.class)
+                .forEach(pomFiles::registerFile);
 
         final Builds.BuildsOrder builds = pomFiles.travers();
         log.info("Build order:\n{}", builds);
 
-        builds.each(pomFile -> {
-            final File location = pomFile.persisted();
+        builds.each(build -> {
+            final File location = build.pomFile().persisted();
+            final List<String> profiles = build.arg().map(Arg::getProfiles)
+                    .orElse(Collections.emptyList());
+
             maven.exec(
                     location,
                     Arrays.asList(
@@ -72,7 +74,7 @@ public class CmdRepository implements Runnable {
                             GO_OFFLINE_PLUGIN_TASK,
                             INSTALL
                     ),
-                    Collections.emptyList()
+                    profiles
             );
         });
 
@@ -90,20 +92,4 @@ public class CmdRepository implements Runnable {
         log.info("Build repository snapshot: {}", FileUtils.byteCountToDisplaySize(writeRepositoryDest.toFile().length()));
     }
 
-    @Data
-    private static class PomFileInfo {
-        @SerializedName("file")
-        private Path file;
-        @SerializedName("flags_line")
-        private List<String> flags;
-
-//        public Args args() {
-//            return Optional.ofNullable(flags)
-//                    .filter(d -> !d.isEmpty())
-//                    .map(flags -> {
-//                        final String line = String.join(" ", flags);
-//                        return new Args().parseCommandLine(line);
-//                    }).orElse(new Args());
-//        }
-    }
 }

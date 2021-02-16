@@ -1,5 +1,7 @@
 package tools.jvm.v2.mvn;
 
+import com.google.gson.annotations.SerializedName;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -12,26 +14,39 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class Builds {
-    private final Map<String, PomFileHolder> buildMap = new HashMap<>();
+    private final Map<String, BuildImpl> buildMap = new HashMap<>();
 
 
     /**
      * Builds order according to pom structure and deps.
      */
     interface BuildsOrder {
-        void each(Consumer<PomFile> file);
+        void each(Consumer<Build> file);
     }
 
 
+    public interface Build {
+         PomFile pomFile();
+         Optional<Arg> arg();
+    }
+
+    @Data
+    public static class BuildInfo {
+        @SerializedName("file")
+        private Path file;
+        @SerializedName("flags_line")
+        private List<String> flags;
+    }
+
     /**
      * Add pom file.
-     * @param path pom file location
+     * @param info pom file location
      */
-    public void registerFile(Path path) {
-        final Path file = path.toAbsolutePath();
-        final PomFileHolder holder = buildMap.computeIfAbsent(getKey(file), (k) -> {
+    public void registerFile(BuildInfo info) {
+        final Path file = info.file.toAbsolutePath();
+        final BuildImpl holder = buildMap.computeIfAbsent(getKey(file), (k) -> {
             PomFile f = new PomFile.Simple(file.toFile());
-            return new PomFileHolder(f, k);
+            return new BuildImpl(f, k);
         });
         System.out.println(file);
         walk(file, holder, buildMap);
@@ -46,13 +61,13 @@ public class Builds {
     }
 
 
-    private static void walk(Path orig, PomFileHolder current,  Map<String, PomFileHolder> buildMap) {
-        final Optional<Path> parentPath = current.pomFile.pom()
+    private static void walk(Path orig, BuildImpl current, Map<String, BuildImpl> buildMap) {
+        final Optional<Path> parentPath = current.origin.pom()
                 .relativePath().map(rel -> orig.getParent().resolve(rel).normalize());
         parentPath.ifPresent(p -> {
-            final PomFileHolder parentHolder = buildMap.computeIfAbsent(getKey(p), (k) -> {
+            final BuildImpl parentHolder = buildMap.computeIfAbsent(getKey(p), (k) -> {
                 PomFile parent = new PomFile.Simple(p.toFile());
-                PomFileHolder parentBuild = new PomFileHolder(parent, k);
+                BuildImpl parentBuild = new BuildImpl(parent, k);
                 parentBuild._children.add(current);
                 current._parent = parentBuild;
                 return parentBuild;
@@ -62,57 +77,66 @@ public class Builds {
         });
     }
 
-    private static String getKey(Path p) {
-        return p.toAbsolutePath().toString();
-    }
-
-    @Data
-    private static class PomFileWrap implements PomFile {
-        private final PomFileHolder h;
-
-        @Override
-        public Pom pom() {
-            return h.pomFile.pom();
-        }
-
-        @Override
-        public PomFile update(PomUpdate... upd) {
-            return h.pomFile.update(upd);
-        }
-
-        @Override
-        public File persisted(boolean w) {
-            final File location = h.pomFile.persisted(w);
-            h._children.forEach(dep ->
-                    dep.pomFile.update(new PomUpdate.NewRelativeParent(location.getName()))
-            );
-            return location;
-        }
-    }
 
     @ToString(of = {"id"})
     @EqualsAndHashCode(of = {"id"})
-    private static class PomFileHolder {
-        private final PomFile pomFile;
+    private static class BuildImpl implements Build {
         private final String id;
+        private final PomFile origin;
 
-        private PomFileHolder(PomFile pomFile, String id) {
-            this.pomFile = pomFile;
+        @AllArgsConstructor
+        private class WrapFile implements PomFile {
+            private PomFile file;
+
+            @Override
+            public Pom pom() {
+                return file.pom();
+            }
+
+            @Override
+            public PomFile update(PomUpdate... upd) {
+                file = file.update(upd);
+                return this;
+            }
+
+            @Override
+            public File persisted(boolean w) {
+                final File location = file.persisted(w);
+                BuildImpl.this._children.forEach(dep ->
+                        dep.pomFile().update(new PomUpdate.NewRelativeParent(location.getName()))
+                );
+                return location;
+            }
+        }
+
+        @Override
+        public PomFile pomFile() {
+            return new BuildImpl.WrapFile(this.origin);
+        }
+
+        @Override
+        public Optional<Arg> arg() {
+            return Optional.empty();
+        }
+
+
+        private BuildImpl(PomFile pomFile, String id) {
+            this.origin = pomFile;
             this.id = id;
         }
 
-        private final Set<PomFileHolder> _children = new LinkedHashSet<>();
-        private PomFileHolder _parent;
+        private final Set<BuildImpl> _children = new LinkedHashSet<>();
+        private BuildImpl _parent;
     }
 
 
     private static class PreOrderBuilds implements BuildsOrder {
-        private Map<String, PomFileHolder> lookup = new HashMap<>();
+        private Map<String, BuildImpl> lookup = new HashMap<>();
 
-        private PreOrderBuilds(Iterable<PomFileHolder> defFiles) {
+        private PreOrderBuilds(Iterable<BuildImpl> defFiles) {
             defFiles.forEach(def -> lookup.put(def.id, def));
-            for (PomFileHolder defFile : defFiles) {
-                final PomFileHolder thisNode = lookup.get(defFile.id);
+            for (BuildImpl defFile : defFiles) {
+                final BuildImpl thisNode = lookup.get(defFile.id);
                 if (thisNode._parent != null) {
                     final String parentId = thisNode._parent.id;
                     lookup.computeIfPresent(parentId, (k, parent) -> {
@@ -125,23 +149,23 @@ public class Builds {
         }
 
         @Override
-        public void each(Consumer<PomFile> file) {
-            forEach((x,holder) -> file.accept(new PomFileWrap(holder)));
+        public void each(Consumer<Build> file) {
+            forEach((x, holder) -> file.accept(holder));
         }
 
-        public void forEach(BiConsumer<Integer, PomFileHolder> nodeConsumer) {
-            final Iterator<PomFileHolder> roots = lookup.values().stream()
+        public void forEach(BiConsumer<Integer, BuildImpl> nodeConsumer) {
+            final Iterator<BuildImpl> roots = lookup.values().stream()
                     .filter(node -> node._parent == null).iterator();
             forEachImpl(roots, 0, nodeConsumer);
         }
 
-        private void forEachImpl(Iterator<PomFileHolder> it, int dep, BiConsumer<Integer, PomFileHolder> nodeConsumer) {
+        private void forEachImpl(Iterator<BuildImpl> it, int dep, BiConsumer<Integer, BuildImpl> nodeConsumer) {
             while (it.hasNext()) {
-                final PomFileHolder node = it.next();
+                final BuildImpl node = it.next();
                 nodeConsumer.accept(dep, node);
 
                 if (!node._children.isEmpty()) {
-                    final Iterator<PomFileHolder> childIt = node._children.iterator();
+                    final Iterator<BuildImpl> childIt = node._children.iterator();
                     forEachImpl(childIt, dep+1, nodeConsumer);
                 }
             }
@@ -164,4 +188,9 @@ public class Builds {
             return b.toString();
         }
     }
+
+    private static String getKey(Path p) {
+        return p.toAbsolutePath().toString();
+    }
+
 }

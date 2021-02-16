@@ -15,3 +15,9 @@ e2e_has_jar_test(
     jar = "tests/e2e/mvn-lib-a/libmvn-lib-a.jar"
 )
 
+
+e2e_has_jar_test(
+    name = "mvn-lib-b__jar-test",
+    dep = "//tests/e2e/mvn-lib-b",
+    jar = "tests/e2e/mvn-lib-b/libmvn-lib-b.jar"
+)

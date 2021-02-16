@@ -4,7 +4,7 @@ import java.util.*;
 
 public class B {
 
-    Optional<String> java_8_method() {
-        return Optional.of("B");
+    Optional<Object> java_8_method() {
+        return Optional.of(new empns.EmpRequest());
     }
 }
