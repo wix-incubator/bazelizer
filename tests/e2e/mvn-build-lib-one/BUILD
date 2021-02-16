@@ -16,6 +16,7 @@ filegroup(
 declare_module(
     name = "module",
     pom_file = ":pom.xml",
+    parent = "//tests/e2e/mvn-lib-parent:module",
     visibility = ["//visibility:public"]
 )
 

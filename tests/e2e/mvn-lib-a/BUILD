@@ -23,5 +23,5 @@ execute_build(
         "//tests/e2e/mvn-build-lib-one", # maven bazed build
         "//tests/e2e/lib/src/com/mavenizer/examples/subliby", # bazel build
     ],
-    outputs = ["myapi-1.0.0-SNAPSHOT.jar"],
+    outputs = ["a-1.0.0-SNAPSHOT.jar"],
 )

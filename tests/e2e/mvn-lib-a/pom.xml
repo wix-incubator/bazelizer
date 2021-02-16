@@ -1,16 +1,13 @@
 <project xmlns:bz="https://github.com/wix-incubator/bazelizer">
     <modelVersion>4.0.0</modelVersion>
     <!--suppress MavenRedundantGroupId -->
-    <groupId>com.bazelizer</groupId>
+    <groupId>com.mavenizer.examples.api</groupId>
     <artifactId>a</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <java.version>1.8</java.version>
-        <maven.compiler.source>${java.version}</maven.compiler.source>
-        <maven.compiler.target>${java.version}</maven.compiler.target>
     </properties>
 
     <parent>
@@ -41,7 +38,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.0</version>
             </plugin>
         </plugins>
     </build>

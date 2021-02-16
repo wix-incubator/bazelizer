@@ -1,5 +1,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns:bz="https://github.com/wix-incubator/bazelizer"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <!-- xembly:on -->
@@ -9,8 +10,19 @@
     <artifactId>myapi-single</artifactId>
     <version>1.0.0</version>
 
+    <parent>
+        <groupId>com.mavenizer.examples.api</groupId>
+        <artifactId>myapi-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../mvn-lib-parent/pom.xml</relativePath>
+    </parent>
 
-    <dependencies>
+    <dependencies bz:drop="never">
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>30.0-jre</version>
+        </dependency>
     </dependencies>
 
     <build>

@@ -81,14 +81,14 @@ public class CmdBuild implements Runnable {
                 Collections.emptyList()
         );
 
-        final Path target = pomFile.toAbsolutePath().getParent().resolve("target");
+        final Path target = pomFile.getParent().resolve("target");
         writeJar(target, aPomFile.pom());
         writeCustom(target);
         writeArchivedFolder(builds, aPomFile.pom());
     }
 
     private void writeCustom(Path target) {
-        outputs.forEach((relSrc, destAbs) -> {
+        outputs.forEach((destAbs, relSrc) -> {
             try {
                 Files.copy(target.resolve(relSrc), Paths.get(destAbs));
             } catch (IOException e) {
