@@ -90,37 +90,36 @@ public class Builds {
     @EqualsAndHashCode(of = {"id"})
     private static class BuildImpl implements Build {
         private final String id;
-        private final PomFile origin;
+        private PomFile origin;
         private Arg _args;
 
-        @AllArgsConstructor
-        private class WrapFile implements PomFile {
-            private PomFile file;
-
+        private final PomFile wrap = new PomFile() {
             @Override
             public Pom pom() {
-                return file.pom();
+                return origin.pom();
             }
 
             @Override
             public PomFile update(PomUpdate... upd) {
-                file = file.update(upd);
+                origin = origin.update(upd);
                 return this;
             }
 
             @Override
             public File persisted(boolean w) {
-                final File location = file.persisted(w);
+                final File location = origin.persisted(w);
                 BuildImpl.this._children.forEach(dep ->
-                        dep.pomFile().update(new PomUpdate.NewRelativeParent(location.getName()))
+                        dep.pomFile().update(
+                                new PomUpdate.NewRelativeParent(location.getName())
+                        )
                 );
                 return location;
             }
-        }
+        };
 
         @Override
         public PomFile pomFile() {
-            return new BuildImpl.WrapFile(this.origin);
+            return wrap;
         }
 
         @Override

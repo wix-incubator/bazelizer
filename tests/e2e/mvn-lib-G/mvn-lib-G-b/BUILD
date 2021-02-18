@@ -17,6 +17,7 @@ filegroup(
 execute_build(
     name = "mvn-lib-G-b",
     pom_def = ":module",
+    deps = [ "//tests/e2e/mvn-lib-G/mvn-lib-G-a" ],
     srcs = [":sources"],
     visibility = ["//visibility:public"]
 )

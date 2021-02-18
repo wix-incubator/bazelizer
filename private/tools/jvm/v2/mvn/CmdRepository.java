@@ -63,7 +63,10 @@ public class CmdRepository implements Runnable {
         log.info("Build order:\n{}", builds);
 
         builds.each(build -> {
-            final File location = build.pomFile().persisted();
+            final File location = build.pomFile().update(
+                    new PomUpdate.PomStruc(),
+                    new PomUpdate.PomDropDeps()
+            ).persisted();
             final List<String> profiles = build.arg().map(Arg::getProfiles)
                     .orElse(Collections.emptyList());
 
