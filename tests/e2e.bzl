@@ -1,7 +1,7 @@
 
 
 
-def e2e_has_jar_test(name, dep, jar):
+def e2e_has_jar_test(name, dep, jar, clazz=None):
     """
     sh_library(
         name = "mvn-build-lib-with-profile__maven",
@@ -24,10 +24,14 @@ def e2e_has_jar_test(name, dep, jar):
         data = [dep],
     )
 
+    arg_ = [jar]
+    if clazz:
+        arg_.append(str(clazz))
+
     native.sh_test(
         name = str(name),
         srcs = ["test_jar.sh"],
-        args = [jar],
+        args = arg_,
         data = [":" + name_],
         deps = [":" + name_]
     )

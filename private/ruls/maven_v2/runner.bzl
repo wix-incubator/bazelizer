@@ -103,8 +103,8 @@ def _run_mvn_impl(ctx):
 
     args.add("--m2-repository", repository_info.tar.path)
     args.add("--deps", deps_manifest)
-    args.add("--write-artifact", def_output_artifact_file.path)
-    args.add("--write-jar", def_output_jar_file.path)
+    args.add("-wa", def_output_artifact_file.path)
+    args.add("-wj", def_output_jar_file.path)
     args.add("--pom", pom_module_provider.file.path)
 
     if pom_module_provider.parent_file:

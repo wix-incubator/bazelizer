@@ -18,6 +18,14 @@ maven_repository_registry_v2(
         "//tests/e2e/mvn-lib-parent:module",
         "//tests/e2e/mvn-build-lib-one:module",
         "//tests/e2e/mvn-lib-b:module",
+
+        "//tests/e2e/mvn-lib-G:module",
+        "//tests/e2e/mvn-lib-G/mvn-lib-G-a:module",
+        "//tests/e2e/mvn-lib-G/mvn-lib-G-b:module",
     ],
     use_global_cache = False
 )
+
+
+load("@bazel_tools//tools/build_defs/repo:jvm.bzl",
+_jvm_maven_import_external = "jvm_maven_import_external")

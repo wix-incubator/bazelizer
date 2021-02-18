@@ -24,8 +24,8 @@ import static org.apache.commons.io.filefilter.FileFilterUtils.*;
 @CommandLine.Command(name = "run")
 public class CmdBuild implements Runnable {
 
-    @CommandLine.Option(names = {"--args"}, required = true,
-            paramLabel = "args", description = "The extra arguments")
+    @CommandLine.Option(names = {"--args"}, paramLabel = "args",
+            description = "The extra arguments")
     public String arg;
 
     @CommandLine.Option(names = {"--pom"}, required = true,
@@ -43,11 +43,11 @@ public class CmdBuild implements Runnable {
     @CommandLine.Option(names = {"-O"}, description = "declared bazel output -> relatice file path /target")
     public Map<String, String> outputs = ImmutableMap.of();
 
-    @CommandLine.Option(names = {"-wid", "--write-artifact"}, paramLabel = "P",
+    @CommandLine.Option(names = {"-wa"}, paramLabel = "P",
             description = "write archived artifact from repo, except default jar")
     public Path writeInstalledArtifact;
 
-    @CommandLine.Option(names = {"-wdj", "--write-jar"}, paramLabel = "P",
+    @CommandLine.Option(names = {"-wj"}, paramLabel = "P",
             description = "write default jar")
     public Path writeDefaultJar;
 
