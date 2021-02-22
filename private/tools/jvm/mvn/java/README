@@ -1,4 +1,0 @@
-Bazel first looks for Maven's standard directory layout, (a "src" directory followed by a "resources" directory grandchild).
-If that is not found, Bazel then looks for the topmost directory named "java" or "javatests" (so, for example,
-if a resource is at <workspace root>/x/java/y/java/z, the path of the resource will be y/java/z.
-This heuristic cannot be overridden.
