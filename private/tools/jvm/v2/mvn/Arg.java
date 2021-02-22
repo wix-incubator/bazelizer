@@ -21,13 +21,7 @@ public class Arg {
     }
 
     private static String[] format(String argsLine) {
-        String line = argsLine;
-        if (line.startsWith("'") || line.startsWith("\"")) {
-            line = line.substring(1);
-        }
-        if (line.endsWith("'") || line.endsWith("\"")) {
-            line = line.substring(0, line.length() - 1);
-        }
+        String line = Manifest.formatLine(argsLine);
         return line.split(" ");
     }
 

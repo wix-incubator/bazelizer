@@ -23,16 +23,18 @@ public class Manifest {
     @SneakyThrows
     public List<String> lines() {
         try (Stream<String> s = Files.lines(text)) {
-            return s.map(p -> {
-                String base = p.trim();
-                if (base.startsWith(WRAP)) {
-                    base = base.substring(1);
-                }
-                if (base.endsWith(WRAP)) {
-                    base = base.substring(0, base.length() - 1);
-                }
-                return base;
-            }).collect(Collectors.toList());
+            return s.map(p -> formatLine(p.trim())).collect(Collectors.toList());
         }
+    }
+
+    public static String formatLine(String argsLine) {
+        String line = argsLine;
+        if (line.startsWith("'") || line.startsWith("\"")) {
+            line = line.substring(1);
+        }
+        if (line.endsWith("'") || line.endsWith("\"")) {
+            line = line.substring(0, line.length() - 1);
+        }
+        return line;
     }
 }

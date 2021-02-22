@@ -58,7 +58,6 @@ public class BuildsTest {
             Assert.assertNotNull(pom);
             b[0] = true;
         });
-        
         Assert.assertTrue(b[0]);
     }
 
