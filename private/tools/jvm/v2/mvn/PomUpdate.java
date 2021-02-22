@@ -4,20 +4,49 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import lombok.AllArgsConstructor;
+import org.cactoos.iterable.Joined;
+import org.cactoos.iterable.Mapped;
 import org.xembly.Directive;
 import org.xembly.Directives;
 
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public interface PomUpdate {
 
     /**
      * Dirs.
+     *
      * @param xml pom
      * @return dirs.
      */
     Iterable<Directive> apply(Pom xml);
+
+    /**
+     * Pom modifications for Build task.
+     */
+    class BuildUpdates implements PomUpdate {
+        private final PomUpdate pu;
+
+        public BuildUpdates(Iterable<Dep> deps) {
+            this.pu = xml -> {
+                final List<PomUpdate> updates = Arrays.asList(
+                        new PomStruc(),
+                        new PomDropDeps(),
+                        new AppendDeps(deps)
+                );
+                return new Joined<>(new Mapped<>(updates, x -> x.apply(xml)));
+            };
+        }
+
+        @Override
+        public Iterable<Directive> apply(Pom xml) {
+            return pu.apply(xml);
+        }
+    }
+
 
     /**
      * The PomStruc.
