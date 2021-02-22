@@ -1,9 +1,5 @@
 package tools.jvm.v2.mvn;
 
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.Lists;
-import com.google.common.io.Closer;
-import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 import org.apache.commons.compress.archivers.ArchiveEntry;
@@ -12,16 +8,15 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.cactoos.Input;
 import org.cactoos.Output;
+import org.cactoos.Scalar;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
 
@@ -31,9 +26,11 @@ public class TarUtils {
 
     @SneakyThrows
     public List<String> list(Path p) {
-        try (TarArchiveInputStream is = open(p)) {
-            final ArrayList<String> nn = Lists.newArrayList();
-            new Iter(is).forEachRemaining(x -> nn.add(x.getName()));
+        try (TarArchiveInputStream is = new TarArchiveInputStream(Files.newInputStream(p, StandardOpenOption.READ))) {
+            final ArrayList<String> nn = new ArrayList<>();
+            for (TarArchiveEntry tarEntry; (tarEntry = is.getNextTarEntry()) != null;) {
+                nn.add(tarEntry.getName());
+            }
             return nn;
         }
     }
@@ -42,21 +39,22 @@ public class TarUtils {
     @SneakyThrows
     public void untar(Input tar, Path dest) {
         try(TarArchiveInputStream ais = new TarArchiveInputStream(tar.stream())) {
-            final Iterator<TarArchiveEntry> iter = new Iter(ais);
             final File destFile = dest.toFile();
-            iter.forEachRemaining(tarEntry -> {
+            for (TarArchiveEntry tarEntry; (tarEntry = ais.getNextTarEntry()) != null;) {
                 mkFile(ais, destFile, tarEntry);
-            });
+            }
         }
     }
 
     @SuppressWarnings({"DuplicatedCode", "unused", "UnstableApiUsage"})
     @SneakyThrows
     public void tar(Collection<File> files, Output out, Function<File, Path> tarPath) {
-        final Closer closer = Closer.create();
-        final TarArchiveOutputStream aos = closer.register(new TarArchiveOutputStream(out.stream()));
-        aos.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
-        try {
+        Scalar<TarArchiveOutputStream> aStream = () -> {
+            final TarArchiveOutputStream aos = new TarArchiveOutputStream(out.stream());
+            aos.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
+            return aos;
+        };
+        try (TarArchiveOutputStream aos = aStream.value()) {
             for (File file : files) {
                 final ArchiveEntry entry = aos.createArchiveEntry(file, tarPath.apply(file).toString());
                 aos.putArchiveEntry(entry);
@@ -64,23 +62,6 @@ public class TarUtils {
                 aos.closeArchiveEntry();
             }
             aos.finish();
-        } finally {
-            closer.close();
-        }
-    }
-
-    public static TarArchiveInputStream open(Path p) throws IOException {
-        return new TarArchiveInputStream(Files.newInputStream(p, StandardOpenOption.READ));
-    }
-
-    @AllArgsConstructor
-    private static class Iter extends AbstractIterator<TarArchiveEntry> {
-        final TarArchiveInputStream ais;
-        @SneakyThrows
-        @Override
-        protected TarArchiveEntry computeNext() {
-            final TarArchiveEntry entry = ais.getNextTarEntry();
-            return entry != null ? entry : endOfData();
         }
     }
 

@@ -151,6 +151,8 @@ public class Mvn {
         log.info(">> running {}", cmd);
         final InvocationResult execute = invoker.execute(request);
         if (execute.getExitCode() != 0) {
+            log.error("[mvn] return non-zero exit code {}", execute.getExitCode());
+            log.error("[mvn] pom file dump:\n{}", new TextOf(pomFile).asString());
             throw new MvnException("exit code " + execute.getExitCode() + ";");
         }
     }
