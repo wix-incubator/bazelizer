@@ -93,7 +93,7 @@ public interface Dep {
         @Override
         public Install install() {
             return new AllOf(Arrays.asList(
-                    new Untar(getSource()),
+                    new Untar(),
                     new FolderFor(
                             new PomFor()
                     )
@@ -221,10 +221,9 @@ public interface Dep {
     @AllArgsConstructor
     @Slf4j
     class Untar implements Install {
-        private final Path dep;
 
         @Override
-        public void exec(Dep dep, Path repo) throws Exception {
+        public void exec(Dep dep, Path repo) {
             log.info("[{}}] untar artifact: {}", dep, dep.getSource());
             TarUtils.untar(new InputOf(dep.getSource()), repo);
         }
