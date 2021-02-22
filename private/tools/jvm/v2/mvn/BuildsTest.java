@@ -1,5 +1,6 @@
 package tools.jvm.v2.mvn;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
@@ -45,16 +46,20 @@ public class BuildsTest {
         pomFiles.registerFile(new Builds.BuildInfo(aFile));
 
         final Builds.BuildsOrder builds = pomFiles.travers();
-        System.out.println(builds);
+        boolean[] b = new boolean[1];
 
         builds.each(pf -> {
             final File location = pf.pomFile().persisted(false);
             System.out.println(location);
+            Assert.assertNotNull(location);
 
             final Pom pom = pf.pomFile().pom();
             System.out.println(pom.asString());
+            Assert.assertNotNull(pom);
+            b[0] = true;
         });
-
+        
+        Assert.assertTrue(b[0]);
     }
 
 
