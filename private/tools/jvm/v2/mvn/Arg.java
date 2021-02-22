@@ -32,7 +32,7 @@ public class Arg {
     }
 
     public Arg(List<String> cmdLine) {
-        this(cmdLine.toArray(new String[0]));
+        this(cmdLine != null ? cmdLine.toArray(new String[0]) : new String[0]);
     }
 
     public Arg(String[] flags) {

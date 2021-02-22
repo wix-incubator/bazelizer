@@ -82,14 +82,13 @@ public interface PomFile {
                 final Path abs = p.toAbsolutePath();
                 if (Files.notExists(abs)) {
                     log.error("[pom.xml] this pom file referenced to the relative " +
-                            "parent file that doesn't exists; {}",p);
+                            "parent file that doesn't exists!! {}",p);
                 }
             });
             if (!dest.exists() && w) {
                 Files.write(dest.toPath(), pom.bytes().asBytes());
                 if (log.isInfoEnabled()) {
-                    log.info("[pom.xml] persist {}", dest);
-                    log.info("{}", pom.asString());
+                    log.info("[pom.xml] saving content into {}\n{}", dest,pom.asString());
                 }
                 return dest;
             }

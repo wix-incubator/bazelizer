@@ -1,7 +1,6 @@
 package tools.jvm.v2.mvn;
 
 import com.google.gson.annotations.SerializedName;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -14,7 +13,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class Builds {
-    private final Map<String, BuildImpl> buildMap = new HashMap<>();
+    private final Map<String, BuildHolder> buildMap = new HashMap<>();
 
 
     /**
@@ -24,10 +23,12 @@ public class Builds {
         void each(Consumer<Build> file);
     }
 
-
+    /**
+     * Build.
+     */
     public interface Build {
-         PomFile pomFile();
-         Optional<Arg> arg();
+        PomFile pomFile();
+        Optional<Arg> arg();
     }
 
     @Data
@@ -36,62 +37,76 @@ public class Builds {
         private Path file;
         @SerializedName("flags_line")
         private List<String> flags;
+
+        public BuildInfo(Path p) {
+            this.file = p;
+        }
+
+        @SuppressWarnings("unused")
+        public BuildInfo() {
+            this.file = null;
+            this.flags = null;
+        }
     }
 
     /**
-     * Add pom file.
-     * @param info pom file location
+     * Add by file.
+     * @param info file
      */
+    public void registerFile(File info) {
+        registerFile(new BuildInfo(info.toPath()));
+    }
+
+        /**
+         * Add pom file.
+         *
+         * @param info pom file location
+         */
     public void registerFile(BuildInfo info) {
-        final Path file = info.file.toAbsolutePath();
-        final BuildImpl holder = buildMap.compute(getKey(file), (k, maybeBuild) -> {
-            final BuildImpl build;
-            if (maybeBuild == null) {
-                build = new BuildImpl(new PomFile.Simple(file.toFile()), k);
-            } else {
-                build = maybeBuild;
-            }
-            if (build._args == null && info.flags != null) {
-                build._args = new Arg(info.flags);
-            }
-            return build;
-        });
-        System.out.println(file);
-        walk(file, holder, buildMap);
+        Optional<BuildHolder> current = Optional
+                .of(new BuildHolder(info.file.toFile(), info.flags))
+                .map(this::register);
+
+        while (current.isPresent()) {
+            current.ifPresent(holder -> {
+                final Optional<BuildHolder> maybeParent = holder.pomFile().pom().relativePath().map(rel -> {
+                    final Path parentFile = holder.originFile.toPath().getParent().resolve(rel).normalize();
+                    return new BuildHolder(parentFile.toFile(), holder._args);
+                }).map(this::register);
+
+                if (holder._parent == null) {
+                    holder._parent = maybeParent.orElse(null);
+                }
+
+                maybeParent.ifPresent(parent -> parent._children.add(holder));
+            });
+            current = current.flatMap(holder -> Optional.ofNullable(holder._parent));
+        }
+    }
+
+    private BuildHolder register(BuildHolder h) {
+        return buildMap.computeIfAbsent(h.id, (k) -> h);
     }
 
     /**
      * Get builds order.
+     *
      * @return builds.
      */
     public BuildsOrder travers() {
         return new PreOrderBuilds(buildMap.values());
     }
 
-
-    private static void walk(Path orig, BuildImpl current, Map<String, BuildImpl> buildMap) {
-        final Optional<Path> parentPath = current.origin.pom()
-                .relativePath().map(rel -> orig.getParent().resolve(rel).normalize());
-        parentPath.ifPresent(p -> {
-            final BuildImpl parentHolder = buildMap.computeIfAbsent(getKey(p), (k) -> {
-                PomFile parent = new PomFile.Simple(p.toFile());
-                BuildImpl parentBuild = new BuildImpl(parent, k);
-                parentBuild._children.add(current);
-                current._parent = parentBuild;
-                return parentBuild;
-            });
-
-            walk(p, parentHolder, buildMap);
-        });
-    }
-
-
     @ToString(of = {"id"})
     @EqualsAndHashCode(of = {"id"})
-    private static class BuildImpl implements Build {
+    private static class BuildHolder implements Build {
         private final String id;
+        private File originFile;
         private PomFile origin;
         private Arg _args;
+
+        private final Set<BuildHolder> _children = new LinkedHashSet<>();
+        private BuildHolder _parent;
 
         private final PomFile wrap = new PomFile() {
             @Override
@@ -108,7 +123,7 @@ public class Builds {
             @Override
             public File persisted(boolean w) {
                 final File location = origin.persisted(w);
-                BuildImpl.this._children.forEach(dep ->
+                BuildHolder.this._children.forEach(dep ->
                         dep.pomFile().update(
                                 new PomUpdate.NewRelativeParent(location.getName())
                         )
@@ -128,23 +143,30 @@ public class Builds {
         }
 
 
-        private BuildImpl(PomFile pomFile, String id) {
-            this.origin = pomFile;
-            this.id = id;
+        private BuildHolder(File pomFile, List<String> arg) {
+            this(pomFile, getKey(pomFile.toPath()), arg != null ? new Arg(arg) : null);
         }
 
-        private final Set<BuildImpl> _children = new LinkedHashSet<>();
-        private BuildImpl _parent;
+        private BuildHolder(File pomFile, Arg arg) {
+            this(pomFile, getKey(pomFile.toPath()), arg);
+        }
+
+        private BuildHolder(File pomFile, String id, Arg arg) {
+            this.originFile = pomFile;
+            this.origin = new PomFile.Simple(pomFile);
+            this.id = id;
+            this._args = arg;
+        }
     }
 
 
     private static class PreOrderBuilds implements BuildsOrder {
-        private Map<String, BuildImpl> lookup = new HashMap<>();
+        private Map<String, BuildHolder> lookup = new HashMap<>();
 
-        private PreOrderBuilds(Iterable<BuildImpl> defFiles) {
+        private PreOrderBuilds(Iterable<BuildHolder> defFiles) {
             defFiles.forEach(def -> lookup.put(def.id, def));
-            for (BuildImpl defFile : defFiles) {
-                final BuildImpl thisNode = lookup.get(defFile.id);
+            for (BuildHolder defFile : defFiles) {
+                final BuildHolder thisNode = lookup.get(defFile.id);
                 if (thisNode._parent != null) {
                     final String parentId = thisNode._parent.id;
                     lookup.computeIfPresent(parentId, (k, parent) -> {
@@ -161,20 +183,20 @@ public class Builds {
             forEach((x, holder) -> file.accept(holder));
         }
 
-        public void forEach(BiConsumer<Integer, BuildImpl> nodeConsumer) {
-            final Iterator<BuildImpl> roots = lookup.values().stream()
+        public void forEach(BiConsumer<Integer, BuildHolder> nodeConsumer) {
+            final Iterator<BuildHolder> roots = lookup.values().stream()
                     .filter(node -> node._parent == null).iterator();
             forEachImpl(roots, 0, nodeConsumer);
         }
 
-        private void forEachImpl(Iterator<BuildImpl> it, int dep, BiConsumer<Integer, BuildImpl> nodeConsumer) {
+        private void forEachImpl(Iterator<BuildHolder> it, int dep, BiConsumer<Integer, BuildHolder> nodeConsumer) {
             while (it.hasNext()) {
-                final BuildImpl node = it.next();
+                final BuildHolder node = it.next();
                 nodeConsumer.accept(dep, node);
 
                 if (!node._children.isEmpty()) {
-                    final Iterator<BuildImpl> childIt = node._children.iterator();
-                    forEachImpl(childIt, dep+1, nodeConsumer);
+                    final Iterator<BuildHolder> childIt = node._children.iterator();
+                    forEachImpl(childIt, dep + 1, nodeConsumer);
                 }
             }
         }
@@ -182,7 +204,7 @@ public class Builds {
         @Override
         public String toString() {
             final StringWriter b = new StringWriter();
-            forEach((idx,f) -> {
+            forEach((idx, f) -> {
                 if (idx > 0) {
                     for (int i = idx; i > 0; i--) {
                         b.append("\t");

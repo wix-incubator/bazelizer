@@ -10,9 +10,7 @@ import java.nio.file.Path;
 public class BuildsTest {
 
 
-    final String pomStr = "<project xmlns=\"http://maven.apache.org/POM/4.0.0\"\n" +
-            "         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n" +
-            "         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\">\n" +
+    final String pomStr = "<project >\n" +
             "\n" +
             "\n" +
             "    <modelVersion>4.0.0</modelVersion>\n" +
@@ -42,17 +40,18 @@ public class BuildsTest {
     public void build() throws IOException {
         final Builds pomFiles = new Builds();
         final Path aFile = Files.createTempFile("pom", ".xml");
+
         Files.write(aFile, pomStr.getBytes());
-        pomFiles.registerFile(aFile);
+        pomFiles.registerFile(new Builds.BuildInfo(aFile));
 
         final Builds.BuildsOrder builds = pomFiles.travers();
         System.out.println(builds);
 
         builds.each(pf -> {
-            final File location = pf.persisted(false);
+            final File location = pf.pomFile().persisted(false);
             System.out.println(location);
 
-            final Pom pom = pf.pom();
+            final Pom pom = pf.pomFile().pom();
             System.out.println(pom.asString());
         });
 

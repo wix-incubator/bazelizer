@@ -246,6 +246,16 @@ def install(server_urls = _def_server_urls):
         srcjar_sha256 = "3a8fde6cabadd1f6c6dcddc92edbe17501448e0553fee893cfc62becce57531a",
     )
 
+    # testImplementation group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.30'
+    _jvm_import(
+	    name = "org_slf4j_slf4j_simple",
+        artifact ='org.slf4j:slf4j-simple:jar:1.7.30',
+        fetch_sources = True,
+        server_urls = server_urls,
+#        artifact_sha256 = "ce3fc8ecb10f39e9a3cddcbb2ce350d272d9cd3d0b1e18e6fe73c3b9389c8734",
+#        srcjar_sha256 = "3a8fde6cabadd1f6c6dcddc92edbe17501448e0553fee893cfc62becce57531a",
+    )
+
     _jvm_import(
 	    name = "org_mockito_mockito_core",
         artifact = "org.mockito:mockito-core:jar:3.5.15",

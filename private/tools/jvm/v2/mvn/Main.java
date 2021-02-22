@@ -17,6 +17,10 @@ import java.time.LocalDateTime;
         CmdBuild.class
 })
 public class Main {
+    static {
+        System.setProperty("org.slf4j.simpleLogger.showShortLogName", "true");
+    }
+
     public static final Gson GSON = new GsonBuilder()
             .setPrettyPrinting()
             .registerTypeAdapter(Path.class, (JsonDeserializer<Path>) (json, typeOfT, context) -> {
@@ -24,13 +28,14 @@ public class Main {
                 return Paths.get(asString);
             }).create();
 
-
     public static void main(String[] args) {
         LocalDateTime from = LocalDateTime.now();
         int exitCode = new CommandLine(new Main()).execute(args);
+        log.info("");
         log.info(">> {}", exitCode == 0 ? "DONE" : "FAIL");
         LocalDateTime to = LocalDateTime.now();
         log.info(">>  time elapsed: {}s", Duration.between(from, to).getSeconds());
+        log.info("");
         System.exit(exitCode);
     }
 }

@@ -14,8 +14,9 @@ _deps = [
     "//external:wix_incubator_bazelizer_rules/dependency/commons_io_commons_io",
     "//external:wix_incubator_bazelizer_rules/dependency/org_apache_commons_commons_compress",
     "//external:wix_incubator_bazelizer_rules/dependency/org_slf4j_slf4j_api",
-    "//external:wix_incubator_bazelizer_rules/dependency/ch_qos_logback_logback_classic",
-    "//external:wix_incubator_bazelizer_rules/dependency/ch_qos_logback_logback_core",
+    "//external:wix_incubator_bazelizer_rules/dependency/org_slf4j_slf4j_simple",
+#    "//external:wix_incubator_bazelizer_rules/dependency/ch_qos_logback_logback_classic",
+#    "//external:wix_incubator_bazelizer_rules/dependency/ch_qos_logback_logback_core",
     "//external:wix_incubator_bazelizer_rules/dependency/com_google_code_gson_gson",
     "//external:wix_incubator_bazelizer_rules/dependency/com_jcabi_incubator_xembly",
     # bazel infra support

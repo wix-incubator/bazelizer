@@ -67,6 +67,7 @@ public class CmdRepository implements Runnable {
                     new PomUpdate.PomStruc(),
                     new PomUpdate.PomDropDeps()
             ).persisted();
+
             final List<String> profiles = build.arg().map(Arg::getProfiles)
                     .orElse(Collections.emptyList());
 

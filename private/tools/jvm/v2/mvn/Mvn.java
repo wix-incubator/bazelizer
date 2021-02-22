@@ -148,8 +148,7 @@ public class Mvn {
         properties.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "WARN");
         request.setProperties(properties);
 
-        log.info("running {}", cmd);
-        log.info("");
+        log.info(">> running {}", cmd);
         final InvocationResult execute = invoker.execute(request);
         if (execute.getExitCode() != 0) {
             throw new MvnException("exit code " + execute.getExitCode() + ";");
