@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
@@ -99,11 +100,12 @@ public class Maven {
      *
      * @param project a project
      * @param args args
+     * @param deps external deps
      * @throws IOException if any
      * @throws MavenInvocationException if any
      */
-    public void executeOffline(MavenProject project, List<String> args) throws IOException, MavenInvocationException {
-        execute(project, args, true);
+    public void executeOffline(MavenProject project, List<String> args, List<Dep> deps) throws IOException, MavenInvocationException {
+        execute(project, args, deps, true);
     }
 
     /**
@@ -115,11 +117,17 @@ public class Maven {
      * @throws MavenInvocationException if any
      */
     public void execute(MavenProject project, List<String> args) throws IOException, MavenInvocationException {
-        execute(project, args, false);
+        execute(project, args, Collections.emptyList(), false);
     }
 
-    private void execute(MavenProject project, List<String> args, boolean offline) throws IOException, MavenInvocationException {
-        final File pomFile = project.emit();
+    private void execute(MavenProject project, List<String> args, List<Dep> deps, boolean offline) throws IOException, MavenInvocationException {
+        for (Dep dep : deps) {
+            dep.copyTo(repository);
+        }
+
+        final File pomFile = project.emit(
+                deps
+        );
         maven.setWorkingDirectory(pomFile.getParentFile());
 
         DefaultInvocationRequest request = new DefaultInvocationRequest();
@@ -141,7 +149,7 @@ public class Maven {
         request.setProperties(properties);
 
         Log.info(project, " >>>");
-        Log.info(project, "executing commands: " + args);
+        Log.info(project, " >>> executing commands " + args);
         long x0 = System.currentTimeMillis();
         final InvocationResult result = maven.execute(request);
         long x1 = System.currentTimeMillis();

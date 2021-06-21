@@ -88,7 +88,8 @@ public class Cli {
 
             env.executeOffline(
                     project,
-                    asList("clean", "install")
+                    asList("clean", "install"),
+                    deps
             );
 
             Files.copy(

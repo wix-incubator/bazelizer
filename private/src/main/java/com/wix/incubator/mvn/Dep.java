@@ -37,6 +37,10 @@ public abstract class Dep {
     public final String artifactId;
     public final String version;
 
+    public String scope() {
+        return "compile";
+    }
+
     protected Dep(String[] id) {
         this(id[0], id[1], id[2]);
     }

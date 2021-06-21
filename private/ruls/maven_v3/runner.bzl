@@ -108,6 +108,7 @@ def _run_mvn_impl(ctx):
     args.add("--deps", deps_manifest)
     args.add("--pom", pom_project_provider.file.path)
     args.add("--jarOutput", def_output_jar_file.path)
+    args.add("--archiveOutput", def_output_artifact_file.path)
 
     if pom_project_provider.deps:
         for f in pom_project_provider.deps.to_list():

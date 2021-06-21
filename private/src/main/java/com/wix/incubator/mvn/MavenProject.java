@@ -1,7 +1,9 @@
 package com.wix.incubator.mvn;
 
+import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
+import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.codehaus.plexus.util.dag.DAG;
 import org.codehaus.plexus.util.dag.TopologicalSorter;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
@@ -9,13 +11,12 @@ import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.nio.file.StandardOpenOption;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -84,10 +85,22 @@ public class MavenProject {
      * @return pom file
      * @throws IOException if any
      */
-    public File emit() throws IOException {
-        final Path newPom = pom.getParentFile().toPath().resolve("pom.bazelizer.__gen__.xml");
-        if (Files.notExists(newPom)) {
-            Files.copy(pom.toPath(), newPom, StandardCopyOption.REPLACE_EXISTING);
+    public File emit(Collection<Dep> deps) throws IOException {
+        final Path newPom = pom.getParentFile().toPath().resolve("pom.__bazelizer__.xml");
+        final Model newModel = model.clone();
+        for (Dep dep : deps) {
+            final Dependency d = new Dependency();
+            d.setArtifactId(dep.artifactId);
+            d.setGroupId(dep.groupId);
+            d.setVersion(dep.version);
+            d.setScope(dep.scope());
+            newModel.getDependencies().add(d);
+        }
+        if (!newPom.toFile().exists()) {
+            final MavenXpp3Writer writer = new MavenXpp3Writer();
+            try (OutputStream out = Files.newOutputStream(newPom, StandardOpenOption.CREATE_NEW, StandardOpenOption.TRUNCATE_EXISTING)) {
+                writer.write(out,newModel);
+            }
         }
         return newPom.toFile();
 
