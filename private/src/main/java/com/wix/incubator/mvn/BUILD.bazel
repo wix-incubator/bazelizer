@@ -1,0 +1,33 @@
+package(default_visibility = ["//visibility:public"])
+
+load("//:macros.bzl", "sources", "test_sources")
+load("//:maven_binary_tool.bzl", _maven_bin_name = "MAVEN_BINARY_NAME")
+sources()
+
+java_binary(
+    name = "mvn",
+    main_class = "com.wix.incubator.mvn.Cli",
+    srcs = [":sources"],
+    jvm_flags = [
+        "--illegal-access=permit",
+        "-Dtools.jvm.mvn.MavenBin=\"%s\"" % _maven_bin_name,
+    ],
+    data = [
+        "@%s//:%s" % (_maven_bin_name, _maven_bin_name)
+    ],
+    runtime_deps = [
+    ],
+    deps = [
+        "//private/src/main/resources",
+        "@bazel_tools//tools/java/runfiles",
+        "@bazelizer_deps//:com_google_code_gson_gson",
+        "@bazelizer_deps//:com_google_guava_guava",
+        "@bazelizer_deps//:org_apache_maven_maven_model",
+        "@bazelizer_deps//:org_apache_maven_shared_maven_invoker",
+        "@bazelizer_deps//:org_codehaus_plexus_plexus_utils",
+        "@bazelizer_deps//:info_picocli_picocli",
+        "@bazelizer_deps//:org_apache_commons_commons_compress",
+        "@bazelizer_deps//:commons_io_commons_io",
+        "@bazelizer_deps//:com_github_spullara_mustache_java_compiler"
+    ],
+)

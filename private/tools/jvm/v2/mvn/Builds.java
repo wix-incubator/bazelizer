@@ -49,14 +49,6 @@ public class Builds {
         }
     }
 
-    /**
-     * Add by file.
-     * @param info file
-     */
-    public void registerFile(File info) {
-        registerFile(new BuildInfo(info.toPath()));
-    }
-
         /**
          * Add pom file.
          *
