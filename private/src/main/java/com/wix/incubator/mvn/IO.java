@@ -45,7 +45,6 @@ public final class IO {
             final long size = IO.tar(files, os, dir::relativize);
             Log.info("archived repository " + FileUtils.byteCountToDisplaySize(size));
         }
-
     }
 
     public static long tar(Collection<Path> files, OutputStream out, Function<Path, Path> tarPath) throws IOException {

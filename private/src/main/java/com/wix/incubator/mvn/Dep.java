@@ -14,7 +14,7 @@ import static java.util.Arrays.asList;
 
 public abstract class Dep {
 
-    public static class DefinitionStruct {
+    private static class DefinitionStruct {
         public Path file;
         public Map<String, String> tags;
     }
@@ -46,8 +46,6 @@ public abstract class Dep {
         this.artifactId = artifactId;
         this.version = version;
     }
-
-
 
     public abstract void copyTo(Path repo) throws IOException;
 
@@ -121,14 +119,8 @@ public abstract class Dep {
     }
 
     private static Path mvnLayout(Dep dep) {
-        String[] gidParts = dep.groupId.split("\\.");
-        Path thisGroupIdRepo = Paths.get("");
-        for (String gidPart : gidParts) {
-            thisGroupIdRepo = thisGroupIdRepo.resolve(gidPart);
-        }
-        return thisGroupIdRepo.resolve(dep.artifactId).resolve(dep.version);
+        return Maven.mvnLayout(dep.groupId, dep.artifactId, dep.version);
     }
-
 
     private static void writePom(Dep dep, Path folder) throws IOException {
         String pomXml = "<project>\n" +

@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
@@ -15,12 +16,40 @@ import java.util.Properties;
 @SuppressWarnings("FieldCanBeLocal")
 public class Maven {
 
+    /**
+     * Get layout of folder according to maven coordinates.
+     *
+     * @param groupId group id
+     * @param artifactId artifact id
+     * @param version version
+     * @return a path
+     */
+    public static Path mvnLayout(String groupId, String artifactId, String version) {
+        String[] gidParts = groupId.split("\\.");
+        Path thisGroupIdRepo = Paths.get("");
+        for (String gidPart : gidParts) {
+            thisGroupIdRepo = thisGroupIdRepo.resolve(gidPart);
+        }
+        return thisGroupIdRepo.resolve(artifactId).resolve(version);
+    }
+
+    /**
+     * Prepare maven environemtn from archived repository.
+     * @param repositoryArchive archived tar
+     * @return a maven
+     * @throws IOException if any
+     */
     public static Maven prepareEnv(Path repositoryArchive) throws IOException {
         final Maven env = prepareEnv();
         IO.untar(repositoryArchive, env.repository);
         return env;
     }
 
+    /**
+     * Prepare default maven env.
+     * @return a maven
+     * @throws IOException if any
+     */
     public static Maven prepareEnv() throws IOException {
         Runfiles runfiles = Runfiles.create();
         final File tool = Optional.ofNullable(System.getProperty(BZL_MVN_TOOL_SYS_PROP))
@@ -45,6 +74,7 @@ public class Maven {
         return new Maven(m2HomeDir, repository, settingsXmlFile, invoker);
     }
 
+    @SuppressWarnings("unused")
     private final Path m2HomeDir;
     private final Path settingsXmlFile;
     public final Path repository;
@@ -53,17 +83,37 @@ public class Maven {
     private static final String PREF = "tools.jvm.mvn.";
     private static final String BZL_MVN_TOOL_SYS_PROP = PREF + "MavenBin";
 
-    public Maven(Path m2HomeDir, Path repository, Path settingsXmlFile, Invoker maven) {
+    /**
+     * Ctor.
+     *
+     */
+    private Maven(Path m2HomeDir, Path repository, Path settingsXmlFile, Invoker maven) {
         this.m2HomeDir = m2HomeDir;
         this.repository = repository;
         this.settingsXmlFile = settingsXmlFile;
         this.maven = maven;
     }
 
+    /**
+     * Execute maven build in offline mode.
+     *
+     * @param project a project
+     * @param args args
+     * @throws IOException if any
+     * @throws MavenInvocationException if any
+     */
     public void executeOffline(MavenProject project, List<String> args) throws IOException, MavenInvocationException {
         execute(project, args, true);
     }
 
+    /**
+     * Execute regular maven build.
+     *
+     * @param project a project
+     * @param args args
+     * @throws IOException if any
+     * @throws MavenInvocationException if any
+     */
     public void execute(MavenProject project, List<String> args) throws IOException, MavenInvocationException {
         execute(project, args, false);
     }

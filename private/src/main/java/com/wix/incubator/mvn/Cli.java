@@ -5,12 +5,17 @@ import com.github.mustachejava.MustacheFactory;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.FileFilterUtils;
 import picocli.CommandLine;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -86,7 +91,37 @@ public class Cli {
                     asList("clean", "install")
             );
 
-            Files.copy(project.jar(), jarOutput);
+            Files.copy(
+                    project.jar(),
+                    jarOutput
+            );
+
+            writeArchivedFolder(
+                    env,
+                    project,
+                    archiveOutput
+            );
+        }
+
+        private static void writeArchivedFolder(Maven mvn, MavenProject project, Path out) throws IOException {
+            final Path installedFolder = project.folder();
+            final Path repository = mvn.repository;
+            final Collection<Path> files = FileUtils.listFiles(
+                    repository.resolve(installedFolder).toFile(),
+                    FileFilterUtils.and(
+                            IO.REPOSITORY_FILES_FILTER,
+                            FileFilterUtils.notFileFilter(FileFilterUtils.suffixFileFilter("pom"))
+                    ),
+                    FileFilterUtils.trueFileFilter()
+            ).stream().map(File::toPath).collect(Collectors.toList());
+
+            try (OutputStream output = Files.newOutputStream(out)) {
+                IO.tar(files, output, aFile -> {
+                    final Path filePath = aFile.toAbsolutePath();
+                    return filePath.subpath(repository.getNameCount(), filePath.getNameCount());
+                });
+            }
+
         }
     }
 
@@ -106,7 +141,7 @@ public class Cli {
         public void invoke() throws Exception {
             final Maven env = Maven.prepareEnv(
             );
-            final List<MavenProject> projects = MavenProject.sort(
+            final List<MavenProject> projects = MavenProject.topologicSort(
                     readLines(configFile).stream()
                             .map(MavenProject::create)
                             .collect(Collectors.toList())

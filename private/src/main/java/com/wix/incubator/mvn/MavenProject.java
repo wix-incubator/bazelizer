@@ -18,6 +18,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * Maven project.
+ */
 @SuppressWarnings("Convert2MethodRef")
 public class MavenProject {
     private final String id;
@@ -26,6 +29,11 @@ public class MavenProject {
     private final File pom;
     private final Model model;
 
+    /**
+     * New project from pom file
+     * @param p a file
+     * @return maven project
+     */
     public static MavenProject create(Path p) {
         try {
             return new MavenProject(p.toFile());
@@ -34,8 +42,13 @@ public class MavenProject {
         }
     }
 
+    /**
+     * New projet from json description.
+     * @param json json str
+     * @return maven project
+     */
     public static MavenProject create(String json) {
-        final DTO dto = Cli.GSON.fromJson(json, DTO.class);
+        final MavenProjectDTO dto = Cli.GSON.fromJson(json, MavenProjectDTO.class);
         try {
             return new MavenProject(dto.file.toFile());
         } catch (XmlPullParserException | IOException e) {
@@ -43,6 +56,16 @@ public class MavenProject {
         }
     }
 
+    private static class MavenProjectDTO {
+        public Path file;
+    }
+
+    /**
+     * Ctor.
+     * @param pom a pom file
+     * @throws XmlPullParserException if any
+     * @throws IOException if any
+     */
     private MavenProject(File pom) throws XmlPullParserException, IOException {
         try (FileInputStream is = new FileInputStream(pom)) {
             MavenXpp3Reader r = new MavenXpp3Reader();
@@ -50,17 +73,17 @@ public class MavenProject {
         }
         this.id = pom.toPath().toAbsolutePath().toString();
         this.pom = pom;
-
         Optional<String> parentRelPath = Optional.ofNullable(model.getParent()).map(p -> p.getRelativePath());
         Optional<Path> parentAbsPath = parentRelPath.map(p -> pom.toPath().toAbsolutePath().getParent().resolve(p).normalize());
         this.parentId = parentAbsPath.map(p -> p.toString()).orElse(null);
         this.parentPom = parentAbsPath.map(p -> p.toFile()).orElse(null);
     }
 
-    private MavenProject getParentProject() throws XmlPullParserException, IOException {
-        return parentPom != null ? new MavenProject(parentPom) : null;
-    }
-
+    /**
+     * Emit new pom file for execution.
+     * @return pom file
+     * @throws IOException if any
+     */
     public File emit() throws IOException {
         final Path newPom = pom.getParentFile().toPath().resolve("pom.bazelizer.__gen__.xml");
         if (Files.notExists(newPom)) {
@@ -70,12 +93,30 @@ public class MavenProject {
 
     }
 
+    /**
+     * Jar file of a project.
+     * @return a jar
+     */
     public Path jar() {
         final Path target = pom.toPath().getParent().resolve("target");
         return target.resolve(String.format("%s-%s.jar", model.getArtifactId(), model.getVersion()));
     }
 
-    public static List<MavenProject> sort(Iterable<MavenProject> projects) throws Exception {
+    public Path folder() {
+        String groupId = model.getGroupId() == null ? model.getParent().getGroupId() : model.getGroupId();
+        return Maven.mvnLayout(groupId, model.getArtifactId(), model.getVersion());
+    }
+
+    private MavenProject getParentProject() throws XmlPullParserException, IOException {
+        return parentPom != null ? new MavenProject(parentPom) : null;
+    }
+
+    @Override
+    public String toString() {
+        return "" + model.getId() + "";
+    }
+
+    public static List<MavenProject> topologicSort(Iterable<MavenProject> projects) throws Exception {
         DAG dag = new DAG();
         Map<String, MavenProject> vertices = new HashMap<>();
         for (MavenProject project : projects) {
@@ -91,6 +132,7 @@ public class MavenProject {
         return ids.stream().map(id -> vertices.get(id)).collect(Collectors.toList());
     }
 
+
     private static void addVertex(DAG dag, Map<String, MavenProject> vertices,
                                   MavenProject project) throws XmlPullParserException, IOException {
         if (project == null)
@@ -101,12 +143,5 @@ public class MavenProject {
         addVertex(dag, vertices, project.getParentProject());
     }
 
-    private static class DTO {
-        public Path file;
-    }
 
-    @Override
-    public String toString() {
-        return "" + model.getId() + "";
-    }
 }
