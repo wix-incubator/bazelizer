@@ -158,6 +158,8 @@ public abstract class Dep {
                 "</project>";
 
         Files.write(folder.resolve((dep.artifactId + "-" + dep.version) + ".pom"),
-                pomXml.getBytes(StandardCharsets.UTF_8), StandardOpenOption.TRUNCATE_EXISTING);
+                pomXml.getBytes(StandardCharsets.UTF_8),
+                StandardOpenOption.CREATE_NEW,
+                StandardOpenOption.TRUNCATE_EXISTING);
     }
 }

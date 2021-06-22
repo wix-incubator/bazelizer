@@ -24,7 +24,7 @@ def _create_manifest_file(name, ctx, dep_info_items):
 
 
 def _dep_info(file, **kwargs):
-    return struct(path=file, tags=dict(kwargs))
+    return struct(file=file, tags=dict(kwargs))
 
 
 def _collect_deps(dep_targets, ctx_scope, **kwargs):
