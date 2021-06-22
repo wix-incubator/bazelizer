@@ -24,6 +24,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("FieldCanBeLocal")
@@ -266,6 +267,7 @@ public class Maven {
 
 
     private void executeIntern(Project project, Args args, boolean offline) throws IOException, MavenInvocationException {
+
         for (Dep dep : args.deps) {
             dep.installTo(repository);
         }
@@ -297,10 +299,11 @@ public class Maven {
         Logs.info(project, " >>>");
         Logs.info(project, " >>> executing commands " + args);
         long x0 = System.currentTimeMillis();
-        final InvocationResult result = maven.execute(request);
+        final InvocationResult result = maven.execute(
+                request
+        );
         long x1 = System.currentTimeMillis();
-        final Duration dur = Duration.ofMillis(x1 - x0);
-        Logs.info(project, " >>> Done. Elapsed time: " + fmt(dur));
+        Logs.info(project, " >>> Done. Elapsed time: " + fmt(Duration.ofMillis(x1 - x0)));
 
         if (result.getExitCode() != 0) {
             throw new MvnExecException("non zero exit code: " + result.getExitCode());
@@ -325,4 +328,26 @@ public class Maven {
             super(message);
         }
     }
+
+    public static class DependencyFilter {
+
+        static Predicate<Dependency> all() {
+            return d -> false;
+        }
+
+        static Predicate<Dependency> coords(String coords) {
+            final int split = coords.indexOf(":");
+            if (split == -1) throw new IllegalArgumentException(
+                    "illegal expression be in format of'<artifactId|*>:<groupId|*>' ");
+            String groupId = coords.substring(0, split);
+            String artifactId = coords.substring(split + 1);
+            final Predicate<Dependency> groupIdFilter =
+                    d -> groupId.equals("*") || groupId.equals(d.getGroupId());
+            final Predicate<Dependency> artifactIdFilter =
+                    d -> artifactId.equals("*") || artifactId.equals(d.getArtifactId());
+            return groupIdFilter.or(artifactIdFilter);
+        }
+    }
+
+
 }

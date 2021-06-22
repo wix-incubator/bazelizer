@@ -69,6 +69,9 @@ public class Cli {
                 description = "write default jar")
         public Path jarOutput;
 
+        @CommandLine.Option(names = {"-R"}, paramLabel = "P", description = "rules for deps filter")
+        public Map<String, String> xmlDirs;
+
         @SuppressWarnings("Convert2MethodRef")
         public void invoke() throws Exception {
             final Maven env = Maven.prepareEnvFromArchive(
@@ -127,8 +130,8 @@ public class Cli {
                     output
             );
 
-            Logs.info(" " + IntStream.range(0,72).mapToObj(i -> "-").collect(Collectors.joining()));
-            Logs.info("Build graph finished. Archived repository " + FileUtils.byteCountToDisplaySize(size));
+            Logs.info(" " + IntStream.range(0,48).mapToObj(i -> "-").collect(Collectors.joining()));
+            Logs.info("Build finished. Archived repository " + FileUtils.byteCountToDisplaySize(size));
         }
     }
 
