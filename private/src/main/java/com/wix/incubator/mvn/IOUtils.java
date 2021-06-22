@@ -36,14 +36,13 @@ public final class IOUtils {
             )
     );
 
-    public static void tarRepositoryRecursive(Maven env, Path out) throws IOException {
+    public static long tarRepositoryRecursive(Maven env, Path out) throws IOException {
         final Path dir = env.repository;
         final Collection<Path> files = FileUtils.listFiles(
                 dir.toFile(), REPOSITORY_FILES_FILTER, FileFilterUtils.directoryFileFilter() // recursive
         ).stream().map(File::toPath).collect(Collectors.toList());
         try (OutputStream os = Files.newOutputStream(out)) {
-            final long size = IOUtils.tar(files, os, dir::relativize);
-            Logs.info("archived repository " + FileUtils.byteCountToDisplaySize(size));
+            return IOUtils.tar(files, os, dir::relativize);
         }
     }
 

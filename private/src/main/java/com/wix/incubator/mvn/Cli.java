@@ -5,6 +5,7 @@ import com.github.mustachejava.MustacheFactory;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
+import org.apache.commons.io.FileUtils;
 import picocli.CommandLine;
 
 import java.io.IOException;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static java.util.Arrays.asList;
@@ -120,10 +122,13 @@ public class Cli {
                     new Args(asList("clean", "install"))
             );
 
-            IOUtils.tarRepositoryRecursive(
+            long size = IOUtils.tarRepositoryRecursive(
                     env,
                     output
             );
+
+            Logs.info(" " + IntStream.range(0,72).mapToObj(i -> "-").collect(Collectors.joining()));
+            Logs.info("Build graph finished. Archived repository " + FileUtils.byteCountToDisplaySize(size));
         }
     }
 
