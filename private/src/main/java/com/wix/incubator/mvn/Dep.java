@@ -9,9 +9,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.util.Arrays.asList;
 
+/**
+ * Dependency from bazel
+ */
 public abstract class Dep {
 
     private static class DefinitionStruct {
@@ -19,13 +23,18 @@ public abstract class Dep {
         public Map<String, String> tags;
     }
 
+    /**
+     * New dep.
+     * @param jsonDef json definition
+     * @return a dep
+     */
     public static Dep create(String jsonDef)  {
         DefinitionStruct dto = Cli.GSON.fromJson(jsonDef, DefinitionStruct.class);
         final Path file = dto.file;
         final String extension = FilenameUtils.getExtension(file.getFileName().toString());
         switch (extension) {
             case "jar":
-                return new Hashed(dto);
+                return new Bazel(dto);
             case "tar":
                 return new Tar(file);
             default:
@@ -41,35 +50,50 @@ public abstract class Dep {
         return "compile";
     }
 
+    /**
+     * Ctor.
+     * @param id id
+     */
     protected Dep(String[] id) {
         this(id[0], id[1], id[2]);
     }
 
+    /**
+     * Ctor.
+     */
     protected Dep(String groupId, String artifactId, String version) {
         this.groupId = groupId;
         this.artifactId = artifactId;
         this.version = version;
     }
 
-    public abstract void copyTo(Path repo) throws IOException;
+    public abstract void installTo(Path repo) throws IOException;
 
 
     @SuppressWarnings("UnstableApiUsage")
-    private static class Hashed extends Dep {
+    private static class Bazel extends Dep {
         private final Path sourceFile;
+        private final String scope;
 
-        private Hashed(DefinitionStruct struct) {
+        private Bazel(DefinitionStruct struct) {
             super(mkVersion(struct));
             this.sourceFile = struct.file;
+            this.scope = Optional.ofNullable(struct.tags)
+                    .map(t -> t.get("scope")).orElse("compile");
         }
 
         @Override
-        public void copyTo(Path repo) throws IOException {
-            final Path depFolder = repo.resolve(mvnLayout(this));
+        public String scope() {
+            return scope;
+        }
+
+        @Override
+        public void installTo(Path repo) throws IOException {
+            final Path depFolder = repo.resolve(Maven.mvnLayout(groupId, artifactId, version));
             Files.createDirectories(depFolder);
             String fileName = this.artifactId + "-" + this.version;
             Files.copy(this.sourceFile, depFolder.resolve(fileName + ".jar"), StandardCopyOption.REPLACE_EXISTING);
-            writePom(this, depFolder);
+            generatePom(this, depFolder);
         }
 
         private static String[] mkVersion(DefinitionStruct struct) {
@@ -95,7 +119,7 @@ public abstract class Dep {
         private static String[] readIds(Path source)  {
             final List<String> tarFiles;
             try {
-                tarFiles = IO.list(source);
+                tarFiles = IOUtils.list(source);
             } catch (IOException e) {
                 throw new IllegalStateException(e);
             }
@@ -114,19 +138,17 @@ public abstract class Dep {
         }
 
         @Override
-        public void copyTo(Path repo) throws IOException {
-            final Path depFolder = repo.resolve(mvnLayout(this));
+        public void installTo(Path repo) throws IOException {
+            final Path depFolder = repo.resolve(
+                    Maven.mvnLayout(groupId, artifactId, version)
+            );
             Files.createDirectories(depFolder);
-            IO.untar(tar, depFolder);
-            Dep.writePom(this, depFolder);
+            IOUtils.untar(tar, depFolder);
+            Dep.generatePom(this, depFolder);
         }
     }
 
-    private static Path mvnLayout(Dep dep) {
-        return Maven.mvnLayout(dep.groupId, dep.artifactId, dep.version);
-    }
-
-    private static void writePom(Dep dep, Path folder) throws IOException {
+    private static void generatePom(Dep dep, Path folder) throws IOException {
         String pomXml = "<project>\n" +
                 "   <modelVersion>4.0.0</modelVersion>\n" +
                 "   <groupId>" + dep.groupId + "</groupId>\n" +

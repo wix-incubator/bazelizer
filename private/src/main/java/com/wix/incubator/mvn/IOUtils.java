@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public final class IO {
+public final class IOUtils {
     public static IOFileFilter REPOSITORY_FILES_FILTER = FileFilterUtils.and(
             FileFilterUtils.fileFileFilter(),
             // SEE: https://stackoverflow.com/questions/16866978/maven-cant-find-my-local-artifacts
@@ -42,8 +42,8 @@ public final class IO {
                 dir.toFile(), REPOSITORY_FILES_FILTER, FileFilterUtils.directoryFileFilter() // recursive
         ).stream().map(File::toPath).collect(Collectors.toList());
         try (OutputStream os = Files.newOutputStream(out)) {
-            final long size = IO.tar(files, os, dir::relativize);
-            Log.info("archived repository " + FileUtils.byteCountToDisplaySize(size));
+            final long size = IOUtils.tar(files, os, dir::relativize);
+            Logs.info("archived repository " + FileUtils.byteCountToDisplaySize(size));
         }
     }
 
@@ -92,5 +92,5 @@ public final class IO {
         }
     }
 
-    private IO() {}
+    private IOUtils() {}
 }

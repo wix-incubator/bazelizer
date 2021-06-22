@@ -5,17 +5,12 @@ import com.github.mustachejava.MustacheFactory;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.FileFilterUtils;
 import picocli.CommandLine;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -74,56 +69,30 @@ public class Cli {
 
         @SuppressWarnings("Convert2MethodRef")
         public void invoke() throws Exception {
-            Maven env = Maven.prepareEnv(
+            final Maven env = Maven.prepareEnvFromArchive(
                     repository
             );
 
-            List<Dep> deps = readLines(depsConfig).stream()
+            final List<Dep> deps = readLines(depsConfig).stream()
                     .map(jsonLine -> Dep.create(jsonLine))
                     .collect(Collectors.toList());
 
-            MavenProject project = MavenProject.create(
+            final Maven.Project project = Maven.createProject(
                     pomFile
             );
 
             env.executeOffline(
                     project,
-                    asList("clean", "install"),
-                    deps
+                    new Args(asList("clean", "install"), deps)
             );
 
-            Files.copy(
-                    project.jar(),
-                    jarOutput
-            );
-
-            writeArchivedFolder(
+            project.save(
                     env,
-                    project,
+                    jarOutput,
                     archiveOutput
             );
         }
 
-        private static void writeArchivedFolder(Maven mvn, MavenProject project, Path out) throws IOException {
-            final Path installedFolder = project.folder();
-            final Path repository = mvn.repository;
-            final Collection<Path> files = FileUtils.listFiles(
-                    repository.resolve(installedFolder).toFile(),
-                    FileFilterUtils.and(
-                            IO.REPOSITORY_FILES_FILTER,
-                            FileFilterUtils.notFileFilter(FileFilterUtils.suffixFileFilter("pom"))
-                    ),
-                    FileFilterUtils.trueFileFilter()
-            ).stream().map(File::toPath).collect(Collectors.toList());
-
-            try (OutputStream output = Files.newOutputStream(out)) {
-                IO.tar(files, output, aFile -> {
-                    final Path filePath = aFile.toAbsolutePath();
-                    return filePath.subpath(repository.getNameCount(), filePath.getNameCount());
-                });
-            }
-
-        }
     }
 
     @CommandLine.Command(name = "build-repository")
@@ -140,19 +109,21 @@ public class Cli {
 
         @Override
         public void invoke() throws Exception {
-            final Maven env = Maven.prepareEnv(
-            );
-            final List<MavenProject> projects = MavenProject.topologicSort(
-                    readLines(configFile).stream()
-                            .map(MavenProject::create)
-                            .collect(Collectors.toList())
+            final Maven env = Maven.prepareEnv();
+
+            final List<Maven.Project> projects = readLines(configFile).stream()
+                    .map(Maven::createProject)
+                    .collect(Collectors.toList());
+
+            env.execute(
+                    projects,
+                    new Args(asList("clean", "install"))
             );
 
-            for (MavenProject mvnProject : projects) {
-                env.execute(mvnProject, asList("dependency:go-offline", "clean", "install"));
-            }
-
-            IO.tarRepositoryRecursive(env, output);
+            IOUtils.tarRepositoryRecursive(
+                    env,
+                    output
+            );
         }
     }
 

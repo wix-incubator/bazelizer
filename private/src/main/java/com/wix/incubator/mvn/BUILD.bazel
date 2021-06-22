@@ -28,6 +28,7 @@ java_binary(
         "@bazelizer_deps//:info_picocli_picocli",
         "@bazelizer_deps//:org_apache_commons_commons_compress",
         "@bazelizer_deps//:commons_io_commons_io",
-        "@bazelizer_deps//:com_github_spullara_mustache_java_compiler"
+        "@bazelizer_deps//:com_github_spullara_mustache_java_compiler",
+        "@bazelizer_deps//:com_jcabi_incubator_xembly",
     ],
 )
