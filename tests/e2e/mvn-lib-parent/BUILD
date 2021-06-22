@@ -1,14 +1,13 @@
-load("//maven:defs.bzl", "declare_module")
-load("@maven_e2e_v2//:execute_build.bzl", "execute_build")
+load("//private/ruls/maven_v3:maven_project.bzl", "maven_project")
 
-
-#
-# API 2.0
-#
-
-declare_module(
-    name = "module",
-    pom_file = ":pom.xml",
-    visibility = ["//visibility:public"],
+filegroup(
+    name = "sources",
+    srcs = glob(["src/**/*"]),
+    visibility = ["//visibility:public"]
 )
 
+maven_project(
+    name = "maven",
+    pom_file = ":pom.xml",
+    visibility = ["//visibility:public"]
+)

@@ -91,22 +91,6 @@ install_maven_tool()
 # E2E tests
 #
 
-load("//maven:defs.bzl", "maven_repository_registry_v2")
-
-maven_repository_registry_v2(
-    name = "maven_e2e_v2",
-    modules = [
-        "//tests/e2e/mvn-lib-a:module",
-        "//tests/e2e/mvn-lib-parent:module",
-        "//tests/e2e/mvn-build-lib-one:module",
-        "//tests/e2e/mvn-lib-b:module",
-        "//tests/e2e/mvn-lib-G:module",
-        "//tests/e2e/mvn-lib-G/mvn-lib-G-a:module",
-        "//tests/e2e/mvn-lib-G/mvn-lib-G-b:module",
-    ],
-    use_global_cache = False,
-)
-
 load("//private/ruls/maven_v3:modules_registrary.bzl", maven_repository_registry_v3 = "maven_repository_registry")
 
 maven_repository_registry_v3(
@@ -114,6 +98,8 @@ maven_repository_registry_v3(
     modules = [
         "//tests/e2e/mvn2:maven",
         "//tests/e2e/mvn2/p1:maven",
+        "//tests/e2e/mvn-lib-a:maven",
+        "//tests/e2e/mvn-lib-parent:maven",
     ],
 )
 
