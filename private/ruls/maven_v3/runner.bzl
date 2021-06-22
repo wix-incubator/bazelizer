@@ -71,7 +71,7 @@ _run_mvn_attrs = {
     "repository": attr.label(mandatory=True),
     "deps": attr.label_list(),
     "runtime_deps": attr.label_list(),
-    "xml_dirs": attr.string(),
+    "pom_rules": attr.string_dict(),
     "srcs": attr.label_list(allow_files = True),
     "project": attr.label(mandatory=True),
     "outputs": attr.string_list(),
@@ -122,6 +122,9 @@ def _run_mvn_impl(ctx):
         file = ctx.actions.declare_file(out)
         output_files.append(file)
         args.add("-O{dest}={src}".format(dest=file.path, src=out))
+
+    for k, v in ctx.attr.pom_rules.items():
+        args.add("-R{rule}={ptn}".format(rule=k, ptn=v))
 
     ctx.actions.run(
         inputs = depset(input_files, transitive = input_transitive_files),
