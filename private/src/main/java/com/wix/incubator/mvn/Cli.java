@@ -12,6 +12,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -69,26 +71,46 @@ public class Cli {
                 description = "write default jar")
         public Path jarOutput;
 
-        @CommandLine.Option(names = {"-R"}, paramLabel = "P", description = "rules for deps filter")
-        public Map<String, String> xmlDirs;
+        @CommandLine.Option(names = {"--drop-deps-all"})
+        public boolean dropAllDepsFromPom;
+
+        @CommandLine.Option(names = {"--drop-deps-ignore"}, paramLabel = "<coors>", description = "rules for deps filter")
+        public List<String> dropDepsExcludes = Collections.emptyList();
 
         @SuppressWarnings("Convert2MethodRef")
         public void invoke() throws Exception {
             final Maven env = Maven.prepareEnvFromArchive(
                     repository
             );
+            final Maven.Project project = Maven.createProject(
+                    pomFile
+            );
+
+            List<Maven.DepsFilter> filters = new ArrayList<>();
+            if (dropAllDepsFromPom) {
+                filters.add(Maven.DepsFilter.falseFilter());
+                for (String exclude : dropDepsExcludes) {
+                    filters.add(Maven.DepsFilter.coords(exclude));
+                }
+            }
 
             final List<Dep> deps = readLines(depsConfig).stream()
                     .map(jsonLine -> Dep.create(jsonLine))
                     .collect(Collectors.toList());
 
-            final Maven.Project project = Maven.createProject(
-                    pomFile
-            );
+            final Maven.DepsFilter filter = filters.stream()
+                    .reduce(Maven.DepsFilter::or)
+                    .orElse(Maven.DepsFilter.trueFilter());
+
+            final Maven.Args build = Maven.Args.builder()
+                    .deps(deps)
+                    .cmd(asList("clean", "install"))
+                    .depsFilter(filter)
+                    .build();
 
             env.executeOffline(
                     project,
-                    new Args(asList("clean", "install"), deps)
+                    build
             );
 
             project.save(
@@ -119,10 +141,13 @@ public class Cli {
             final List<Maven.Project> projects = readLines(configFile).stream()
                     .map(Maven::createProject)
                     .collect(Collectors.toList());
+            final Maven.Args build = Maven.Args.builder()
+                    .cmd(asList("clean", "dependency:go-offline", "install"))
+                    .build();
 
             env.execute(
                     projects,
-                    new Args(asList("clean", "install"))
+                    build
             );
 
             long size = IOUtils.tarRepositoryRecursive(

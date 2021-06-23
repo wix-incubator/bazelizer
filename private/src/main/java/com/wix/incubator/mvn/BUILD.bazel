@@ -29,6 +29,16 @@ java_binary(
         "@bazelizer_deps//:org_apache_commons_commons_compress",
         "@bazelizer_deps//:commons_io_commons_io",
         "@bazelizer_deps//:com_github_spullara_mustache_java_compiler",
-        "@bazelizer_deps//:com_jcabi_incubator_xembly",
+        "@bazelizer_deps//:org_projectlombok_lombok",
     ],
+    plugins = [":lombok_plugin"],
+    licenses = ["notice"],  # Apache 2.0
+)
+
+
+java_plugin(
+    name = "lombok_plugin",
+    processor_class = "lombok.launch.AnnotationProcessorHider$AnnotationProcessor",
+    deps = ["@bazelizer_deps//:org_projectlombok_lombok"],
+    generates_api = 1,
 )

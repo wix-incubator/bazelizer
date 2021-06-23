@@ -97,8 +97,9 @@ maven_repository_registry_v3(
     name = "maven_e2e_v3",
     modules = [
         "//tests/e2e/mvn2:maven",
-        "//tests/e2e/mvn2/p1:maven",
-        "//tests/e2e/mvn-lib-a:maven",
+        "//tests/e2e/mvn2/p1:maven", # TODO rm
+
+        "//tests/e2e/mvn-lib:maven",
         "//tests/e2e/mvn-lib-parent:maven",
     ],
 )

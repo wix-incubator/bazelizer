@@ -71,10 +71,11 @@ _run_mvn_attrs = {
     "repository": attr.label(mandatory=True),
     "deps": attr.label_list(),
     "runtime_deps": attr.label_list(),
-    "pom_rules": attr.string_dict(),
     "srcs": attr.label_list(allow_files = True),
     "project": attr.label(mandatory=True),
     "outputs": attr.string_list(),
+    "flags": attr.string_list(),
+    "mvn_flags": attr.string_list(),
     "data": attr.label_list(allow_files = True),
     "log_level": attr.string(default="OFF"),
     "_tool": attr.label(default=CLI_TOOL, allow_files = True, executable = True, cfg = "host")
@@ -123,8 +124,8 @@ def _run_mvn_impl(ctx):
         output_files.append(file)
         args.add("-O{dest}={src}".format(dest=file.path, src=out))
 
-    for k, v in ctx.attr.pom_rules.items():
-        args.add("-R{rule}={ptn}".format(rule=k, ptn=v))
+    for flag in ctx.attr.flags:
+        args.add( flag )
 
     ctx.actions.run(
         inputs = depset(input_files, transitive = input_transitive_files),

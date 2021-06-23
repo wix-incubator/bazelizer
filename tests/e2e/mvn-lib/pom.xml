@@ -1,4 +1,4 @@
-<project xmlns:bz="https://github.com/wix-incubator/bazelizer">
+<project>
     <modelVersion>4.0.0</modelVersion>
     <!--suppress MavenRedundantGroupId -->
     <groupId>com.mavenizer.examples.api</groupId>
@@ -17,7 +17,7 @@
         <relativePath>../mvn-lib-parent/pom.xml</relativePath>
     </parent>
 
-    <dependencies bz:drop="never">
+    <dependencies>
 
         <dependency>
             <groupId>com.google.guava</groupId>

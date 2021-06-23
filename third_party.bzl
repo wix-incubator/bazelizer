@@ -20,6 +20,7 @@ deps = [
     dependency("org.scala-lang:scala-library:2.12.6"),
     dependency("org.scala-lang:scala-reflect:2.12.6"),
     dependency("com.github.scopt:scopt_2.12:4.0.1"),
+
     dependency("org.apache.maven:maven-model:3.6.2"),
     dependency("com.google.code.gson:gson:2.8.7"),
     dependency("org.codehaus.plexus:plexus-utils:3.2.1"),
@@ -28,7 +29,7 @@ deps = [
     dependency('info.picocli:picocli:4.6.1'),
     dependency('org.apache.commons:commons-compress:1.20'),
     dependency('com.github.spullara.mustache.java:compiler:0.9.10'),
-    dependency('com.jcabi.incubator:xembly:0.25.0'),
+    dependency('org.projectlombok:lombok:1.18.2'),
 ]
 
 _repositories = [

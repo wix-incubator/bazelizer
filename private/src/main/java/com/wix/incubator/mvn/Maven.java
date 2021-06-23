@@ -1,6 +1,8 @@
 package com.wix.incubator.mvn;
 
 import com.google.devtools.build.runfiles.Runfiles;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.apache.maven.model.Dependency;
@@ -98,27 +100,30 @@ public class Maven {
             this.parentFile = parentAbsPath.map(Path::toFile).orElse(null);
         }
 
-        public Optional<Project> getParent() {
+        private Optional<Project> getParent() {
             return Optional.ofNullable(parentFile).map(Project::new);
         }
 
         /**
          * Save pom file.
          *
-         * @param deps deps
+         * @param args deps
          * @return file
          * @throws IOException if any
          */
-        public File emitPom(List<Dep> deps) throws IOException {
+        public File emitPom(Args args) throws IOException {
             final Path newPom = srcFile.getParentFile().toPath().resolve("pom.__bazelizer__.xml");
             final Model newModel = model.clone();
-            for (Dep dep : deps) {
+            final List<Dependency> dependencies = newModel.getDependencies();
+            dependencies.removeIf(d -> !args.depsFilter.test(d));
+
+            for (Dep dep : args.deps) {
                 final Dependency d = new Dependency();
                 d.setArtifactId(dep.artifactId);
                 d.setGroupId(dep.groupId);
                 d.setVersion(dep.version);
                 d.setScope(dep.scope());
-                newModel.getDependencies().add(d);
+                dependencies.add(d);
             }
             if (!newPom.toFile().exists()) {
                 final MavenXpp3Writer writer = new MavenXpp3Writer();
@@ -267,17 +272,12 @@ public class Maven {
 
 
     private void executeIntern(Project project, Args args, boolean offline) throws IOException, MavenInvocationException {
-
         for (Dep dep : args.deps) {
             dep.installTo(repository);
         }
-
-        final File pomFile = project.emitPom(
-                args.deps
-        );
+        final File pomFile = project.emitPom(args);
 
         maven.setWorkingDirectory(pomFile.getParentFile());
-
         DefaultInvocationRequest request = new DefaultInvocationRequest();
         request.setUserSettingsFile(settingsXmlFile.toFile());
         request.setLocalRepositoryDirectory(repository.toFile());
@@ -329,13 +329,52 @@ public class Maven {
         }
     }
 
-    public static class DependencyFilter {
+    @AllArgsConstructor
+    @Builder
+    public static class Args {
+        @Builder.Default
+        public final List<String> cmd = Collections.emptyList();
+        @Builder.Default
+        public final List<Dep> deps = Collections.emptyList();
+        @Builder.Default
+        public final DepsFilter depsFilter = d -> true;
+    }
 
-        static Predicate<Dependency> all() {
+
+    public interface DepsFilter extends Predicate<Dependency> {
+
+        @Override
+        default DepsFilter and(Predicate<? super Dependency> other) {
+            return (t) -> test(t) && other.test(t);
+        }
+
+        @Override
+        default DepsFilter negate() {
+            return d -> !this.test(d);
+        }
+
+        @Override
+        default DepsFilter or(Predicate<? super Dependency> other) {
+            return (t) -> test(t) || other.test(t);
+        }
+
+        /**
+         * Rule that false by default.
+         */
+        static DepsFilter falseFilter() {
             return d -> false;
         }
 
-        static Predicate<Dependency> coords(String coords) {
+        static DepsFilter trueFilter() {
+            return d -> true;
+        }
+
+        /**
+         * Rule accept only by maven coordinates pattern
+         *
+         * @param coords pattern
+         */
+        static DepsFilter coords(String coords) {
             final int split = coords.indexOf(":");
             if (split == -1) throw new IllegalArgumentException(
                     "illegal expression be in format of'<artifactId|*>:<groupId|*>' ");
@@ -345,9 +384,8 @@ public class Maven {
                     d -> groupId.equals("*") || groupId.equals(d.getGroupId());
             final Predicate<Dependency> artifactIdFilter =
                     d -> artifactId.equals("*") || artifactId.equals(d.getArtifactId());
-            return groupIdFilter.or(artifactIdFilter);
+            Predicate<Dependency> rule = groupIdFilter.or(artifactIdFilter);
+            return rule::test;
         }
     }
-
-
 }
