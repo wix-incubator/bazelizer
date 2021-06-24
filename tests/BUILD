@@ -28,10 +28,10 @@ e2e_has_jar_test(
 #    clazz = "A.class"
 #)
 
-#e2e_has_jar_test(
-#    name = "mvn-lib-G-b__jar-test",
-#    dep = "//tests/e2e/mvn-lib-G/mvn-lib-G-b",
-#    jar = "tests/e2e/mvn-lib-G/mvn-lib-G-b/libmvn-lib-G-b.jar",
-#    clazz = "B.class"
-#)
+e2e_has_jar_test(
+    name = "mvn-lib-G-b__jar-test",
+    dep = "//tests/e2e/mvn-lib-subparent/mvn-lib-module-b",
+    jar = "tests/e2e/mvn-lib-G/mvn-lib-G-b/libmvn-lib-module-b.jar",
+    clazz = "B.class"
+)
 

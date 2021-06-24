@@ -61,7 +61,7 @@ public abstract class Dep {
     /**
      * Ctor.
      */
-    protected Dep(String groupId, String artifactId, String version) {
+    private Dep(String groupId, String artifactId, String version) {
         this.groupId = groupId;
         this.artifactId = artifactId;
         this.version = version;
@@ -93,7 +93,7 @@ public abstract class Dep {
             Files.createDirectories(depFolder);
             String fileName = this.artifactId + "-" + this.version;
             Files.copy(this.sourceFile, depFolder.resolve(fileName + ".jar"), StandardCopyOption.REPLACE_EXISTING);
-            generatePom(this, depFolder);
+            writePom(this, depFolder);
         }
 
         private static String[] mkVersion(DefinitionStruct struct) {
@@ -112,29 +112,8 @@ public abstract class Dep {
         private final Path tar;
 
         protected Tar(Path source)  {
-            super(readIds(source));
+            super(readCoords(source));
             tar = source;
-        }
-
-        private static String[] readIds(Path source)  {
-            final List<String> tarFiles;
-            try {
-                tarFiles = IOUtils.list(source);
-            } catch (IOException e) {
-                throw new IllegalStateException(e);
-            }
-
-            return tarFiles.stream()
-                    .filter(name -> name.endsWith(".jar"))
-                    .findFirst()
-                    .map(pathWithinTar -> {
-                        final List<String> parts = asList(pathWithinTar.split("/"));
-                        final String version = parts.get(parts.size() - 2);
-                        final String art = parts.get(parts.size() - 3);
-                        final String gid = Joiner.on(".").join(parts.subList(0, parts.size() - 3));
-                        return new String[]{gid, art, version};
-                    }).orElseThrow(() -> new IllegalStateException("tar has not resolvable content in "
-                            + source + ": " + tarFiles));
         }
 
         @Override
@@ -144,11 +123,25 @@ public abstract class Dep {
             );
             Files.createDirectories(depFolder);
             IOUtils.untar(tar, depFolder);
-            Dep.generatePom(this, depFolder);
+            Dep.writePom(this, depFolder);
+        }
+
+        private static String[] readCoords(Path source)  {
+            return IOUtils.listUnchacked(source).stream()
+                    .filter(name -> name.endsWith(".jar"))
+                    .findFirst()
+                    .map(pathWithinTar -> {
+                        final List<String> parts = asList(pathWithinTar.split("/"));
+                        final String version = parts.get(parts.size() - 2);
+                        final String art = parts.get(parts.size() - 3);
+                        final String gid = Joiner.on(".").join(parts.subList(0, parts.size() - 3));
+                        return new String[]{gid, art, version};
+                    }).orElseThrow(() -> new IllegalStateException("tar has not resolvable content in "
+                            + source + ": " + IOUtils.listUnchacked(source)));
         }
     }
 
-    private static void generatePom(Dep dep, Path folder) throws IOException {
+    private static void writePom(Dep dep, Path folder) throws IOException {
         String pomXml = "<project>\n" +
                 "   <modelVersion>4.0.0</modelVersion>\n" +
                 "   <groupId>" + dep.groupId + "</groupId>\n" +
@@ -159,7 +152,7 @@ public abstract class Dep {
 
         Files.write(folder.resolve((dep.artifactId + "-" + dep.version) + ".pom"),
                 pomXml.getBytes(StandardCharsets.UTF_8),
-                StandardOpenOption.CREATE_NEW,
+                StandardOpenOption.CREATE,
                 StandardOpenOption.TRUNCATE_EXISTING);
     }
 }

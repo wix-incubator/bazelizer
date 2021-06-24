@@ -91,5 +91,15 @@ public final class IOUtils {
         }
     }
 
+    public static List<String> listUnchacked(Path p)  {
+        final List<String> tarFiles;
+        try {
+            tarFiles = list(p);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
+        return tarFiles;
+    }
+
     private IOUtils() {}
 }

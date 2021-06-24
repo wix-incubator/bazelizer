@@ -90,21 +90,16 @@ install_maven_tool()
 #
 # E2E tests
 #
+load("//maven:defs.bzl", "maven_repository_registry")
 
-load("//private/ruls/maven_v3:modules_registrary.bzl", maven_repository_registry_v3 = "maven_repository_registry")
-
-maven_repository_registry_v3(
+maven_repository_registry(
     name = "maven_e2e_v3",
     modules = [
-        "//tests/e2e/mvn2:maven",
-        "//tests/e2e/mvn2/p1:maven", # TODO rm
 
+        "//tests/e2e/mvn-lib-subparent:maven",
+        "//tests/e2e/mvn-lib-subparent/mvn-lib-module-a:maven",
+        "//tests/e2e/mvn-lib-subparent/mvn-lib-module-b:maven",
         "//tests/e2e/mvn-lib:maven",
         "//tests/e2e/mvn-lib-parent:maven",
     ],
-)
-
-load(
-    "@bazel_tools//tools/build_defs/repo:jvm.bzl",
-    _jvm_maven_import_external = "jvm_maven_import_external",
 )

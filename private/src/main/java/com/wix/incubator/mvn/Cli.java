@@ -77,6 +77,9 @@ public class Cli {
         @CommandLine.Option(names = {"--drop-deps-ignore"}, paramLabel = "<coors>", description = "rules for deps filter")
         public List<String> dropDepsExcludes = Collections.emptyList();
 
+        @CommandLine.Option(names = {"--mvn-active-profile"}, paramLabel = "<p>", description = "maven active profiles")
+        public List<String> mavenActiveProfiles = Collections.emptyList();
+
         @SuppressWarnings("Convert2MethodRef")
         public void invoke() throws Exception {
             final Maven env = Maven.prepareEnvFromArchive(

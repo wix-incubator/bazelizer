@@ -1,12 +1,12 @@
-load("//maven:defs.bzl", "declare_module")
+load("//maven:defs.bzl", "maven_project")
 
-load("@maven_e2e_v2//:execute_build.bzl", "execute_build")
+load("@maven_e2e_v3//:execute_build.bzl", "execute_build")
 
 
-declare_module(
-    name = "module",
+maven_project(
+    name = "maven",
     pom_file = ":pom.xml",
-    parent = "//tests/e2e/mvn-lib-G:module",
+    parent_project = "//tests/e2e/mvn-lib-subparent:maven",
     visibility = ["//visibility:public"],
 )
 
@@ -17,8 +17,8 @@ filegroup(
 )
 
 execute_build(
-    name = "mvn-lib-G-a",
-    pom_def = ":module",
+    name = "mvn-lib-module-a",
+    project = ":maven",
     srcs = [":sources"],
     visibility = ["//visibility:public"]
 )

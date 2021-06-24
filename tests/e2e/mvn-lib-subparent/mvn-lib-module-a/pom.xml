@@ -6,7 +6,7 @@
 
     <parent>
         <groupId>com.mavenizer.examples.api</groupId>
-        <artifactId>mvn-lib-G</artifactId>
+        <artifactId>mvn-lib-subparent</artifactId>
         <version>1.0.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
