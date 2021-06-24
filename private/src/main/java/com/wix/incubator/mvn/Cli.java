@@ -71,10 +71,10 @@ public class Cli {
                 description = "write default jar")
         public Path jarOutput;
 
-        @CommandLine.Option(names = {"--drop-deps-all"})
+        @CommandLine.Option(names = {"--deps-drop-all"})
         public boolean dropAllDepsFromPom;
 
-        @CommandLine.Option(names = {"--drop-deps-ignore"}, paramLabel = "<coors>", description = "rules for deps filter")
+        @CommandLine.Option(names = {"--deps-drop-ignore"}, paramLabel = "<coors>", description = "rules for deps filter")
         public List<String> dropDepsExcludes = Collections.emptyList();
 
         @CommandLine.Option(names = {"--mvn-active-profile"}, paramLabel = "<p>", description = "maven active profiles")

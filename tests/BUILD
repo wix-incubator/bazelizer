@@ -29,9 +29,9 @@ e2e_has_jar_test(
 #)
 
 e2e_has_jar_test(
-    name = "mvn-lib-G-b__jar-test",
+    name = "mvn-lib-module-b__jar-test",
     dep = "//tests/e2e/mvn-lib-subparent/mvn-lib-module-b",
-    jar = "tests/e2e/mvn-lib-G/mvn-lib-G-b/libmvn-lib-module-b.jar",
+    jar = "tests/e2e/mvn-lib-subparent/mvn-lib-module-b/libmvn-lib-module-b.jar",
     clazz = "B.class"
 )
 

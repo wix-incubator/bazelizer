@@ -24,8 +24,8 @@ execute_build(
         "//tests/e2e/bzl-lib/src/com/mavenizer/examples/util", # bazel build
     ],
     flags = [
-        "--drop-deps-all",
-        "--drop-deps-ignore", "*:guava"
+        "--deps-drop-all",
+        "--deps-drop-ignore", "*:guava"
     ],
 #    outputs = ["a-1.0.0-SNAPSHOT.jar"],
 )

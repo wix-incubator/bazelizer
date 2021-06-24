@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -194,6 +195,7 @@ public class Maven {
                 .orElseThrow(() -> new IllegalStateException("no sys prop: " + BZL_MVN_TOOL_SYS_PROP));
 
         Path m2HomeDir = Files.createTempDirectory("M2_HOME@_" + "128" + "_@");
+        Logs.info(" M2_HOME="+m2HomeDir);
         Path repository = m2HomeDir.resolve("repository").toAbsolutePath();
         Files.createDirectories(repository);
         Path settingsXmlFile = m2HomeDir.resolve("settings.xml").toAbsolutePath();
@@ -306,12 +308,17 @@ public class Maven {
         Logs.info(project, " >>> Done. Elapsed time: " + fmt(Duration.ofMillis(x1 - x0)));
 
         if (result.getExitCode() != 0) {
+            dumpLog(pomFile);
             throw new MvnExecException("non zero exit code: " + result.getExitCode());
         }
     }
 
     private String fmt(Duration dur) {
         return dur.getSeconds() + "." + dur.minusSeconds(dur.getSeconds()).toMillis() + "s";
+    }
+
+    private void dumpLog(File file) {
+        Logs.logXML(file);
     }
 
     private static void addVertex(DAG dag, Map<String, Project> vertices, Project project) {
