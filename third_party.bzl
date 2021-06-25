@@ -13,14 +13,6 @@ def dependency(coordinates, exclusions = None):
     )
 
 deps = [
-    dependency("org.scala-lang.modules:scala-java8-compat_2.12:0.8.0"),
-    dependency("org.scala-lang.modules:scala-parser-combinators_2.12:1.0.4"),
-    dependency("org.scala-lang.modules:scala-xml_2.12:1.1.0"),
-    dependency("org.scala-lang:scala-compiler:2.12.6"),
-    dependency("org.scala-lang:scala-library:2.12.6"),
-    dependency("org.scala-lang:scala-reflect:2.12.6"),
-    dependency("com.github.scopt:scopt_2.12:4.0.1"),
-
     dependency("org.apache.maven:maven-model:3.6.2"),
     dependency("com.google.code.gson:gson:2.8.7"),
     dependency("org.codehaus.plexus:plexus-utils:3.2.1"),
