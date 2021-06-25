@@ -100,8 +100,11 @@ public abstract class Dep {
             String filePath = struct.file.toAbsolutePath().toString();
             String hash = Hashing.murmur3_128().hashString(filePath, StandardCharsets.UTF_8).toString();
             String groupId = "bazelizer." + hash;
-            String artifactId = struct.file.getFileName().toString().replace("/", "_")
-                    .replace("=", "_").replace(".jar", "");
+            String artifactId = struct.file.getFileName().toString()
+                    .replace("/", "_")
+                    .replace("=", "_")
+                    .replace(".jar", "")
+                    .replace(".", "_");
             String version = "rev-" + hash.substring(0, 7);
             return new String[]{groupId, artifactId, version};
         }
@@ -118,12 +121,9 @@ public abstract class Dep {
 
         @Override
         public void installTo(Path repo) throws IOException {
-            final Path depFolder = repo.resolve(
-                    Maven.mvnLayout(groupId, artifactId, version)
-            );
-            Files.createDirectories(depFolder);
-            IOUtils.untar(tar, depFolder);
-            Dep.writePom(this, depFolder);
+            IOUtils.untar(tar, repo);
+            final Path depFolder = repo.resolve(Maven.mvnLayout(groupId, artifactId, version));
+            Dep.writePom(this, depFolder); // override pom by synthetic
         }
 
         private static String[] readCoords(Path source)  {
