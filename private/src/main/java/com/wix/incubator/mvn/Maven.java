@@ -20,13 +20,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -344,21 +344,11 @@ public class Maven {
         @Builder.Default
         public final List<Dep> deps = Collections.emptyList();
         @Builder.Default
-        public final DepsFilter depsFilter = d -> true;
+        public final DepsFilter depsFilter = DepsFilter.trueFilter();
     }
 
 
     public interface DepsFilter extends Predicate<Dependency> {
-
-        @Override
-        default DepsFilter and(Predicate<? super Dependency> other) {
-            return (t) -> test(t) && other.test(t);
-        }
-
-        @Override
-        default DepsFilter negate() {
-            return d -> !this.test(d);
-        }
 
         @Override
         default DepsFilter or(Predicate<? super Dependency> other) {
@@ -385,14 +375,26 @@ public class Maven {
             final int split = coords.indexOf(":");
             if (split == -1) throw new IllegalArgumentException(
                     "illegal expression be in format of'<artifactId|*>:<groupId|*>' ");
-            String groupId = coords.substring(0, split);
-            String artifactId = coords.substring(split + 1);
-            final Predicate<Dependency> groupIdFilter =
-                    d -> groupId.equals("*") || groupId.equals(d.getGroupId());
-            final Predicate<Dependency> artifactIdFilter =
-                    d -> artifactId.equals("*") || artifactId.equals(d.getArtifactId());
+            String groupIdPtn = coords.substring(0, split);
+            String artifactIdPtn = coords.substring(split + 1);
+            final Predicate<Dependency> groupIdFilter = coordsFilter(groupIdPtn, Dependency::getGroupId);
+            final Predicate<Dependency> artifactIdFilter = coordsFilter(artifactIdPtn, Dependency::getArtifactId);
             Predicate<Dependency> rule = groupIdFilter.or(artifactIdFilter);
             return rule::test;
         }
+    }
+
+    private static DepsFilter coordsFilter(String coords, Function<Dependency,String> fn) {
+        if (coords.equals("*")) return DepsFilter.trueFilter();
+        final int split = coords.indexOf("*");
+        if (coords.startsWith("*")) {
+            String suf = coords.substring(split+1);
+            return d -> fn.apply(d).endsWith(suf);
+        }
+        if (coords.endsWith("*")) {
+            String pref = coords.substring(0, split);
+            return d -> fn.apply(d).startsWith(pref);
+        }
+        return d -> fn.apply(d).equals(coords);
     }
 }

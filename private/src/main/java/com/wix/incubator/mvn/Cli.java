@@ -71,10 +71,12 @@ public class Cli {
                 description = "write default jar")
         public Path jarOutput;
 
-        @CommandLine.Option(names = {"--deps-drop-all"})
+        @CommandLine.Option(names = {"--deps-drop-all"},
+                description = "Delete all dependencies that declared in pom file before tool execution")
         public boolean dropAllDepsFromPom;
 
-        @CommandLine.Option(names = {"--deps-drop-ignore"}, paramLabel = "<coors>", description = "rules for deps filter")
+        @CommandLine.Option(names = {"--deps-drop-ignore"}, paramLabel = "<coors>", description = "Rules for deps drop exclusion, " +
+                "rxpected format is '<groupId>:<artifactId>'. Examples: 'com.google.*:*', '*:guava', ect. ")
         public List<String> dropDepsExcludes = Collections.emptyList();
 
         @CommandLine.Option(names = {"--mvn-active-profile"}, paramLabel = "<p>", description = "maven active profiles")
