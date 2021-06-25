@@ -89,7 +89,7 @@ public abstract class Dep {
 
         @Override
         public void installTo(Path repo) throws IOException {
-            final Path depFolder = repo.resolve(Maven.mvnLayout(groupId, artifactId, version));
+            final Path depFolder = repo.resolve(Maven.artifactRepositoryLayout(groupId, artifactId, version));
             Files.createDirectories(depFolder);
             String fileName = this.artifactId + "-" + this.version;
             Files.copy(this.sourceFile, depFolder.resolve(fileName + ".jar"), StandardCopyOption.REPLACE_EXISTING);
@@ -121,13 +121,13 @@ public abstract class Dep {
 
         @Override
         public void installTo(Path repo) throws IOException {
-            IOUtils.untar(tar, repo);
-            final Path depFolder = repo.resolve(Maven.mvnLayout(groupId, artifactId, version));
+            IOSupport.untar(tar, repo);
+            final Path depFolder = repo.resolve(Maven.artifactRepositoryLayout(groupId, artifactId, version));
             Dep.writePom(this, depFolder); // override pom by synthetic
         }
 
         private static String[] readCoords(Path source)  {
-            return IOUtils.listUnchacked(source).stream()
+            return IOSupport.lisTartUnchacked(source).stream()
                     .filter(name -> name.endsWith(".jar"))
                     .findFirst()
                     .map(pathWithinTar -> {
@@ -137,7 +137,7 @@ public abstract class Dep {
                         final String gid = Joiner.on(".").join(parts.subList(0, parts.size() - 3));
                         return new String[]{gid, art, version};
                     }).orElseThrow(() -> new IllegalStateException("tar has not resolvable content in "
-                            + source + ": " + IOUtils.listUnchacked(source)));
+                            + source + ": " + IOSupport.lisTartUnchacked(source)));
         }
     }
 

@@ -8,8 +8,6 @@ import com.google.gson.JsonDeserializer;
 import org.apache.commons.io.FileUtils;
 import picocli.CommandLine;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -19,8 +17,8 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
+import static com.wix.incubator.mvn.IOSupport.readLines;
 import static java.util.Arrays.asList;
 
 @CommandLine.Command(subcommands = {
@@ -111,6 +109,7 @@ public class Cli {
                     .deps(deps)
                     .cmd(asList("clean", "install"))
                     .depsFilter(filter)
+                    .profiles(mavenActiveProfiles)
                     .build();
 
             env.executeOffline(
@@ -141,7 +140,9 @@ public class Cli {
 
         @Override
         public void invoke() throws Exception {
-            final Maven env = Maven.prepareEnv();
+            final Maven env = Maven.prepareEnv(
+                    Maven.MvnRepository.fromFile(settingsXml)
+            );
 
             final List<Maven.Project> projects = readLines(configFile).stream()
                     .map(Maven::createProject)
@@ -155,30 +156,16 @@ public class Cli {
                     build
             );
 
-            long size = IOUtils.tarRepositoryRecursive(
+            long size = IOSupport.tarRepositoryRecursive(
                     env,
                     output
             );
 
-            Logs.info(" " + IntStream.range(0,48).mapToObj(i -> "-").collect(Collectors.joining()));
-            Logs.info("Build finished. Archived repository " + FileUtils.byteCountToDisplaySize(size));
+            Log.info(" " + IntStream.range(0,48).mapToObj(i -> "-").collect(Collectors.joining()));
+            Log.info("Build finished. Archived repository " + FileUtils.byteCountToDisplaySize(size));
         }
     }
 
-    public static List<String> readLines(Path text) throws IOException {
-        try (Stream<String> s = Files.lines(text)) {
-            return s.map(p -> {
-                String line = p.trim();
-                if (line.startsWith("'") || line.startsWith("\"")) {
-                    line = line.substring(1);
-                }
-                if (line.endsWith("'") || line.endsWith("\"")) {
-                    line = line.substring(0, line.length() - 1);
-                }
-                return line;
-            }).collect(Collectors.toList());
-        }
-    }
 
     public static abstract class Executable implements Callable<Void> {
         @Override

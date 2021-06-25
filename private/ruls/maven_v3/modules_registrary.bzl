@@ -52,12 +52,11 @@ def _maven_repository_registry_impl(repository_ctx):
     repository_name = repository_ctx.name
     maven_repository_target_name = "pinned_maven_repository"
     settings_xml_json = repository_ctx.path("settings_xml.json")
-
     repositories = []
     user_mvn_repo = repository_ctx.path(repository_ctx.os.environ["HOME"] + "/.m2/repository/")
     if user_mvn_repo.exists:
         repository_ctx.report_progress("Using host maven repository: %s" % (user_mvn_repo))
-        profile_id = "agg._host_local_m2_cache"
+        profile_id = "_host_local_m2_cache"
         url = "file://%s" % (user_mvn_repo)
 
         repositories.append(

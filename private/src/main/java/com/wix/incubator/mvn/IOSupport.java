@@ -20,8 +20,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-public final class IOUtils {
+public final class IOSupport {
     public static IOFileFilter REPOSITORY_FILES_FILTER = FileFilterUtils.and(
             FileFilterUtils.fileFileFilter(),
             // SEE: https://stackoverflow.com/questions/16866978/maven-cant-find-my-local-artifacts
@@ -42,7 +43,7 @@ public final class IOUtils {
                 dir.toFile(), REPOSITORY_FILES_FILTER, FileFilterUtils.directoryFileFilter() // recursive
         ).stream().map(File::toPath).collect(Collectors.toList());
         try (OutputStream os = Files.newOutputStream(out)) {
-            return IOUtils.tar(files, os, dir::relativize);
+            return IOSupport.tar(files, os, dir::relativize);
         }
     }
 
@@ -81,7 +82,7 @@ public final class IOUtils {
         }
     }
 
-    public static List<String> list(Path p) throws IOException {
+    public static List<String> listTar(Path p) throws IOException {
         try (TarArchiveInputStream is = new TarArchiveInputStream(Files.newInputStream(p, StandardOpenOption.READ))) {
             final ArrayList<String> nn = new ArrayList<>();
             for (TarArchiveEntry tarEntry; (tarEntry = is.getNextTarEntry()) != null; ) {
@@ -91,15 +92,32 @@ public final class IOUtils {
         }
     }
 
-    public static List<String> listUnchacked(Path p)  {
+
+    public static List<String> lisTartUnchacked(Path p)  {
         final List<String> tarFiles;
         try {
-            tarFiles = list(p);
+            tarFiles = listTar(p);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
         return tarFiles;
     }
 
-    private IOUtils() {}
+
+    public static List<String> readLines(Path text) throws IOException {
+        try (Stream<String> s = Files.lines(text)) {
+            return s.map(p -> {
+                String line = p.trim();
+                if (line.startsWith("'") || line.startsWith("\"")) {
+                    line = line.substring(1);
+                }
+                if (line.endsWith("'") || line.endsWith("\"")) {
+                    line = line.substring(0, line.length() - 1);
+                }
+                return line;
+            }).collect(Collectors.toList());
+        }
+    }
+
+    private IOSupport() {}
 }
