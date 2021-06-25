@@ -25,10 +25,6 @@ load("@bazelizer_deps//:defs.bzl", "pinned_maven_install")
 
 pinned_maven_install()
 
-load("@bazelizer_deps//:compat.bzl", "compat_repositories")
-
-compat_repositories()
-
 load("//:maven_binary_tool.bzl", install_maven_tool = "install")
 
 install_maven_tool()
