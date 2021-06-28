@@ -1,19 +1,25 @@
 package com.wix.incubator.mvn;
 
 import com.google.common.io.Files;
-import org.apache.commons.io.output.NullOutputStream;
-import org.apache.commons.io.output.TeeOutputStream;
+import com.sun.org.apache.xml.internal.serializer.OutputPropertiesFactory;
 import org.apache.maven.shared.invoker.InvocationOutputHandler;
 import org.apache.maven.shared.invoker.InvocationResult;
 import org.apache.maven.shared.invoker.MavenInvocationException;
+import org.w3c.dom.*;
+import org.xml.sax.SAXException;
 
 import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.*;
+import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.*;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 
 public class Log {
+
     public static void info(String m) {
         System.out.println("[info]  " + m);
     }
@@ -22,26 +28,43 @@ public class Log {
         System.out.println("[info]  {" + project + "}  " + m);
     }
 
-    @SuppressWarnings("UnstableApiUsage")
     public static void dumpXmlFile(File file) {
-        try (Reader r = Files.newReader(file, StandardCharsets.UTF_8)) {
-            Source xmlInput = new StreamSource(r);
-            StringWriter stringWriter = new StringWriter();
-            StreamResult xmlOutput = new StreamResult(stringWriter);
-            TransformerFactory transformerFactory = TransformerFactory.newInstance();
-            transformerFactory.setAttribute("indent-number", 2);
-            transformerFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-            transformerFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
-            Transformer transformer = transformerFactory.newTransformer();
-            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "" + 2);
-            transformer.transform(xmlInput, xmlOutput);
-            String xml = xmlOutput.getWriter().toString();
-            System.out.println(xml);
-        } catch (Exception e) {
-            throw new RuntimeException(e); // simple exception handling, please review it
-        }
+        System.out.println(prettyPrint(file));
+    }
 
+    private static String prettyPrint(File file) {
+        final StringWriter writer = new StringWriter();
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(file);
+            trimWhitespace(doc);
+
+            TransformerFactory transformerFactory = TransformerFactory.newInstance();
+            final Transformer trans = transformerFactory.newTransformer();
+            trans.setOutputProperty(OutputKeys.INDENT, "yes");
+            trans.setOutputProperty(OutputKeys.VERSION, "1.0");
+            trans.setOutputProperty(OutputPropertiesFactory.S_KEY_INDENT_AMOUNT, "2");
+            trans.transform(new DOMSource(doc), new StreamResult(writer));
+        } catch (TransformerException | SAXException | ParserConfigurationException | IOException ex) {
+            throw new IllegalStateException(ex);
+        }
+        return writer.toString();
+    }
+
+
+    private static void trimWhitespace(Node node) {
+        NodeList children = node.getChildNodes();
+        for (int i = 0; i < children.getLength(); ++i) {
+            Node child = children.item(i);
+            if (child.getNodeType() == Node.CDATA_SECTION_NODE) {
+                System.out.println("");
+            }
+            if (child.getNodeType() == Node.TEXT_NODE) {
+                child.setTextContent(child.getTextContent().trim());
+            }
+            trimWhitespace(child);
+        }
     }
 
 

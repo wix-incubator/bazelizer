@@ -1,4 +1,4 @@
-load("//:maven_binary_tool.bzl", "MAVEN_BINARY_NAME")
+load("//:tooling.bzl", "MAVEN_BINARY_NAME")
 
 _BUILD = """
 load("@wix_incubator_bazelizer//private/ruls/maven_v3:modules_registrary_go_offline.bzl", _go_offline_modules = "go_offline")

@@ -1,8 +1,10 @@
 package(default_visibility = ["//visibility:public"])
 
-load("//:macros.bzl", "sources", "test_sources")
-load("//:maven_binary_tool.bzl", _maven_bin_name = "MAVEN_BINARY_NAME")
+load("//:macros.bzl", "sources", "test_sources", "import_third_party_deps")
+load("//:tooling.bzl", _maven_bin_name = "MAVEN_BINARY_NAME")
+
 sources()
+import_third_party_deps()
 
 java_binary(
     name = "mvn",
@@ -18,18 +20,9 @@ java_binary(
     runtime_deps = [
     ],
     deps = [
+        ":third_party_deps",
         "//private/src/main/resources",
         "@bazel_tools//tools/java/runfiles",
-        "@bazelizer_deps//:com_google_code_gson_gson",
-        "@bazelizer_deps//:com_google_guava_guava",
-        "@bazelizer_deps//:org_apache_maven_maven_model",
-        "@bazelizer_deps//:org_apache_maven_shared_maven_invoker",
-        "@bazelizer_deps//:org_codehaus_plexus_plexus_utils",
-        "@bazelizer_deps//:info_picocli_picocli",
-        "@bazelizer_deps//:org_apache_commons_commons_compress",
-        "@bazelizer_deps//:commons_io_commons_io",
-        "@bazelizer_deps//:com_github_spullara_mustache_java_compiler",
-        "@bazelizer_deps//:org_projectlombok_lombok",
     ],
     plugins = [":lombok_plugin"],
     licenses = ["notice"],  # Apache 2.0
@@ -39,6 +32,6 @@ java_binary(
 java_plugin(
     name = "lombok_plugin",
     processor_class = "lombok.launch.AnnotationProcessorHider$AnnotationProcessor",
-    deps = ["@bazelizer_deps//:org_projectlombok_lombok"],
+    deps = ["//external:wix_incubator_bazelizer_rules/dependency/org_projectlombok_lombok"],
     generates_api = 1,
 )
