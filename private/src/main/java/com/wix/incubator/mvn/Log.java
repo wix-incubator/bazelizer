@@ -28,6 +28,10 @@ public class Log {
         System.out.println("[info]  {" + project + "}  " + m);
     }
 
+    public static void error(Object project, String m) {
+        System.out.println("[error]  {" + project + "}  " + m);
+    }
+
     public static void dumpXmlFile(File file) {
         System.out.println(prettyPrint(file));
     }

@@ -1,7 +1,6 @@
 package com.wix.incubator.mvn;
 
 import com.github.mustachejava.Mustache;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CharSource;
 import com.google.devtools.build.runfiles.Runfiles;
 import lombok.AllArgsConstructor;
@@ -326,26 +325,22 @@ public class Maven {
             return maven.execute(request);
         });
         long x1 = System.currentTimeMillis();
-        Log.info(project, " >>> Done. Elapsed time: " + fmt(Duration.ofMillis(x1 - x0)));
 
         if (result.getExitCode() != 0) {
-            dumpLog(pomFile);
+            Log.error(project, " >>> Build failed");
+            Log.dumpXmlFile(pomFile);
             throw new MvnExecException("non zero exit code: " + result.getExitCode());
         }
+
+        Log.info(project, " >>> Done. Elapsed time: " + fmt(Duration.ofMillis(x1 - x0)));
     }
 
     private String fmt(Duration dur) {
         return dur.getSeconds() + "." + dur.minusSeconds(dur.getSeconds()).toMillis() + "s";
     }
 
-    private void dumpLog(File file) {
-        Log.dumpXmlFile(file);
-    }
-
     private static void addVertex(DAG dag, Map<String, Project> vertices, Project project) {
-        if (project == null)
-            return;
-
+        if (project == null) return;
         dag.addVertex(project.id);
         vertices.putIfAbsent(project.id, project);
         addVertex(dag, vertices, project.getParent().orElse(null));
