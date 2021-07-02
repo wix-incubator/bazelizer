@@ -25,10 +25,11 @@ public abstract class Dep {
 
     /**
      * New dep.
+     *
      * @param jsonDef json definition
      * @return a dep
      */
-    public static Dep create(String jsonDef)  {
+    public static Dep create(String jsonDef) {
         DefinitionStruct dto = Cli.GSON.fromJson(jsonDef, DefinitionStruct.class);
         final Path file = dto.file;
         final String extension = FilenameUtils.getExtension(file.getFileName().toString());
@@ -52,6 +53,7 @@ public abstract class Dep {
 
     /**
      * Ctor.
+     *
      * @param id id
      */
     protected Dep(String[] id) {
@@ -67,6 +69,12 @@ public abstract class Dep {
         this.version = version;
     }
 
+    /**
+     * Install dep into local repository.
+     *
+     * @param repo repo location
+     * @throws IOException if any
+     */
     public abstract void installTo(Path repo) throws IOException;
 
 
@@ -114,7 +122,7 @@ public abstract class Dep {
     private static class Tar extends Dep {
         private final Path tar;
 
-        protected Tar(Path source)  {
+        protected Tar(Path source) {
             super(readCoords(source));
             tar = source;
         }
@@ -126,7 +134,7 @@ public abstract class Dep {
             Dep.writePom(this, depFolder); // override pom by synthetic
         }
 
-        private static String[] readCoords(Path source)  {
+        private static String[] readCoords(Path source) {
             return IOSupport.lisTartUnchacked(source).stream()
                     .filter(name -> name.endsWith(".jar"))
                     .findFirst()

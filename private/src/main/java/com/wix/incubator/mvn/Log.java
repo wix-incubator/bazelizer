@@ -56,7 +56,6 @@ public class Log {
         return writer.toString();
     }
 
-
     private static void trimWhitespace(Node node) {
         NodeList children = node.getChildNodes();
         for (int i = 0; i < children.getLength(); ++i) {
@@ -71,18 +70,10 @@ public class Log {
         }
     }
 
-
-    public interface Invoc {
-        InvocationResult exec(InvocationOutputHandler handler) throws IOException, MavenInvocationException;
-    }
-
-    public static InvocationResult invokeWithLogging(Invoc cons) throws IOException, MavenInvocationException {
-        InvocationOutputHandler handler = new InvocationOutputHandler() {
-            @Override
-            public void consumeLine(String line) throws IOException {
-                System.out.println("\t" + line);
-            }
-        };
-        return cons.exec(handler);
+    public static class PrintOutputHandler implements InvocationOutputHandler {
+        @Override
+        public void consumeLine(String line) throws IOException {
+            System.out.println("\t" + line);
+        }
     }
 }

@@ -3,6 +3,7 @@ package com.wix.incubator.mvn;
 import com.github.mustachejava.Mustache;
 import com.google.common.io.CharSource;
 import com.google.devtools.build.runfiles.Runfiles;
+import com.google.gson.annotations.SerializedName;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import org.apache.commons.io.FileUtils;
@@ -284,8 +285,7 @@ public class Maven {
             }
         }
         final List<String> ids = TopologicalSorter.sort(dag);
-        final List<Project> reactorOrder = ids.stream()
-                .map(vertices::get).collect(Collectors.toList());
+        final List<Project> reactorOrder = ids.stream().map(vertices::get).collect(Collectors.toList());
 
         for (Project project : reactorOrder) {
             executeIntern(project, args, false);
@@ -319,11 +319,10 @@ public class Maven {
         request.setProperties(properties);
         Log.info(project, " >>>");
         Log.info(project, " >>> executing commands " + args);
+        request.setOutputHandler(new Log.PrintOutputHandler());
+
         long x0 = System.currentTimeMillis();
-        final InvocationResult result = Log.invokeWithLogging(handler -> {
-            request.setOutputHandler(handler);
-            return maven.execute(request);
-        });
+        final InvocationResult result = maven.execute(request);
         long x1 = System.currentTimeMillis();
 
         if (result.getExitCode() != 0) {
@@ -332,10 +331,11 @@ public class Maven {
             throw new MvnExecException("non zero exit code: " + result.getExitCode());
         }
 
-        Log.info(project, " >>> Done. Elapsed time: " + fmt(Duration.ofMillis(x1 - x0)));
+        Log.info(project, " >>> Done. Elapsed time: " + duration(x0, x1));
     }
 
-    private String fmt(Duration dur) {
+    private String duration(long from, long to) {
+        final Duration dur = Duration.ofMillis(to - from);
         return dur.getSeconds() + "." + dur.minusSeconds(dur.getSeconds()).toMillis() + "s";
     }
 

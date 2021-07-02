@@ -9,13 +9,14 @@ GoOfflineMavenInfo = provider(fields={
 
 def _go_offline_impl(ctx):
     reposiotry_def_args = ctx.actions.args()
-    pom_providers = [dep[PomProjectInfo] for dep in ctx.attr.modules]
+    pom_providers = [ dep[PomProjectInfo] for dep in ctx.attr.modules ]
+
     for pom_provider in pom_providers:
         reposiotry_def_args.add(
             struct(
-                file = pom_provider.file.path
+                file = pom_provider.file.path,
                 # parent_file = pom_provider.parent_file.path if pom_provider.parent_file else None,
-                # flags_line = pom_provider.flags_line
+                # tool_flags = pom_provider.tool_flags
             ).to_json()
         )
 

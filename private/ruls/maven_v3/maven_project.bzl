@@ -4,7 +4,7 @@ CLI_TOOL = "//private/src/main/java/com/wix/incubator/mvn"
 PomProjectInfo = provider(fields = {
     "file": "",
     "deps": "",
-    "mvn_flags": "",
+    "tool_flags": "",
 })
 
 def _maven_project_impl(ctx):
@@ -19,7 +19,7 @@ def _maven_project_impl(ctx):
         PomProjectInfo(
             file = pom_file,
             deps = depset([pom_file], transitive = transitive_deps),
-            mvn_flags = None
+            tool_flags = ctx.attr.tool_flags or []
         )
     ]
 
@@ -28,6 +28,6 @@ maven_project = rule(
     implementation = _maven_project_impl,
     attrs = {
         "pom_file": attr.label(allow_single_file=True, mandatory = True),
-        "parent_project": attr.label()
+        "parent_project": attr.label(),
     }
 )

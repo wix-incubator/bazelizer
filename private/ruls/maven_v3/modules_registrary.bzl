@@ -40,9 +40,26 @@ def execute_build(name, **kwargs):
     )
 """
 
+
+_MACROS_BZL_FILE = """
+load("@wix_incubator_bazelizer//private/ruls/maven_v3:runner.bzl", _run_mvn = "run_mvn")
+load("@wix_incubator_bazelizer//private/ruls/maven_v3:maven_project.bzl", _maven_project = "maven_project")
+
+def execute_build(name, **kwargs):
+    _maven_project(
+        name = ""
+    )
+
+    _run_mvn(
+        name = name,
+        repository = "{maven_repository_ref}",
+        data = ["{data}"],
+        **kwargs
+    )
+"""
+
 _maven_repository_registry_attrs = {
     "modules": attr.label_list(),
-    "use_unsafe_local_cache": attr.bool(default = True),
     "use_global_cache": attr.bool(default = True),
     "repositories": attr.string_dict(),
     "_dummy": attr.label(default = Label("//maven:defs.bzl")),
@@ -52,16 +69,14 @@ def _maven_repository_registry_impl(repository_ctx):
     repository_name = repository_ctx.name
     maven_repository_target_name = "pinned_maven_repository"
     settings_xml_json = repository_ctx.path("settings_xml.json")
+
     repositories = []
     user_mvn_repo = repository_ctx.path(repository_ctx.os.environ["HOME"] + "/.m2/repository/")
     if user_mvn_repo.exists:
         repository_ctx.report_progress("Using host maven repository: %s" % (user_mvn_repo))
         profile_id = "_host_local_m2_cache"
         url = "file://%s" % (user_mvn_repo)
-
-        repositories.append(
-            struct(id = profile_id, url = url),
-        )
+        repositories.append(struct(id = profile_id, url = url))
 
     repository_ctx.file(
         "BUILD",
@@ -72,7 +87,7 @@ def _maven_repository_registry_impl(repository_ctx):
                 for d in repository_ctx.attr.modules
             ]),
             unsafe_global_settings = settings_xml_json,
-            use_global_cache = repository_ctx.attr.use_global_cache,
+            use_global_cache = repository_ctx.attr.use_global_cache
         ),
         False,  # not executable
     )
