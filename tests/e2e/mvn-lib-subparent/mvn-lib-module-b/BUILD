@@ -6,6 +6,9 @@ maven_project(
     name = "maven",
     pom_file = ":pom.xml",
     parent_project = "//tests/e2e/mvn-lib-subparent:maven",
+    flags = [
+        "--deps-drop-all"
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -22,8 +25,5 @@ execute_build(
             "@bazelizer_deps//:com_google_guava_guava",
     ],
     srcs = [":sources"],
-    flags = [
-        "--deps-drop-all"
-    ],
     visibility = ["//visibility:public"]
 )

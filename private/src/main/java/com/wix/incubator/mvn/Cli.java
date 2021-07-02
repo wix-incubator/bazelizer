@@ -10,10 +10,7 @@ import picocli.CommandLine;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -26,9 +23,36 @@ import static java.util.Arrays.asList;
         Cli.CmdBuild.class,
 })
 public class Cli {
-
     static {
         System.setProperty("org.slf4j.simpleLogger.showShortLogName", "true");
+    }
+
+    public static class ExecutionOptions {
+
+        @CommandLine.Option(names = {"--deps-drop-all"},
+                description = "Delete all dependencies that declared in pom file before tool execution")
+        public boolean dropAllDepsFromPom;
+
+        @CommandLine.Option(names = {"--deps-drop-ignore"}, paramLabel = "<coors>", description = "Rules for deps drop exclusion, " +
+                "rxpected format is '<groupId>:<artifactId>'. Examples: 'com.google.*:*', '*:guava', ect. ")
+        public List<String> dropDepsExcludes = Collections.emptyList();
+
+        @CommandLine.Option(names = {"--mvn-active-profile"}, paramLabel = "<p>", description = "maven active profiles")
+        public List<String> mavenActiveProfiles = Collections.emptyList();
+
+
+        public Maven.DepsFilter depsFilter() {
+            List<Maven.DepsFilter> filters = new ArrayList<>();
+            if (dropAllDepsFromPom) {
+                filters.add(Maven.DepsFilter.falseFilter());
+                for (String exclude : dropDepsExcludes) {
+                    filters.add(Maven.DepsFilter.coords(exclude));
+                }
+            }
+            return filters.stream()
+                    .reduce(Maven.DepsFilter::or)
+                    .orElse(Maven.DepsFilter.trueFilter());
+        }
     }
 
     public static final Gson GSON = new GsonBuilder()
@@ -49,6 +73,10 @@ public class Cli {
 
     @CommandLine.Command(name = "build")
     public static class CmdBuild extends Executable {
+
+        @CommandLine.Mixin
+        public ExecutionOptions executionOptions;
+
         @CommandLine.Option(names = {"--repository"}, paramLabel = "PATH")
         public Path repository;
 
@@ -69,16 +97,6 @@ public class Cli {
                 description = "write default jar")
         public Path jarOutput;
 
-        @CommandLine.Option(names = {"--deps-drop-all"},
-                description = "Delete all dependencies that declared in pom file before tool execution")
-        public boolean dropAllDepsFromPom;
-
-        @CommandLine.Option(names = {"--deps-drop-ignore"}, paramLabel = "<coors>", description = "Rules for deps drop exclusion, " +
-                "rxpected format is '<groupId>:<artifactId>'. Examples: 'com.google.*:*', '*:guava', ect. ")
-        public List<String> dropDepsExcludes = Collections.emptyList();
-
-        @CommandLine.Option(names = {"--mvn-active-profile"}, paramLabel = "<p>", description = "maven active profiles")
-        public List<String> mavenActiveProfiles = Collections.emptyList();
 
         @SuppressWarnings("Convert2MethodRef")
         public void invoke() throws Exception {
@@ -89,27 +107,15 @@ public class Cli {
                     pomFile
             );
 
-            List<Maven.DepsFilter> filters = new ArrayList<>();
-            if (dropAllDepsFromPom) {
-                filters.add(Maven.DepsFilter.falseFilter());
-                for (String exclude : dropDepsExcludes) {
-                    filters.add(Maven.DepsFilter.coords(exclude));
-                }
-            }
-
             final List<Dep> deps = readLines(depsConfig).stream()
                     .map(jsonLine -> Dep.create(jsonLine))
                     .collect(Collectors.toList());
 
-            final Maven.DepsFilter filter = filters.stream()
-                    .reduce(Maven.DepsFilter::or)
-                    .orElse(Maven.DepsFilter.trueFilter());
-
             final Maven.Args build = Maven.Args.builder()
                     .deps(deps)
                     .cmd(asList("clean", "install"))
-                    .depsFilter(filter)
-                    .profiles(mavenActiveProfiles)
+                    .depsFilter(executionOptions.depsFilter())
+                    .profiles(executionOptions.mavenActiveProfiles)
                     .build();
 
             env.executeOffline(
@@ -147,11 +153,12 @@ public class Cli {
             final List<Maven.Project> projects = readLines(configFile).stream()
                     .map(Maven::createProject)
                     .collect(Collectors.toList());
+
             final Maven.Args build = Maven.Args.builder()
                     .cmd(asList("clean", "dependency:go-offline", "install"))
                     .build();
 
-            env.execute(
+            env.executeInOrder(
                     projects,
                     build
             );
@@ -161,7 +168,7 @@ public class Cli {
                     output
             );
 
-            Log.info(" " + IntStream.range(0,48).mapToObj(i -> "-").collect(Collectors.joining()));
+            Log.info(" " + IntStream.range(0, 48).mapToObj(i -> "-").collect(Collectors.joining()));
             Log.info("Build finished. Archived repository " + FileUtils.byteCountToDisplaySize(size));
         }
     }

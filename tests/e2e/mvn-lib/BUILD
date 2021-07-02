@@ -11,6 +11,10 @@ maven_project(
     name = "maven",
     pom_file = ":pom.xml",
     parent_project = "//tests/e2e/mvn-lib-parent:maven",
+    flags = [
+        "--deps-drop-all",
+        "--deps-drop-ignore", "*:guava"
+     ],
     visibility = ["//visibility:public"]
 )
 
@@ -22,10 +26,6 @@ execute_build(
     deps = [
 #        "//tests/e2e/mvn-build-lib-one", # maven bazed build
         "//tests/e2e/bzl-lib/src/com/mavenizer/examples/util", # bazel build
-    ],
-    flags = [
-        "--deps-drop-all",
-        "--deps-drop-ignore", "*:guava"
     ],
 #    outputs = ["a-1.0.0-SNAPSHOT.jar"],
 )

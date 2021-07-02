@@ -16,7 +16,7 @@ def _go_offline_impl(ctx):
             struct(
                 file = pom_provider.file.path,
                 # parent_file = pom_provider.parent_file.path if pom_provider.parent_file else None,
-                # tool_flags = pom_provider.tool_flags
+                flags = pom_provider.flags
             ).to_json()
         )
 

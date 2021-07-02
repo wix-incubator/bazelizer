@@ -3,7 +3,6 @@ package com.wix.incubator.mvn;
 import com.github.mustachejava.Mustache;
 import com.google.common.io.CharSource;
 import com.google.devtools.build.runfiles.Runfiles;
-import com.google.gson.annotations.SerializedName;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import org.apache.commons.io.FileUtils;
@@ -18,6 +17,7 @@ import org.codehaus.plexus.util.dag.CycleDetectedException;
 import org.codehaus.plexus.util.dag.DAG;
 import org.codehaus.plexus.util.dag.TopologicalSorter;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
+import picocli.CommandLine;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -30,6 +30,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.google.common.io.Resources.asCharSource;
 import static com.google.common.io.Resources.getResource;
@@ -38,6 +39,7 @@ import static com.google.common.io.Resources.getResource;
 public class Maven {
 
 
+    @SuppressWarnings("unused")
     public static class MvnRepository {
         public String id;
         public String url;
@@ -74,7 +76,7 @@ public class Maven {
      * @return maven project
      */
     public static Project createProject(Path p) {
-        return new Project(p.toFile());
+        return new Project(p.toFile(), Collections.emptyList());
     }
 
     /**
@@ -85,11 +87,12 @@ public class Maven {
      */
     public static Project createProject(String json) {
         final MavenProjectDTO dto = Cli.GSON.fromJson(json, Maven.MavenProjectDTO.class);
-        return new Project(dto.file.toFile());
+        return new Project(dto.file.toFile(), dto.flags);
     }
 
     private static class MavenProjectDTO {
         public Path file;
+        public List<String> flags;
     }
 
     public static class Project {
@@ -98,8 +101,13 @@ public class Maven {
         private final String parentId;
         private final File srcFile;
         private final File parentFile;
+        private final Args predefinedArgs;
 
         private Project(File file) {
+            this(file, Collections.emptyList());
+        }
+
+        private Project(File file, List<String> flags) {
             try (FileInputStream is = new FileInputStream(file)) {
                 MavenXpp3Reader r = new MavenXpp3Reader();
                 model = r.read(is);
@@ -109,16 +117,22 @@ public class Maven {
 
             this.id = file.toPath().toAbsolutePath().toString();
             this.srcFile = file;
+
             Optional<Path> parentAbsPath = Optional.ofNullable(model.getParent())
                     .map(Parent::getRelativePath)
                     .map(p -> file.toPath().toAbsolutePath().getParent().resolve(p).normalize());
-
             this.parentId = parentAbsPath.map(Path::toString).orElse(null);
             this.parentFile = parentAbsPath.map(Path::toFile).orElse(null);
-        }
-
-        private Optional<Project> getParent() {
-            return Optional.ofNullable(parentFile).map(Project::new);
+            if (!flags.isEmpty()) {
+                final Cli.ExecutionOptions options = new Cli.ExecutionOptions();
+                new CommandLine(options).parseArgs(flags.toArray(new String[0]));
+                predefinedArgs = Args.builder()
+                        .profiles(options.mavenActiveProfiles)
+                        .depsFilter(options.depsFilter())
+                        .build();
+            } else {
+                predefinedArgs = Args.builder().build();
+            }
         }
 
         /**
@@ -228,7 +242,7 @@ public class Maven {
                 mustache.execute(out, scope);
             }
         }
-        
+
         DefaultInvoker invoker = new DefaultInvoker();
         invoker.setMavenHome(tool);
         return new Maven(m2HomeDir, repository, settingsXmlFile, invoker);
@@ -273,7 +287,7 @@ public class Maven {
      * @throws IOException              if any
      * @throws MavenInvocationException if any
      */
-    public void execute(List<Project> projects, Args args) throws IOException, MavenInvocationException, CycleDetectedException {
+    public void executeInOrder(List<Project> projects, Args args) throws IOException, MavenInvocationException, CycleDetectedException {
         DAG dag = new DAG();
         Map<String, Project> vertices = new HashMap<>();
         for (Project project : projects) {
@@ -293,7 +307,8 @@ public class Maven {
     }
 
 
-    private void executeIntern(Project project, Args args, boolean offline) throws IOException, MavenInvocationException {
+    private void executeIntern(Project project, Args inputArgs, boolean offline) throws IOException, MavenInvocationException {
+        final Args args = inputArgs.merge(project.predefinedArgs);
         for (Dep dep : args.deps) {
             dep.installTo(repository);
         }
@@ -343,7 +358,11 @@ public class Maven {
         if (project == null) return;
         dag.addVertex(project.id);
         vertices.putIfAbsent(project.id, project);
-        addVertex(dag, vertices, project.getParent().orElse(null));
+        addVertex(dag, vertices, getParent(project).orElse(null));
+    }
+
+    private static Optional<Project> getParent(Project p) {
+        return Optional.ofNullable(p.parentFile).map(Project::new);
     }
 
     public static class MvnExecException extends IOException {
@@ -364,6 +383,15 @@ public class Maven {
         @Builder.Default
         public final List<String> profiles = Collections.emptyList();
 
+        public Args merge(Args other) {
+            return Args.builder()
+                    .cmd(Stream.concat(cmd.stream(), other.cmd.stream()).collect(Collectors.toList()))
+                    .depsFilter(depsFilter.and(other.depsFilter))
+                    .deps(Stream.concat(deps.stream(), other.deps.stream()).collect(Collectors.toList()))
+                    .profiles(Stream.concat(profiles.stream(), other.profiles.stream()).collect(Collectors.toList()))
+                    .build();
+        }
+
         @Override
         public String toString() {
             final String cmdStr = String.join(" ", cmd);
@@ -377,8 +405,13 @@ public class Maven {
     public interface DepsFilter extends Predicate<Dependency> {
 
         @Override
-        default DepsFilter or(Predicate<? super Dependency> other) {
+        default DepsFilter or(@SuppressWarnings("NullableProblems") Predicate<? super Dependency> other) {
             return (t) -> test(t) || other.test(t);
+        }
+
+        @Override
+        default DepsFilter and(@SuppressWarnings("NullableProblems") Predicate<? super Dependency> other) {
+            return t -> test(t) && other.test(t);
         }
 
         /**

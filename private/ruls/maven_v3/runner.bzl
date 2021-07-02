@@ -116,8 +116,9 @@ def _run_mvn_impl(ctx):
         for f in pom_project_provider.deps.to_list():
             input_files.append(f)
 
-    if pom_project_provider.mvn_flags:
-        args.add("--args", _foramt_flags_as_escape_str(pom_project_provider.mvn_flags))
+    if pom_project_provider.flags:
+        for flag in pom_project_provider.flags:
+            args.add(flag)
 
     for out in ctx.attr.outputs:
         file = ctx.actions.declare_file(out)
