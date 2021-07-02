@@ -1,37 +1,44 @@
 package(default_visibility = ["//visibility:public"])
 
-load("//:macros.bzl", "sources", "test_sources", "import_third_party_deps")
+load("//:macros.bzl", "import_third_party_deps", "sources", "test_sources")
 load("//:tooling.bzl", _maven_bin_name = "MAVEN_BINARY_NAME")
 
 sources()
+
 import_third_party_deps()
 
 java_binary(
     name = "mvn",
-    main_class = "com.wix.incubator.mvn.Cli",
     srcs = [":sources"],
+    data = [
+        "@%s//:%s" % (_maven_bin_name, _maven_bin_name),
+    ],
     jvm_flags = [
         "--illegal-access=permit",
         "-Dtools.jvm.mvn.MavenBin=\"%s\"" % _maven_bin_name,
     ],
-    data = [
-        "@%s//:%s" % (_maven_bin_name, _maven_bin_name)
-    ],
+    licenses = ["notice"],  # Apache 2.0
+    main_class = "com.wix.incubator.mvn.Cli",
+    plugins = [":lombok_plugin"],
     runtime_deps = [
     ],
     deps = [
         ":third_party_deps",
         "//private/src/main/resources",
         "@bazel_tools//tools/java/runfiles",
+        "@com_github_spullara_mustache_java_compiler",
+        "@com_google_code_gson_gson",
+        "@com_google_guava_guava",
+        "@commons_io_commons_io",
+        "@org_apache_maven_maven_model",
+        "@org_apache_maven_shared_maven_invoker",
+        "@org_codehaus_plexus_plexus_utils",
     ],
-    plugins = [":lombok_plugin"],
-    licenses = ["notice"],  # Apache 2.0
 )
-
 
 java_plugin(
     name = "lombok_plugin",
+    generates_api = 1,
     processor_class = "lombok.launch.AnnotationProcessorHider$AnnotationProcessor",
     deps = ["//external:wix_incubator_bazelizer_rules/dependency/org_projectlombok_lombok"],
-    generates_api = 1,
 )

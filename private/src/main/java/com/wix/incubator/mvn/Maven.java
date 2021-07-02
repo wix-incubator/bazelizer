@@ -438,19 +438,21 @@ public class Maven {
             String artifactIdPtn = coords.substring(split + 1);
             final DepsFilter groupIdFilter = coordsFilter(groupIdPtn, Dependency::getGroupId);
             final DepsFilter artifactIdFilter = coordsFilter(artifactIdPtn, Dependency::getArtifactId);
-            Predicate<Dependency> rule = groupIdFilter.or(artifactIdFilter);
+            Predicate<Dependency> rule = groupIdFilter.and(artifactIdFilter);
             return rule::test;
         }
     }
 
     private static DepsFilter coordsFilter(String coords, Function<Dependency, String> fn) {
-        if (coords.equals("*")) return DepsFilter.trueFilter();
-        final int split = coords.indexOf("*");
+        if (coords.equals("*"))
+            return DepsFilter.trueFilter();
         if (coords.startsWith("*")) {
+            final int split = coords.indexOf("*");
             String suf = coords.substring(split + 1);
             return d -> fn.apply(d).endsWith(suf);
         }
         if (coords.endsWith("*")) {
+            final int split = coords.indexOf("*");
             String pref = coords.substring(0, split);
             return d -> fn.apply(d).startsWith(pref);
         }
