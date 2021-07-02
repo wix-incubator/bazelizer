@@ -22,7 +22,7 @@ execute_build(
     project = ":maven",
     deps = [
             "//tests/e2e/mvn-lib-subparent/mvn-lib-module-a",
-            "@bazelizer_deps//:com_google_guava_guava",
+            "//external:wix_incubator_bazelizer_rules/dependency/com_google_guava_guava",
     ],
     srcs = [":sources"],
     visibility = ["//visibility:public"]
