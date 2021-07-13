@@ -24,7 +24,6 @@ execute_build(
     srcs = [":sources"],
     visibility = ["//visibility:public"],
     deps = [
-#        "//tests/e2e/mvn-build-lib-one", # maven bazed build
         "//tests/e2e/bzl-lib/src/com/mavenizer/examples/util", # bazel build
     ],
 #    outputs = ["a-1.0.0-SNAPSHOT.jar"],

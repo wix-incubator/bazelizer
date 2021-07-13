@@ -41,17 +41,12 @@ public class Cli {
         public List<String> mavenActiveProfiles = Collections.emptyList();
 
 
-        public Maven.DepsFilter depsFilter() {
-            List<Maven.DepsFilter> filters = new ArrayList<>();
+        public Maven.ModelVisitor visitor() {
             if (dropAllDepsFromPom) {
-                filters.add(Maven.DepsFilter.falseFilter());
-                for (String exclude : dropDepsExcludes) {
-                    filters.add(Maven.DepsFilter.coords(exclude));
-                }
+                return new Maven.DropAllDepsModelVisitor()
+                        .addIgnores(dropDepsExcludes);
             }
-            return filters.stream()
-                    .reduce(Maven.DepsFilter::or)
-                    .orElse(Maven.DepsFilter.trueFilter());
+            return d -> {};
         }
     }
 
@@ -114,7 +109,7 @@ public class Cli {
             final Maven.Args build = Maven.Args.builder()
                     .deps(deps)
                     .cmd(asList("clean", "install"))
-                    .depsFilter(executionOptions.depsFilter())
+                    .modelVisitor(executionOptions.visitor())
                     .profiles(executionOptions.mavenActiveProfiles)
                     .build();
 

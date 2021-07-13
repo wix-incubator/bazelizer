@@ -95,12 +95,15 @@ public class Maven {
         public List<String> flags;
     }
 
+    /**
+     * Maven project.
+     */
     public static class Project {
         private final Model model;
         private final String id;
         private final String parentId;
-        private final File srcFile;
-        private final File parentFile;
+        private final File pomSrcFile;
+        private final File pomParentFile;
         private final Args predefinedArgs;
 
         private Project(File file) {
@@ -116,19 +119,19 @@ public class Maven {
             }
 
             this.id = file.toPath().toAbsolutePath().toString();
-            this.srcFile = file;
+            this.pomSrcFile = file;
 
             Optional<Path> parentAbsPath = Optional.ofNullable(model.getParent())
                     .map(Parent::getRelativePath)
                     .map(p -> file.toPath().toAbsolutePath().getParent().resolve(p).normalize());
             this.parentId = parentAbsPath.map(Path::toString).orElse(null);
-            this.parentFile = parentAbsPath.map(Path::toFile).orElse(null);
+            this.pomParentFile = parentAbsPath.map(Path::toFile).orElse(null);
             if (!flags.isEmpty()) {
                 final Cli.ExecutionOptions options = new Cli.ExecutionOptions();
                 new CommandLine(options).parseArgs(flags.toArray(new String[0]));
                 predefinedArgs = Args.builder()
                         .profiles(options.mavenActiveProfiles)
-                        .depsFilter(options.depsFilter())
+                        .modelVisitor(options.visitor())
                         .build();
             } else {
                 predefinedArgs = Args.builder().build();
@@ -143,10 +146,9 @@ public class Maven {
          * @throws IOException if any
          */
         public File emitPom(Args args) throws IOException {
-            final Path newPom = srcFile.getParentFile().toPath().resolve("pom.__bazelizer__.xml");
+            final Path newPom = pomSrcFile.getParentFile().toPath().resolve("pom.__bazelizer__.xml");
             final Model newModel = model.clone();
-            final List<Dependency> dependencies = newModel.getDependencies();
-            dependencies.removeIf(d -> !args.depsFilter.test(d));
+            args.modelVisitor.apply(newModel);
 
             for (Dep dep : args.deps) {
                 final Dependency d = new Dependency();
@@ -154,8 +156,9 @@ public class Maven {
                 d.setGroupId(dep.groupId);
                 d.setVersion(dep.version);
                 d.setScope(dep.scope());
-                dependencies.add(d);
+                newModel.getDependencies().add(d);
             }
+
             if (!newPom.toFile().exists()) {
                 final MavenXpp3Writer writer = new MavenXpp3Writer();
                 try (OutputStream out = Files.newOutputStream(newPom,
@@ -168,7 +171,7 @@ public class Maven {
 
 
         public void save(Maven maven, Path jarOutput, Path archive) throws IOException {
-            final Path target = srcFile.toPath().getParent().resolve("target");
+            final Path target = pomSrcFile.toPath().getParent().resolve("target");
             final Path jar = target.resolve(String.format("%s-%s.jar",
                     model.getArtifactId(), model.getVersion()));
             Files.copy(jar, jarOutput);
@@ -332,8 +335,8 @@ public class Maven {
         }
         properties.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "WARN");
         request.setProperties(properties);
-        Log.info(project, " >>>");
-        Log.info(project, " >>> executing commands " + args);
+        Log.info(project, "=============");
+        Log.info(project, " >>>> executing commands " + args);
         request.setOutputHandler(new Log.PrintOutputHandler());
 
         long x0 = System.currentTimeMillis();
@@ -341,12 +344,13 @@ public class Maven {
         long x1 = System.currentTimeMillis();
 
         if (result.getExitCode() != 0) {
-            Log.error(project, " >>> Build failed");
+            Log.error(project, " >>>> Build failed. Dump pom file");
             Log.dumpXmlFile(pomFile);
             throw new MvnExecException("non zero exit code: " + result.getExitCode());
         }
 
-        Log.info(project, " >>> Done. Elapsed time: " + duration(x0, x1));
+        Log.info(project, " >>>> Done. Elapsed time: " + duration(x0, x1));
+        Log.info(project, "=============");
     }
 
     private String duration(long from, long to) {
@@ -362,7 +366,7 @@ public class Maven {
     }
 
     private static Optional<Project> getParent(Project p) {
-        return Optional.ofNullable(p.parentFile).map(Project::new);
+        return Optional.ofNullable(p.pomParentFile).map(Project::new);
     }
 
     public static class MvnExecException extends IOException {
@@ -379,14 +383,14 @@ public class Maven {
         @Builder.Default
         public final List<Dep> deps = Collections.emptyList();
         @Builder.Default
-        public final DepsFilter depsFilter = DepsFilter.trueFilter();
+        public final ModelVisitor modelVisitor = d -> {};
         @Builder.Default
         public final List<String> profiles = Collections.emptyList();
 
         public Args merge(Args other) {
             return Args.builder()
                     .cmd(Stream.concat(cmd.stream(), other.cmd.stream()).collect(Collectors.toList()))
-                    .depsFilter(depsFilter.and(other.depsFilter))
+                    .modelVisitor(modelVisitor.andThen(other.modelVisitor))
                     .deps(Stream.concat(deps.stream(), other.deps.stream()).collect(Collectors.toList()))
                     .profiles(Stream.concat(profiles.stream(), other.profiles.stream()).collect(Collectors.toList()))
                     .build();
@@ -402,50 +406,55 @@ public class Maven {
     }
 
 
-    public interface DepsFilter extends Predicate<Dependency> {
+    public interface ModelVisitor {
+        void apply(Model model);
 
-        @Override
-        default DepsFilter or(@SuppressWarnings("NullableProblems") Predicate<? super Dependency> other) {
-            return (t) -> test(t) || other.test(t);
-        }
-
-        @Override
-        default DepsFilter and(@SuppressWarnings("NullableProblems") Predicate<? super Dependency> other) {
-            return t -> test(t) && other.test(t);
-        }
-
-        /**
-         * Rule that false by default.
-         */
-        static DepsFilter falseFilter() {
-            return d -> false;
-        }
-
-        static DepsFilter trueFilter() {
-            return d -> true;
-        }
-
-        /**
-         * Rule accept only by maven coordinates pattern
-         *
-         * @param coords pattern
-         */
-        static DepsFilter coords(String coords) {
-            final int split = coords.indexOf(":");
-            if (split == -1) throw new IllegalArgumentException(
-                    "illegal expression be in format of'<artifactId|*>:<groupId|*>' ");
-            String groupIdPtn = coords.substring(0, split);
-            String artifactIdPtn = coords.substring(split + 1);
-            final DepsFilter groupIdFilter = coordsFilter(groupIdPtn, Dependency::getGroupId);
-            final DepsFilter artifactIdFilter = coordsFilter(artifactIdPtn, Dependency::getArtifactId);
-            Predicate<Dependency> rule = groupIdFilter.and(artifactIdFilter);
-            return rule::test;
+        default ModelVisitor andThen(ModelVisitor after) {
+            Objects.requireNonNull(after);
+            return (t) -> { apply(t); after.apply(t); };
         }
     }
 
-    private static DepsFilter coordsFilter(String coords, Function<Dependency, String> fn) {
+    @SuppressWarnings("UnusedReturnValue")
+    public static class DropAllDepsModelVisitor implements ModelVisitor {
+        private Predicate<Dependency> removeFilter = d -> true;
+
+
+        public DropAllDepsModelVisitor addIgnores(Collection<String> c) {
+            c.forEach(this::addIgnore);
+            return this;
+        }
+
+        public DropAllDepsModelVisitor addIgnore(String coords) {
+            removeFilter = removeFilter.or(matchCoordsFilter(coords).negate());
+            return this;
+        }
+
+        @Override
+        public void apply(Model model) {
+            model.getDependencies().removeIf(d -> removeFilter.test(d));
+        }
+    }
+
+    /**
+     * Rule accept only by maven coordinates pattern
+     *
+     * @param coords pattern
+     */
+    private static Predicate<Dependency> matchCoordsFilter(String coords) {
+        final int split = coords.indexOf(":");
+        if (split == -1) throw new IllegalArgumentException(
+                "illegal expression be in format of'<artifactId|*>:<groupId|*>' ");
+        String groupIdPtn = coords.substring(0, split);
+        String artifactIdPtn = coords.substring(split + 1);
+        final Predicate<Dependency> groupIdFilter = matchExpression(groupIdPtn, Dependency::getGroupId);
+        final Predicate<Dependency> artifactIdFilter = matchExpression(artifactIdPtn, Dependency::getArtifactId);
+        return groupIdFilter.and(artifactIdFilter);
+    }
+
+    private static Predicate<Dependency> matchExpression(String coords, Function<Dependency, String> fn) {
         if (coords.equals("*"))
-            return DepsFilter.trueFilter();
+            return d -> true;
         if (coords.startsWith("*")) {
             final int split = coords.indexOf("*");
             String suf = coords.substring(split + 1);
