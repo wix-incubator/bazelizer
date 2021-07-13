@@ -17,7 +17,7 @@ filegroup(
 )
 
 execute_build(
-    name = "mvn-lib-module-a",
+    name = "mvn-lib-module-non-compiled",
     project = ":maven",
     srcs = [":sources"],
     visibility = ["//visibility:public"]

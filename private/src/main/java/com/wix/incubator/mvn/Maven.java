@@ -335,7 +335,7 @@ public class Maven {
         }
         properties.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "WARN");
         request.setProperties(properties);
-        Log.info(project, "=============");
+        Log.info(project, "");
         Log.info(project, " >>>> executing commands " + args);
         request.setOutputHandler(new Log.PrintOutputHandler());
 
@@ -350,7 +350,7 @@ public class Maven {
         }
 
         Log.info(project, " >>>> Done. Elapsed time: " + duration(x0, x1));
-        Log.info(project, "=============");
+        Log.info(project, "");
     }
 
     private String duration(long from, long to) {
@@ -417,8 +417,7 @@ public class Maven {
 
     @SuppressWarnings("UnusedReturnValue")
     public static class DropAllDepsModelVisitor implements ModelVisitor {
-        private Predicate<Dependency> removeFilter = d -> true;
-
+        private Predicate<Dependency> excludeFilter = null;
 
         public DropAllDepsModelVisitor addIgnores(Collection<String> c) {
             c.forEach(this::addIgnore);
@@ -426,13 +425,15 @@ public class Maven {
         }
 
         public DropAllDepsModelVisitor addIgnore(String coords) {
-            removeFilter = removeFilter.or(matchCoordsFilter(coords).negate());
+            excludeFilter = Optional.ofNullable(excludeFilter)
+                    .map(other -> other.or(matchCoordsExpr(coords)))
+                    .orElseGet(() -> matchCoordsExpr(coords));
             return this;
         }
 
         @Override
         public void apply(Model model) {
-            model.getDependencies().removeIf(d -> removeFilter.test(d));
+            model.getDependencies().removeIf(d -> excludeFilter == null || !excludeFilter.test(d));
         }
     }
 
@@ -441,7 +442,7 @@ public class Maven {
      *
      * @param coords pattern
      */
-    private static Predicate<Dependency> matchCoordsFilter(String coords) {
+    private static Predicate<Dependency> matchCoordsExpr(String coords) {
         final int split = coords.indexOf(":");
         if (split == -1) throw new IllegalArgumentException(
                 "illegal expression be in format of'<artifactId|*>:<groupId|*>' ");
