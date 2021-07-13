@@ -33,9 +33,12 @@ def test_sources(visibility = None):
        visibility = visibility,
     )
 
+def third_party_dep(d):
+    return "//external:wix_incubator_bazelizer_rules/dependency/%s" % d
+
 def import_third_party_deps():
     _deps = [
-        "//external:wix_incubator_bazelizer_rules/dependency/%s" % d.name
+        third_party_dep(d.name)
          for d in third_party_deps_list
     ]
 

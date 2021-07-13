@@ -1,7 +1,7 @@
 <project>
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.mavenizer.examples.api</groupId>
-    <artifactId>mvn-lib-G-a</artifactId>
+    <artifactId>mvn-lib-module-non-compiled</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
     <parent>

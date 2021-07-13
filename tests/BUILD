@@ -23,3 +23,9 @@ e2e_has_jar_test(
     clazz = "B.class"
 )
 
+e2e_has_jar_test(
+    name = "mvn-lib-module-non-compiled__jar-test",
+    dep = "//tests/e2e/mvn-lib-subparent/mvn-lib-module-non-compiled",
+    jar = "tests/e2e/mvn-lib-subparent/mvn-lib-module-non-compiled/libmvn-lib-module-non-compiled.jar",
+)
+
