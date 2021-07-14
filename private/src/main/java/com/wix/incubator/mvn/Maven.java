@@ -104,7 +104,7 @@ public class Maven {
         private final String parentId;
         private final File pomSrcFile;
         private final File pomParentFile;
-        private final Args predefinedArgs;
+        private final Args args;
 
         private Project(File file) {
             this(file, Collections.emptyList());
@@ -126,15 +126,27 @@ public class Maven {
                     .map(p -> file.toPath().toAbsolutePath().getParent().resolve(p).normalize());
             this.parentId = parentAbsPath.map(Path::toString).orElse(null);
             this.pomParentFile = parentAbsPath.map(Path::toFile).orElse(null);
+            this.args = createArgs(flags);
+        }
+
+        private Args createArgs(List<String> flags) {
             if (!flags.isEmpty()) {
                 final Cli.ExecutionOptions options = new Cli.ExecutionOptions();
-                new CommandLine(options).parseArgs(flags.toArray(new String[0]));
-                predefinedArgs = Args.builder()
+                final CommandLine.ParseResult result = new CommandLine(options)
+                        .parseArgs(flags.toArray(new String[0]));
+                if (!result.errors().isEmpty()) {
+                    Console.error(this.model, "project flags are invalid:");
+                    result.errors().forEach(e -> {
+                        Console.error(this.model, " -" + e.getMessage());
+                    });
+                    throw new IllegalArgumentException("invalid flags for project {" + model + "}");
+                }
+                return Args.builder()
                         .profiles(options.mavenActiveProfiles)
                         .modelVisitor(options.visitor())
                         .build();
             } else {
-                predefinedArgs = Args.builder().build();
+                return Args.builder().build();
             }
         }
 
@@ -291,27 +303,15 @@ public class Maven {
      * @throws MavenInvocationException if any
      */
     public void executeInOrder(List<Project> projects, Args args) throws IOException, MavenInvocationException, CycleDetectedException {
-        DAG dag = new DAG();
-        Map<String, Project> vertices = new HashMap<>();
-        for (Project project : projects) {
-            addVertex(dag, vertices, project);
-        }
-        for (Project project : projects) {
-            if (project.parentId != null) {
-                dag.addEdge(project.id, project.parentId);
-            }
-        }
-        final List<String> ids = TopologicalSorter.sort(dag);
-        final List<Project> reactorOrder = ids.stream().map(vertices::get).collect(Collectors.toList());
+        final List<Project> reactorOrder = sortProjects(projects);
 
         for (Project project : reactorOrder) {
             executeIntern(project, args, false);
         }
     }
 
-
     private void executeIntern(Project project, Args inputArgs, boolean offline) throws IOException, MavenInvocationException {
-        final Args args = inputArgs.merge(project.predefinedArgs);
+        final Args args = inputArgs.merge(project.args);
         for (Dep dep : args.deps) {
             dep.installTo(repository);
         }
@@ -356,6 +356,21 @@ public class Maven {
     private String duration(long from, long to) {
         final Duration dur = Duration.ofMillis(to - from);
         return dur.getSeconds() + "." + dur.minusSeconds(dur.getSeconds()).toMillis() + "s";
+    }
+
+    private static List<Project> sortProjects(List<Project> projects) throws CycleDetectedException {
+        DAG dag = new DAG();
+        Map<String, Project> vertices = new HashMap<>();
+        for (Project project : projects) {
+            addVertex(dag, vertices, project);
+        }
+        for (Project project : projects) {
+            if (project.parentId != null) {
+                dag.addEdge(project.id, project.parentId);
+            }
+        }
+        final List<String> ids = TopologicalSorter.sort(dag);
+        return ids.stream().map(vertices::get).collect(Collectors.toList());
     }
 
     private static void addVertex(DAG dag, Map<String, Project> vertices, Project project) {
