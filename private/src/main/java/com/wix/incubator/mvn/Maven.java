@@ -291,6 +291,10 @@ public class Maven {
      * @throws MavenInvocationException if any
      */
     public void executeOffline(Project project, Args args) throws IOException, MavenInvocationException {
+        Console.printSeparator();
+        logMavenVersion();
+        Console.printSeparator();
+
         executeIntern(project, args, true);
     }
 
@@ -315,13 +319,6 @@ public class Maven {
 
         for (Project project : reactorOrder) {
             executeIntern(project, args, false);
-        }
-    }
-
-    private void logMavenVersion() {
-        try {
-            maven.execute(newInvocationRequest("OFF"));
-        } catch (MavenInvocationException ignored) {
         }
     }
 
@@ -358,6 +355,13 @@ public class Maven {
         }
 
         Console.info(project, " >>>> Done. Elapsed time: " + duration(x0, x1));
+    }
+
+    private void logMavenVersion() {
+        try {
+            maven.execute(newInvocationRequest("OFF"));
+        } catch (MavenInvocationException ignored) {
+        }
     }
 
     private DefaultInvocationRequest newInvocationRequest() {
