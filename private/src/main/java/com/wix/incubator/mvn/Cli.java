@@ -103,7 +103,7 @@ public class Cli {
             );
 
             final List<Dep> deps = readLines(depsConfig).stream()
-                    .map(jsonLine -> Dep.create(jsonLine))
+                    .map(jsonLine -> Dep.fromJson(jsonLine))
                     .collect(Collectors.toList());
 
             final Maven.Args build = Maven.Args.builder()
@@ -163,8 +163,8 @@ public class Cli {
                     output
             );
 
-            Log.info(" " + IntStream.range(0, 48).mapToObj(i -> "=").collect(Collectors.joining()));
-            Log.info("Build finished. Archived repository " + FileUtils.byteCountToDisplaySize(size));
+            Console.info(" " + IntStream.range(0, 48).mapToObj(i -> "=").collect(Collectors.joining()));
+            Console.info("Build finished. Archived repository " + FileUtils.byteCountToDisplaySize(size));
         }
     }
 

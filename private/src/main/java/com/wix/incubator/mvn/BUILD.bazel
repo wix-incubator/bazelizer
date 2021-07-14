@@ -1,11 +1,11 @@
 package(default_visibility = ["//visibility:public"])
 
-load("//:macros.bzl", "import_third_party_deps", "sources", "test_sources")
+load("//:macros.bzl", "java_import_third_party", "sources", "test_sources", "third_party_dep")
 load("//:tooling.bzl", _maven_bin_name = "MAVEN_BINARY_NAME")
 
 sources()
 
-import_third_party_deps()
+java_import_third_party()
 
 java_binary(
     name = "mvn",
@@ -23,7 +23,7 @@ java_binary(
     runtime_deps = [
     ],
     deps = [
-        ":third_party_deps",
+        ":third_party",
         "//private/src/main/resources",
         "@bazel_tools//tools/java/runfiles",
     ],
@@ -33,5 +33,5 @@ java_plugin(
     name = "lombok_plugin",
     generates_api = 1,
     processor_class = "lombok.launch.AnnotationProcessorHider$AnnotationProcessor",
-    deps = ["//external:wix_incubator_bazelizer_rules/dependency/org_projectlombok_lombok"],
+    deps = [third_party_dep("org_projectlombok_lombok")],
 )

@@ -29,7 +29,7 @@ public abstract class Dep {
      * @param jsonDef json definition
      * @return a dep
      */
-    public static Dep create(String jsonDef) {
+    public static Dep fromJson(String jsonDef) {
         DefinitionStruct dto = Cli.GSON.fromJson(jsonDef, DefinitionStruct.class);
         final Path file = dto.file;
         final String extension = FilenameUtils.getExtension(file.getFileName().toString());

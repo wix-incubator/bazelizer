@@ -228,7 +228,7 @@ public class Maven {
                 .orElseThrow(() -> new IllegalStateException("no sys prop: " + BZL_MVN_TOOL_SYS_PROP));
 
         Path m2HomeDir = Files.createTempDirectory("M2_HOME@_" + "128" + "_@");
-        Log.info(" M2_HOME=" + m2HomeDir);
+        Console.info(" M2_HOME=" + m2HomeDir);
         Path repository = m2HomeDir.resolve("repository").toAbsolutePath();
         Files.createDirectories(repository);
         Path settingsXmlFile = m2HomeDir.resolve("settings.xml").toAbsolutePath();
@@ -335,22 +335,22 @@ public class Maven {
         }
         properties.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "WARN");
         request.setProperties(properties);
-        Log.info(project, "");
-        Log.info(project, " >>>> executing commands " + args);
-        request.setOutputHandler(new Log.PrintOutputHandler());
+        Console.info(project, "");
+        Console.info(project, " >>>> executing commands " + args);
+        request.setOutputHandler(new Console.PrintOutputHandler());
 
         long x0 = System.currentTimeMillis();
         final InvocationResult result = maven.execute(request);
         long x1 = System.currentTimeMillis();
 
         if (result.getExitCode() != 0) {
-            Log.error(project, " >>>> Build failed. Dump pom file");
-            Log.dumpXmlFile(pomFile);
+            Console.error(project, " >>>> Build failed. Dump pom file");
+            Console.dumpXmlFile(pomFile);
             throw new MvnExecException("non zero exit code: " + result.getExitCode());
         }
 
-        Log.info(project, " >>>> Done. Elapsed time: " + duration(x0, x1));
-        Log.info(project, "");
+        Console.info(project, " >>>> Done. Elapsed time: " + duration(x0, x1));
+        Console.info(project, "");
     }
 
     private String duration(long from, long to) {
