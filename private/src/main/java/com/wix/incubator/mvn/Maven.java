@@ -303,12 +303,28 @@ public class Maven {
      * @throws MavenInvocationException if any
      */
     public void executeInOrder(List<Project> projects, Args args) throws IOException, MavenInvocationException, CycleDetectedException {
+        Console.info("Projects reactor order:");
         final List<Project> reactorOrder = sortProjects(projects);
+        for (Project project : reactorOrder) {
+            Console.info("\t{"+project+"}");
+        }
+
+        Console.printSeparator();
+        logMavenVersion();
+        Console.printSeparator();
 
         for (Project project : reactorOrder) {
             executeIntern(project, args, false);
         }
     }
+
+    private void logMavenVersion() {
+        try {
+            maven.execute(newInvocationRequest("OFF"));
+        } catch (MavenInvocationException ignored) {
+        }
+    }
+
 
     private void executeIntern(Project project, Args inputArgs, boolean offline) throws IOException, MavenInvocationException {
         final Args args = inputArgs.merge(project.args);
@@ -318,25 +334,17 @@ public class Maven {
         final File pomFile = project.emitPom(args);
 
         maven.setWorkingDirectory(pomFile.getParentFile());
-        DefaultInvocationRequest request = new DefaultInvocationRequest();
+        DefaultInvocationRequest request = newInvocationRequest();
         request.setUserSettingsFile(settingsXmlFile.toFile());
         request.setLocalRepositoryDirectory(repository.toFile());
-        request.setJavaHome(new File(System.getProperty("java.home")));
         request.setBatchMode(true);
-        request.setShowVersion(true);
+        request.setShowVersion(false);
 
         request.setPomFile(pomFile);
         request.setGoals(args.cmd);
         request.setProfiles(args.profiles);
         request.setOffline(offline);
-        Properties properties = request.getProperties();
-        if (properties == null) {
-            properties = new Properties();
-        }
-        properties.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "WARN");
-        request.setProperties(properties);
-        Console.info(project, "");
-        Console.info(project, " >>>> executing commands " + args);
+        Console.info(project, " >>>> Executing commands " + args);
         request.setOutputHandler(new Console.PrintOutputHandler());
 
         long x0 = System.currentTimeMillis();
@@ -350,7 +358,23 @@ public class Maven {
         }
 
         Console.info(project, " >>>> Done. Elapsed time: " + duration(x0, x1));
-        Console.info(project, "");
+    }
+
+    private DefaultInvocationRequest newInvocationRequest() {
+        return newInvocationRequest("WARN");
+    }
+
+    private DefaultInvocationRequest newInvocationRequest(String logLvl) {
+        DefaultInvocationRequest request = new DefaultInvocationRequest();
+        request.setShowVersion(true);
+        request.setJavaHome(new File(System.getProperty("java.home")));
+        Properties properties = request.getProperties();
+        if (properties == null) {
+            properties = new Properties();
+        }
+        properties.setProperty("org.slf4j.simpleLogger.defaultLogLevel", logLvl);
+        request.setProperties(properties);
+        return request;
     }
 
     private String duration(long from, long to) {

@@ -19,8 +19,14 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class Console {
+
+    public static void printSeparator() {
+        Console.info(" " + IntStream.range(0, 48).mapToObj(i -> "=").collect(Collectors.joining()));
+    }
 
     public static void info(String m) {
         System.out.println("[info]  " + m);

@@ -163,7 +163,7 @@ public class Cli {
                     output
             );
 
-            Console.info(" " + IntStream.range(0, 48).mapToObj(i -> "=").collect(Collectors.joining()));
+            Console.printSeparator();
             Console.info("Build finished. Archived repository " + FileUtils.byteCountToDisplaySize(size));
         }
     }
