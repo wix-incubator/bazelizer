@@ -3,13 +3,23 @@ repository_name = "wix_incubator_bazelizer"
 workspace(name = repository_name)
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("//:tooling.bzl", register_tooling = "register")
 
-register_tooling()
-
-load("//:third_party.bzl", "dependencies")
+load("//third_party:third_party.bzl", "dependencies")
 
 dependencies()
+
+load("@rules_jvm_external//:defs.bzl", "maven_install")
+
+maven_install(
+        artifacts = [
+            "org.eclipse.aether:aether-api:1.1.0CollectRequest"
+        ],
+        fetch_sources = True,
+#        maven_install_json = "//:maven_install.json",
+        repositories = [
+            "https://repo1.maven.org/maven2",
+        ],
+)
 
 #
 # E2E tests

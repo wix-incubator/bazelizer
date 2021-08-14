@@ -13,7 +13,6 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static com.wix.incubator.mvn.IOSupport.readLines;
 import static java.util.Arrays.asList;
@@ -33,7 +32,7 @@ public class Cli {
                 description = "Delete all dependencies that declared in pom file before tool execution")
         public boolean dropAllDepsFromPom;
 
-        @CommandLine.Option(names = {"--deps-drop-ignore"}, paramLabel = "<coors>", description = "Rules for deps drop exclusion, " +
+        @CommandLine.Option(names = {"--deps-drop-exclude"}, paramLabel = "<coors>", description = "Rules for deps drop exclusion, " +
                 "rxpected format is '<groupId>:<artifactId>'. Examples: 'com.google.*:*', '*:guava', ect. ")
         public List<String> dropDepsExcludes = Collections.emptyList();
 
@@ -81,8 +80,8 @@ public class Cli {
         @CommandLine.Option(names = {"--pom"}, paramLabel = "PATH")
         public Path pomFile;
 
-        @CommandLine.Option(names = {"-O"}, description = "declared bazel output -> relatice file path /target")
-        public Map<String, String> outputs;
+        @CommandLine.Option(names = {"-O"}, description = "declared bazel output -> relatvce file path /target")
+        public Map<String, String> outputs = Collections.emptyMap();
 
         @CommandLine.Option(names = {"--archiveOutput"}, paramLabel = "P",
                 description = "write archived artifact from repo, except default jar")
@@ -118,17 +117,26 @@ public class Cli {
                     build
             );
 
+            final List<Maven.Project.Output> outputs = this.outputs.entrySet().stream()
+                    .map(e -> new Maven.Project.Output(e.getValue(), Paths.get(e.getKey())))
+                    .collect(Collectors.toList());
+
             project.save(
                     env,
                     jarOutput,
-                    archiveOutput
+                    archiveOutput,
+                    outputs
             );
+
         }
 
     }
 
     @CommandLine.Command(name = "build-repository")
     public static class CmdRepository extends Executable {
+
+        @CommandLine.Mixin
+        public ExecutionOptions executionOptions;
 
         @CommandLine.Option(names = {"--settingsXml"}, paramLabel = "PATH")
         public Path settingsXml;

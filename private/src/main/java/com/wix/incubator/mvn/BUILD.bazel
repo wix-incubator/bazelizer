@@ -1,11 +1,9 @@
 package(default_visibility = ["//visibility:public"])
 
-load("//:macros.bzl", "java_import_third_party", "sources", "test_sources", "third_party_dep")
-load("//:tooling.bzl", _maven_bin_name = "MAVEN_BINARY_NAME")
+load("//:macros.bzl", "sources", "test_sources", "third_party_dep", "third_party_deps")
+load("//third_party:maven_binaries.bzl", _maven_bin_name = "MAVEN_BINARY_NAME")
 
 sources()
-
-java_import_third_party()
 
 java_binary(
     name = "mvn",
@@ -23,10 +21,9 @@ java_binary(
     runtime_deps = [
     ],
     deps = [
-        ":third_party",
         "//private/src/main/resources",
         "@bazel_tools//tools/java/runfiles",
-    ],
+    ] + third_party_deps(),
 )
 
 java_plugin(

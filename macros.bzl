@@ -1,5 +1,5 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load(":third_party.bzl", third_party_deps_list = "deps")
+load("//third_party:third_party.bzl", third_party_deps_list = "deps")
 
 def resources(name = "resources", runtime_deps = []):
     native.java_library(
@@ -35,15 +35,9 @@ def test_sources(visibility = None):
 def third_party_dep(d):
     return "//external:wix_incubator_bazelizer_rules/dependency/%s" % d
 
-def java_import_third_party():
+def third_party_deps():
     _deps = [
         third_party_dep(d.name)
         for d in third_party_deps_list
     ]
-
-    native.java_import(
-        name = "third_party",
-        jars = [],
-        deps = _deps,
-        exports = _deps,
-    )
+    return _deps

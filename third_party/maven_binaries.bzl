@@ -8,7 +8,6 @@ _maven_binary_version = "3.6.3"
 _maven_binary_sha256 = "26ad91d751b3a9a53087aefa743f4e16a17741d3915b219cf74112bf87a438c5"
 
 MAVEN_BINARY_NAME = "wix_incubator_bazelizer_maven_binary_tool"
-MAVEN_BINARY_NAME_CLI = "wix_incubator_bazelizer_maven_binary_tool"
 
 _MAVEN_BUILD_FILE = """
 filegroup(

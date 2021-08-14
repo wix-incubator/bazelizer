@@ -1,5 +1,5 @@
 load(":maven_project.bzl", "PomProjectInfo")
-load(":modules_registrary_go_offline.bzl", "GoOfflineMavenInfo")
+load(":go_offline.bzl", "GoOfflineMavenInfo")
 
 CLI_TOOL = "//private/src/main/java/com/wix/incubator/mvn"
 
@@ -64,12 +64,13 @@ def _collect_jars(ctx):
 
 _run_mvn_outputs = {
     "jar": "lib%{name}.jar",
-    "img": "%{name}_artifact.tar",
+    "img": "img%{name}.tar",
 }
 
 _run_mvn_attrs = {
     "repository": attr.label(mandatory=True),
     "deps": attr.label_list(),
+    "override_artifact_id": attr.string(),
     "runtime_deps": attr.label_list(),
     "srcs": attr.label_list(allow_files = True),
     "project": attr.label(mandatory=True),

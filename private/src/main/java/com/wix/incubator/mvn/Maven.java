@@ -136,9 +136,7 @@ public class Maven {
                         .parseArgs(flags.toArray(new String[0]));
                 if (!result.errors().isEmpty()) {
                     Console.error(this.model, "project flags are invalid:");
-                    result.errors().forEach(e -> {
-                        Console.error(this.model, " -" + e.getMessage());
-                    });
+                    result.errors().forEach(e -> Console.error(this.model, " -" + e.getMessage()));
                     throw new IllegalArgumentException("invalid flags for project {" + model + "}");
                 }
                 return Args.builder()
@@ -160,7 +158,9 @@ public class Maven {
         public File emitPom(Args args) throws IOException {
             final Path newPom = pomSrcFile.getParentFile().toPath().resolve("pom.__bazelizer__.xml");
             final Model newModel = model.clone();
-            args.modelVisitor.apply(newModel);
+            args.modelVisitor.apply(
+                    newModel
+            );
 
             for (Dep dep : args.deps) {
                 final Dependency d = new Dependency();
@@ -181,11 +181,15 @@ public class Maven {
             return newPom.toFile();
         }
 
+        @AllArgsConstructor
+        public static class Output {
+            final String src;
+            final Path dest;
+        }
 
-        public void save(Maven maven, Path jarOutput, Path archive) throws IOException {
+        public void save(Maven maven, Path jarOutput, Path archive, Collection<Output> outputs) throws IOException {
             final Path target = pomSrcFile.toPath().getParent().resolve("target");
-            final Path jar = target.resolve(String.format("%s-%s.jar",
-                    model.getArtifactId(), model.getVersion()));
+            final Path jar = target.resolve(String.format("%s-%s.jar", model.getArtifactId(), model.getVersion()));
             Files.copy(jar, jarOutput);
 
             String groupId = model.getGroupId() == null ? model.getParent().getGroupId() : model.getGroupId();
@@ -204,6 +208,11 @@ public class Maven {
                     final Path filePath = aFile.toAbsolutePath();
                     return filePath.subpath(maven.repository.getNameCount(), filePath.getNameCount());
                 });
+            }
+
+            for (Output output : outputs) {
+                final Path srcFile = target.resolve(output.src);
+                Files.copy(srcFile, output.dest);
             }
         }
 

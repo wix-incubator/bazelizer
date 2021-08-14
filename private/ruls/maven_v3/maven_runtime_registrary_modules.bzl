@@ -1,9 +1,9 @@
-load("//:tooling.bzl", "MAVEN_BINARY_NAME")
+load("//third_party:maven_binaries.bzl", "MAVEN_BINARY_NAME")
 
 _BUILD = """
-load("@wix_incubator_bazelizer//private/ruls/maven_v3:modules_registrary_go_offline.bzl", _go_offline_modules = "go_offline")
+load("@wix_incubator_bazelizer//private/ruls/maven_v3:go_offline.bzl", _go_offline = "go_offline")
 
-_go_offline_modules(
+_go_offline(
     name = "{go_offline_target_name}",
     visibility = ["//visibility:public"],
     modules = [{go_offline_modules}],
@@ -41,19 +41,14 @@ def execute_build(name, **kwargs):
 """
 
 
-_MACROS_BZL_FILE = """
-load("@wix_incubator_bazelizer//private/ruls/maven_v3:runner.bzl", _run_mvn = "run_mvn")
-load("@wix_incubator_bazelizer//private/ruls/maven_v3:maven_project.bzl", _maven_project = "maven_project")
+_STANDALONE_BZL_FILE = """
+load("@wix_incubator_bazelizer//private/ruls/maven_v3:go_offline.bzl", _go_offline = "go_offline")
 
-def execute_build(name, **kwargs):
-    _maven_project(
-        name = ""
-    )
-
-    _run_mvn(
+def standalone(name, modules, **kwargs):
+    _go_offline(
         name = name,
-        repository = "{maven_repository_ref}",
-        data = ["{data}"],
+        modules = modules,
+        settings_xml = "{unsafe_global_settings}",
         **kwargs
     )
 """
