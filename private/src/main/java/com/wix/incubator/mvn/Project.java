@@ -1,5 +1,7 @@
 package com.wix.incubator.mvn;
 
+import com.google.common.collect.Iterables;
+import com.google.common.hash.Hashing;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -20,6 +22,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -72,7 +75,7 @@ public class Project {
             }
         }
         final List<String> ids = TopologicalSorter.sort(dag);
-        return ids.stream().map(vertices::get).collect(Collectors.toList());
+        return ids.stream().map(vertices::get).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
     private static void addVertex(DAG dag, Map<String, Project> vertices, Project project) {
@@ -106,20 +109,23 @@ public class Project {
             throw new IllegalStateException(e);
         }
 
-        this.id = file.toPath().toAbsolutePath().toString();
-        this.pomSrcFile = file;
-
         Optional<Path> parentAbsPath = Optional.ofNullable(model.getParent())
                 .map(Parent::getRelativePath)
                 .map(p -> file.toPath().toAbsolutePath().getParent().resolve(p).normalize());
         this.parentId = parentAbsPath.map(Path::toString).orElse(null);
         this.pomParentFile = parentAbsPath.map(Path::toFile).orElse(null);
         this.args = createArgs(flags);
+        this.pomSrcFile = file;
+        this.id = generateId(file, args);
+    }
+
+    private String generateId(File file, Args args) {
+        return file.toPath().toAbsolutePath() + ":" + args.toHash();
     }
 
     private Project.Args createArgs(List<String> flags) {
         if (!flags.isEmpty()) {
-            final Cli.ExecutionOptions options = new Cli.ExecutionOptions();
+            final Cmd.ExecutionOpts options = new Cmd.ExecutionOpts();
             final CommandLine.ParseResult result = new CommandLine(options)
                     .parseArgs(flags.toArray(new String[0]));
             if (!result.errors().isEmpty()) {
@@ -130,6 +136,7 @@ public class Project {
             return Project.Args.builder()
                     .profiles(options.mavenActiveProfiles)
                     .modelVisitor(options.visitor())
+                    .cmd(options.mavenArgs)
                     .build();
         } else {
             return Project.Args.builder().build();
@@ -206,7 +213,7 @@ public class Project {
 
     @Override
     public String toString() {
-        return model.toString();
+        return model.toString() + "@" + args.toHash();
     }
 
 
@@ -225,7 +232,7 @@ public class Project {
 
         public Args merge(Args other) {
             return Args.builder()
-                    .cmd(Stream.concat(cmd.stream(), other.cmd.stream()).collect(Collectors.toList()))
+                    .cmd(Stream.concat(cmd.stream(), other.cmd.stream()).distinct().collect(Collectors.toList()))
                     .modelVisitor(modelVisitor.andThen(other.modelVisitor))
                     .deps(Stream.concat(deps.stream(), other.deps.stream()).collect(Collectors.toList()))
                     .profiles(Stream.concat(profiles.stream(), other.profiles.stream()).collect(Collectors.toList()))
@@ -235,9 +242,18 @@ public class Project {
         @Override
         public String toString() {
             final String cmdStr = String.join(" ", cmd);
-            final String profiles = this.profiles.stream().map(s -> "-P " + s)
-                    .collect(Collectors.joining(" "));
+            final String profiles = this.profiles.stream()
+                    .map(s -> "-P " + s).collect(Collectors.joining(" "));
             return "[" + cmdStr + (profiles.isEmpty() ? "" : " " + profiles) + "]";
+        }
+
+        @SuppressWarnings("UnstableApiUsage")
+        public String toHash() {
+            return Hashing.murmur3_32()
+                    .hashString(String.join(" ",
+                            Iterables.concat(cmd, profiles)),
+                            StandardCharsets.UTF_8).toString();
+
         }
     }
 

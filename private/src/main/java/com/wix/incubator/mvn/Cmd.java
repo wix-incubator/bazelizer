@@ -27,17 +27,22 @@ public class Cmd {
                 description = "Delete all dependencies that declared in pom file before tool execution")
         public boolean dropAllDepsFromPom;
 
-        @CommandLine.Option(names = {"--deps-drop-exclude"}, paramLabel = "<coors>", description = "Rules for deps drop exclusion, " +
+        @CommandLine.Option(names = {"--deps-drop-exclude"}, paramLabel = "<coors>",
+                description = "Rules for deps drop exclusion, " +
                 "rxpected format is '<groupId>:<artifactId>'. Examples: 'com.google.*:*', '*:guava', ect. ")
         public List<String> dropDepsExcludes = Collections.emptyList();
 
-        @CommandLine.Option(names = {"--mvn-active-profiles"}, paramLabel = "<p>", description = "maven active profiles")
+        @CommandLine.Option(names = {"--mvn-active-profiles"}, paramLabel = "<p>",
+                description = "maven active profiles")
         public List<String> mavenActiveProfiles = Collections.emptyList();
+
+        @CommandLine.Option(names = {"--mvn-extra-args"}, paramLabel = "<p>",
+                description = "maven arguments")
+        public List<String> mavenArgs = Collections.emptyList();
 
         public Project.ModelVisitor visitor() {
             if (dropAllDepsFromPom) {
-                return new Project.DropAllDepsModelVisitor()
-                        .addIgnores(dropDepsExcludes);
+                return new Project.DropAllDepsModelVisitor().addIgnores(dropDepsExcludes);
             }
             return d -> {
             };
@@ -133,7 +138,7 @@ public class Cmd {
                     .collect(Collectors.toList());
 
             final Project.Args build = Project.Args.builder()
-                    .cmd(asList("clean", "dependency:go-offline", "install"))
+                    .cmd(asList("clean", "dependency:go-offline"))
                     .build();
 
             env.executeInOrder(

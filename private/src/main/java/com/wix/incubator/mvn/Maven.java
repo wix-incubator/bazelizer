@@ -3,10 +3,6 @@ package com.wix.incubator.mvn;
 import com.github.mustachejava.Mustache;
 import com.google.common.io.CharSource;
 import com.google.devtools.build.runfiles.Runfiles;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import org.apache.maven.model.Dependency;
-import org.apache.maven.model.Model;
 import org.apache.maven.shared.invoker.*;
 import org.codehaus.plexus.util.dag.CycleDetectedException;
 
@@ -21,10 +17,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.*;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.google.common.io.Resources.asCharSource;
 import static com.google.common.io.Resources.getResource;

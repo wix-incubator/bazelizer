@@ -28,29 +28,6 @@ public class Cli {
         System.exit(exitCode);
     }
 
-    public static class ExecutionOptions {
-
-        @CommandLine.Option(names = {"--deps-drop-all"},
-                description = "Delete all dependencies that declared in pom file before tool execution")
-        public boolean dropAllDepsFromPom;
-
-        @CommandLine.Option(names = {"--deps-drop-exclude"}, paramLabel = "<coors>", description = "Rules for deps drop exclusion, " +
-                "rxpected format is '<groupId>:<artifactId>'. Examples: 'com.google.*:*', '*:guava', ect. ")
-        public List<String> dropDepsExcludes = Collections.emptyList();
-
-        @CommandLine.Option(names = {"--mvn-active-profile"}, paramLabel = "<p>", description = "maven active profiles")
-        public List<String> mavenActiveProfiles = Collections.emptyList();
-
-
-        public Project.ModelVisitor visitor() {
-            if (dropAllDepsFromPom) {
-                return new Project.DropAllDepsModelVisitor()
-                        .addIgnores(dropDepsExcludes);
-            }
-            return d -> {};
-        }
-    }
-
     public static final Gson GSON = new GsonBuilder()
             .setPrettyPrinting()
             .registerTypeAdapter(Path.class, (JsonDeserializer<Path>) (json, typeOfT, context) -> {

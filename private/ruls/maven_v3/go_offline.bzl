@@ -28,9 +28,11 @@ def _go_offline_impl(ctx):
 
     args = ctx.actions.args()
     snapshot_tar = ctx.outputs.snapshot
+    logfile = ctx.outputs.log
 
     # jfm flags
-    # args.add("--jvm_flag=-Dtools.jvm.mvn.BazelLabelName=%s" % (ctx.label))
+    args.add("--jvm_flag=-Dtools.jvm.mvn.LogFile=%s" % (logfile.path))
+#     args.add("--jvm_flag=-Dtools.jvm.mvn.LogFile=%s" % (logfile))
     # args.add("--jvm_flag=-Dtools.jvm.mvn.Ws=%s" % (ctx.workspace_name))
 
     # cli options
@@ -38,9 +40,11 @@ def _go_offline_impl(ctx):
     args.add('--config', reposiotry_projects_file.path)
     args.add('--settingsXml', ctx.attr.settings_xml)
     args.add('--output', snapshot_tar.path)
-
-    outputs = []
-    outputs.append(snapshot_tar)
+    print('MavenRepositoryMaker: log %s' % logfile.path)
+    outputs = [
+        snapshot_tar,
+        logfile
+    ]
 
     ctx.actions.run(
         inputs = depset([reposiotry_projects_file] + [d.file for d in pom_providers]),
@@ -62,7 +66,8 @@ def _go_offline_impl(ctx):
 go_offline = rule(
     implementation = _go_offline_impl,
     outputs = {
-      "snapshot": "%{name}.snapshot.tar"
+      "snapshot": "%{name}.snapshot.tar",
+      "log": "%{name}.log",
     },
     attrs = {
         "modules": attr.label_list(),
