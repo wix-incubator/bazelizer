@@ -138,7 +138,7 @@ public class Cmd {
                     .collect(Collectors.toList());
 
             final Project.Args build = Project.Args.builder()
-                    .cmd(asList("clean", "dependency:go-offline"))
+                    .cmd(asList("clean", "dependency:go-offline", "install"))
                     .build();
 
             env.executeInOrder(

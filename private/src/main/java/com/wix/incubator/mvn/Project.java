@@ -213,7 +213,7 @@ public class Project {
 
     @Override
     public String toString() {
-        return model.toString() + "@" + args.toHash();
+        return model.toString() + "/" + args.toString();
     }
 
 
@@ -249,10 +249,10 @@ public class Project {
 
         @SuppressWarnings("UnstableApiUsage")
         public String toHash() {
-            return Hashing.murmur3_32()
-                    .hashString(String.join(" ",
-                            Iterables.concat(cmd, profiles)),
-                            StandardCharsets.UTF_8).toString();
+            final Iterable<String> str = Iterables.concat(cmd, profiles);
+            return Iterables.isEmpty(str) ? ""
+                    : Hashing.murmur3_32()
+                    .hashString(String.join(" ", str), StandardCharsets.UTF_8).toString();
 
         }
     }
