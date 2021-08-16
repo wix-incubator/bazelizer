@@ -13,7 +13,7 @@ maven_project(
     parent_project = "//tests/e2e/mvn-lib-parent:maven",
     flags = [
         "--deps-drop-all",
-        "--deps-drop-ignore", "*:guava"
+        "--deps-drop-exclude", "*:guava"
      ],
     visibility = ["//visibility:public"]
 )
