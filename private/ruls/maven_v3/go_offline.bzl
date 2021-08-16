@@ -40,7 +40,7 @@ def _go_offline_impl(ctx):
     args.add('--config', reposiotry_projects_file.path)
     args.add('--settingsXml', ctx.attr.settings_xml)
     args.add('--output', snapshot_tar.path)
-    print('MavenRepositoryMaker: log %s' % logfile.path)
+    print('MavenRepositoryMaker: logging file %s' % logfile.path)
     outputs = [
         snapshot_tar,
         logfile
