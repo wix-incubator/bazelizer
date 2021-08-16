@@ -8,18 +8,22 @@ load("//third_party:third_party.bzl", "dependencies")
 
 dependencies()
 
-load("@rules_jvm_external//:defs.bzl", "maven_install")
-
-maven_install(
-        artifacts = [
-            "org.eclipse.aether:aether-api:1.1.0CollectRequest"
-        ],
-        fetch_sources = True,
-#        maven_install_json = "//:maven_install.json",
-        repositories = [
-            "https://repo1.maven.org/maven2",
-        ],
-)
+#load("@rules_jvm_external//:defs.bzl", "maven_install")
+#
+#maven_install(
+#        artifacts = [
+#            "org.sonatype.aether:aether-api:1.7",
+#            "org.sonatype.aether:aether-spi:1.7",
+#            "org.sonatype.aether:aether-util:1.7",
+#            "org.sonatype.aether:aether-connector-file:1.7",
+#            "org.sonatype.aether:aether-connector-wagon:1.7",
+#            "org.sonatype.aether:aether-impl:1.7",
+#        ],
+#        fetch_sources = True,
+#        repositories = [
+#            "https://repo1.maven.org/maven2",
+#        ],
+#)
 
 #
 # E2E tests

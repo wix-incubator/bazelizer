@@ -18,7 +18,7 @@ import static java.util.Arrays.asList;
  */
 public abstract class Dep {
 
-    private static class DefinitionStruct {
+    private static class DepDTO {
         public Path file;
         public Map<String, String> tags;
     }
@@ -30,7 +30,7 @@ public abstract class Dep {
      * @return a dep
      */
     public static Dep fromJson(String jsonDef) {
-        DefinitionStruct dto = Cli.GSON.fromJson(jsonDef, DefinitionStruct.class);
+        DepDTO dto = Cli.GSON.fromJson(jsonDef, DepDTO.class);
         final Path file = dto.file;
         final String extension = FilenameUtils.getExtension(file.getFileName().toString());
         switch (extension) {
@@ -83,7 +83,7 @@ public abstract class Dep {
         private final Path sourceFile;
         private final String scope;
 
-        private Bazel(DefinitionStruct struct) {
+        private Bazel(DepDTO struct) {
             super(mkVersion(struct));
             this.sourceFile = struct.file;
             this.scope = Optional.ofNullable(struct.tags)
@@ -104,7 +104,7 @@ public abstract class Dep {
             writePom(this, depFolder);
         }
 
-        private static String[] mkVersion(DefinitionStruct struct) {
+        private static String[] mkVersion(DepDTO struct) {
             String filePath = struct.file.toAbsolutePath().toString();
             String hash = Hashing.murmur3_128().hashString(filePath, StandardCharsets.UTF_8).toString();
             String groupId = "bazelizer." + hash;

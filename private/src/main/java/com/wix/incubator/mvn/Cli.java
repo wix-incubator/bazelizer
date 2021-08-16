@@ -17,13 +17,15 @@ import java.util.stream.Collectors;
 import static com.wix.incubator.mvn.IOSupport.readLines;
 import static java.util.Arrays.asList;
 
-@CommandLine.Command(subcommands = {
-        Cli.CmdRepository.class,
-        Cli.CmdBuild.class,
-})
+
 public class Cli {
     static {
         System.setProperty("org.slf4j.simpleLogger.showShortLogName", "true");
+    }
+
+    public static void main(String[] args) {
+        int exitCode = new CommandLine(new Cmd()).execute(args);
+        System.exit(exitCode);
     }
 
     public static class ExecutionOptions {
@@ -40,9 +42,9 @@ public class Cli {
         public List<String> mavenActiveProfiles = Collections.emptyList();
 
 
-        public Maven.ModelVisitor visitor() {
+        public Project.ModelVisitor visitor() {
             if (dropAllDepsFromPom) {
-                return new Maven.DropAllDepsModelVisitor()
+                return new Project.DropAllDepsModelVisitor()
                         .addIgnores(dropDepsExcludes);
             }
             return d -> {};
@@ -56,136 +58,5 @@ public class Cli {
                 return Paths.get(asString);
             }).create();
 
-    public static final MustacheFactory MUSTACHE =
-            new DefaultMustacheFactory();
-
-    public static void main(String[] args) {
-        //noinspection InstantiationOfUtilityClass
-        int exitCode = new CommandLine(new Cli()).execute(args);
-        System.exit(exitCode);
-    }
-
-    @CommandLine.Command(name = "build")
-    public static class CmdBuild extends Executable {
-
-        @CommandLine.Mixin
-        public ExecutionOptions executionOptions;
-
-        @CommandLine.Option(names = {"--repository"}, paramLabel = "PATH")
-        public Path repository;
-
-        @CommandLine.Option(names = {"--deps"}, paramLabel = "PATH")
-        public Path depsConfig;
-
-        @CommandLine.Option(names = {"--pom"}, paramLabel = "PATH")
-        public Path pomFile;
-
-        @CommandLine.Option(names = {"-O"}, description = "declared bazel output -> relatvce file path /target")
-        public Map<String, String> outputs = Collections.emptyMap();
-
-        @CommandLine.Option(names = {"--archiveOutput"}, paramLabel = "P",
-                description = "write archived artifact from repo, except default jar")
-        public Path archiveOutput;
-
-        @CommandLine.Option(names = {"--jarOutput"}, paramLabel = "P",
-                description = "write default jar")
-        public Path jarOutput;
-
-
-        @SuppressWarnings("Convert2MethodRef")
-        public void invoke() throws Exception {
-            final Maven env = Maven.prepareEnvFromArchive(
-                    repository
-            );
-            final Maven.Project project = Maven.createProject(
-                    pomFile
-            );
-
-            final List<Dep> deps = readLines(depsConfig).stream()
-                    .map(jsonLine -> Dep.fromJson(jsonLine))
-                    .collect(Collectors.toList());
-
-            final Maven.Args build = Maven.Args.builder()
-                    .deps(deps)
-                    .cmd(asList("clean", "install"))
-                    .modelVisitor(executionOptions.visitor())
-                    .profiles(executionOptions.mavenActiveProfiles)
-                    .build();
-
-            env.executeOffline(
-                    project,
-                    build
-            );
-
-            final List<Maven.Project.Output> outputs = this.outputs.entrySet().stream()
-                    .map(e -> new Maven.Project.Output(e.getValue(), Paths.get(e.getKey())))
-                    .collect(Collectors.toList());
-
-            project.save(
-                    env,
-                    jarOutput,
-                    archiveOutput,
-                    outputs
-            );
-
-        }
-
-    }
-
-    @CommandLine.Command(name = "build-repository")
-    public static class CmdRepository extends Executable {
-
-        @CommandLine.Mixin
-        public ExecutionOptions executionOptions;
-
-        @CommandLine.Option(names = {"--settingsXml"}, paramLabel = "PATH")
-        public Path settingsXml;
-
-        @CommandLine.Option(names = {"--config"}, paramLabel = "PATH")
-        public Path configFile;
-
-        @CommandLine.Option(names = {"--output"}, paramLabel = "PATH")
-        public Path output;
-
-        @Override
-        public void invoke() throws Exception {
-            final Maven env = Maven.prepareEnv(
-                    Maven.MvnRepository.fromFile(settingsXml)
-            );
-
-            final List<Maven.Project> projects = readLines(configFile).stream()
-                    .map(Maven::createProject)
-                    .collect(Collectors.toList());
-
-            final Maven.Args build = Maven.Args.builder()
-                    .cmd(asList("clean", "dependency:go-offline", "install"))
-                    .build();
-
-            env.executeInOrder(
-                    projects,
-                    build
-            );
-
-            long size = IOSupport.tarRepositoryRecursive(
-                    env,
-                    output
-            );
-
-            Console.printSeparator();
-            Console.info("Build finished. Archived repository " + FileUtils.byteCountToDisplaySize(size));
-        }
-    }
-
-
-    public static abstract class Executable implements Callable<Void> {
-        @Override
-        public final Void call() throws Exception {
-            invoke();
-            return null;
-        }
-
-        public abstract void invoke() throws Exception;
-    }
-
-
+    public static final MustacheFactory MUSTACHE = new DefaultMustacheFactory();
 }

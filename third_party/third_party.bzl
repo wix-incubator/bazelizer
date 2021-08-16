@@ -1,6 +1,5 @@
 load("@bazel_tools//tools/build_defs/repo:jvm.bzl", _jvm_maven_import_external = "jvm_maven_import_external")
 load("//third_party:maven_binaries.bzl", register_maven_tooling = "register")
-load("//third_party:coursier_binaries.bzl", register_coursier_tooling = "register")
 
 _repositories = [
     "https://repo.maven.apache.org/maven2/",
@@ -147,4 +146,3 @@ def dependencies(urls=_repositories):
         )
 
     register_maven_tooling()
-    register_coursier_tooling()
