@@ -40,18 +40,8 @@ def execute_build(name, **kwargs):
     )
 """
 
-
-_STANDALONE_BZL_FILE = """
-load("@wix_incubator_bazelizer//private/ruls/maven_v3:go_offline.bzl", _go_offline = "go_offline")
-
-def standalone(name, modules, **kwargs):
-    _go_offline(
-        name = name,
-        modules = modules,
-        settings_xml = "{unsafe_global_settings}",
-        **kwargs
-    )
-"""
+def repository(name, url, snapshot=False):
+    pass
 
 _maven_repository_registry_attrs = {
     "modules": attr.label_list(),

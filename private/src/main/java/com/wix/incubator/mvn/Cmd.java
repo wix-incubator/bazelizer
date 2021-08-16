@@ -31,9 +31,8 @@ public class Cmd {
                 "rxpected format is '<groupId>:<artifactId>'. Examples: 'com.google.*:*', '*:guava', ect. ")
         public List<String> dropDepsExcludes = Collections.emptyList();
 
-        @CommandLine.Option(names = {"--mvn-active-profile"}, paramLabel = "<p>", description = "maven active profiles")
+        @CommandLine.Option(names = {"--mvn-active-profiles"}, paramLabel = "<p>", description = "maven active profiles")
         public List<String> mavenActiveProfiles = Collections.emptyList();
-
 
         public Project.ModelVisitor visitor() {
             if (dropAllDepsFromPom) {
@@ -45,19 +44,6 @@ public class Cmd {
         }
     }
 
-    @UtilityClass
-    public static class Configs {
-
-        public static class DepsType implements CommandLine.ITypeConverter<List<Dep>> {
-            @Override
-            public List<Dep> convert(String path) throws Exception {
-                return readLines(Paths.get(path)).stream().map(Dep::fromJson)
-                        .collect(Collectors.toList());
-            }
-        }
-
-
-    }
 
     @CommandLine.Command(name = "build")
     public static class CmdBuild extends Executable {
@@ -128,9 +114,6 @@ public class Cmd {
 
     @CommandLine.Command(name = "build-repository")
     public static class CmdRepository extends Executable {
-
-        @CommandLine.Mixin
-        public ExecutionOpts executionOptions;
 
         @CommandLine.Option(names = {"--settingsXml"}, paramLabel = "PATH")
         public Path settingsXml;
