@@ -1,8 +1,7 @@
 # bazelizer
 [![mavenizer actions Status](https://github.com/wix-incubator/mavenizer/workflows/CI/badge.svg)](https://github.com/wix-incubator/mavenizer/actions)
 
-![Logo](assets/black.png?raw=true)
-
+<img src="assets/black.png" width="250">
 
 #### TL;DR
 This is your last chance if you really need some maven plugin inside your Bazel build and you cannot rewrite or adapt it to Bazel.
