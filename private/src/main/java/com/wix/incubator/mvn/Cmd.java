@@ -40,12 +40,20 @@ public class Cmd {
                 description = "maven arguments")
         public List<String> mavenArgs = Collections.emptyList();
 
+        @CommandLine.Option(names = {"--mvn-override-artifact-id"},
+                description = "modify artifact id for current build")
+        public String overrideArtifactId;
+
         public Project.ModelVisitor visitor() {
+            Project.ModelVisitor visitor = Project.ModelVisitor.NOP;
             if (dropAllDepsFromPom) {
-                return new Project.DropAllDepsModelVisitor().addIgnores(dropDepsExcludes);
+                visitor = visitor.andThen(new Project.DropAllDepsModelVisitor()
+                        .addIgnores(dropDepsExcludes));
             }
-            return d -> {
-            };
+            if (overrideArtifactId != null) {
+                visitor = visitor.andThen(new Project.ChangeArtifactId(overrideArtifactId));
+            }
+            return visitor;
         }
     }
 

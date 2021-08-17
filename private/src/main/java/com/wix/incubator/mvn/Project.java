@@ -211,6 +211,7 @@ public class Project {
         public final ModelVisitor modelVisitor = d -> {};
         @Builder.Default
         public final List<String> profiles = Collections.emptyList();
+        public String artifactId;
 
         public Args merge(Args other) {
             return Args.builder()
@@ -241,6 +242,8 @@ public class Project {
 
 
     public interface ModelVisitor {
+        ModelVisitor NOP = d -> {};
+
         void apply(Model model);
 
         default ModelVisitor andThen(ModelVisitor after) {
@@ -268,6 +271,17 @@ public class Project {
         @Override
         public void apply(Model model) {
             model.getDependencies().removeIf(d -> excludeFilter == null || !excludeFilter.test(d));
+        }
+    }
+
+
+    @AllArgsConstructor
+    public static class ChangeArtifactId implements ModelVisitor {
+        private final String id;
+
+        @Override
+        public void apply(Model model) {
+            model.setArtifactId(id);
         }
     }
 
