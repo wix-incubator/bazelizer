@@ -67,7 +67,7 @@ public class Maven {
                 .map((runfilesPath) -> new File(runfiles.rlocation(runfilesPath)))
                 .orElseThrow(() -> new IllegalStateException("no sys prop: " + BZL_MVN_TOOL_SYS_PROP));
 
-        Path m2HomeDir = Files.createTempDirectory("M2_HOME@_" + "128" + "_@");
+        Path m2HomeDir = IOSupport.newTempDirectory("M2_HOME@").toPath();
         Console.info(" M2_HOME=" + m2HomeDir);
         Path repository = m2HomeDir.resolve("repository").toAbsolutePath();
         Files.createDirectories(repository);
