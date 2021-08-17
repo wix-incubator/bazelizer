@@ -74,7 +74,6 @@ _run_mvn_attrs = {
     "srcs": attr.label_list(allow_files = True),
     "project": attr.label(mandatory=True),
     "outputs": attr.string_list(),
-    "mvn_flags": attr.string_list(),
     "data": attr.label_list(allow_files = True),
     "log_level": attr.string(default="OFF"),
     "_tool": attr.label(default=CLI_TOOL, allow_files = True, executable = True, cfg = "host")
