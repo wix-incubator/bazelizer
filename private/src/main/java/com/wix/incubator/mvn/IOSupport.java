@@ -38,15 +38,15 @@ public final class IOSupport {
     );
 
     public static File newTempDirectory(String pref) throws IOException {
-        final File directory = newDirectory(pref, null, new File("."));
+        final File directory = newDirectory(pref, new File("."));
         directory.deleteOnExit();
         return directory;
     }
 
-    private static File newDirectory(String pref, String suf, File root) throws IOException {
+    private static File newDirectory(String pref, File root) throws IOException {
         final String baseName = UUID.randomUUID().toString();
         for (int i = 0; i < 9999; i++) {
-            String name = String.format("%s%s-%d%s", pref != null ? pref : "", baseName, i, suf != null ? suf : ".tmp");
+            String name = String.format("%s%s-%d", pref != null ? pref : "", baseName, i);
             final File tmp = new File(root, name);
             if (tmp.mkdir()) {
                 return tmp;
