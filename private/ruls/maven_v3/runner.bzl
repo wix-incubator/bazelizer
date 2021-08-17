@@ -72,6 +72,7 @@ _run_mvn_attrs = {
     "deps": attr.label_list(),
     "runtime_deps": attr.label_list(),
     "srcs": attr.label_list(allow_files = True),
+    "flags": attr.string_list(),
     "project": attr.label(mandatory=True),
     "outputs": attr.string_list(),
     "data": attr.label_list(allow_files = True),
@@ -109,6 +110,10 @@ def _run_mvn_impl(ctx):
     args.add("--pom", pom_project_provider.file.path)
     args.add("--jarOutput", def_output_jar_file.path)
     args.add("--archiveOutput", def_output_artifact_file.path)
+
+    if ctx.attr.flags:
+        for f in ctx.attr.flags:
+            args.add(f)
 
     if pom_project_provider.deps:
         for f in pom_project_provider.deps.to_list():
