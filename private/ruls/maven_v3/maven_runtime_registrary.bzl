@@ -20,7 +20,6 @@ def execute_build(name, **kwargs):
     _run_mvn(
         name = name,
         repository = "{maven_repository_ref}",
-        data = ["{data}"],
         **kwargs
     )
 """
@@ -71,7 +70,6 @@ def _maven_repository_registry_impl(repository_ctx):
         (_RUNNER_BZL_FILE).format(
             maven_repository_ref = "@%s//:%s" % (repository_name, maven_repository_target_name),
             imports = "",
-            data = "@%s//:%s" % (repository_name, "%s_files" % (maven_repository_target_name)),
         ),
         False,  # not executable
     )

@@ -124,9 +124,6 @@ def _run_mvn_impl(ctx):
         output_files.append(file)
         args.add("-O{dest}={src}".format(dest=file.path, src=out))
 
-    for flag in ctx.attr.flags:
-        args.add( flag )
-
     ctx.actions.run(
         inputs = depset(input_files, transitive = input_transitive_files),
         outputs = output_files,
