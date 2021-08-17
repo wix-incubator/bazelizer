@@ -1,6 +1,7 @@
 # bazelizer
-![Logo](assets/black.png?raw=true | =250x250)
 [![mavenizer actions Status](https://github.com/wix-incubator/mavenizer/workflows/CI/badge.svg)](https://github.com/wix-incubator/mavenizer/actions)
+
+![Logo](assets/black.png?raw=true)
 
 
 #### TL;DR
