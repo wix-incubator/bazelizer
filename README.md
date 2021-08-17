@@ -101,14 +101,14 @@ Also rule fetchs all deps via
 **NOTE 2** Rule fetchs all also by `de.qaware.maven:go-offline-maven-plugin:resolve-dependencies` plugin. 
 This allows overcome a problem that some plugin can dynamically fetch additional deps only at runtime. Pls read more about it [here](https://github.com/qaware/go-offline-maven-plugin).
 
-### declare_module
+### maven_project
 
 Represent a maven target that represented as pom.xml file and optional reference to parent target. 
 
 Usage
 
 ```
-declare_module(
+maven_project(
     name = "module",
     pom_file = ":pom.xml",
     parent = "//tests/e2e/mvn-lib-parent:module"
@@ -120,6 +120,14 @@ declare_module(
 | name  | Name; required. A unique name for this target.  |
 | pom_file  | Actual pom file.     |
 | parent  | Label; Reference to parent module;    |
+
+Special flags are supported:
+
+| attr name  | description  |
+|---                             | ---                                    |
+| --deps-drop-all                | Delete all dependencies in pom.xml before execution. This can be useful if same dependencies will come from a bazel target;  |
+| --deps-drop-exclude  <groupId:artifactId> | Exlude some dependency to be deleted by wildcard like `com.google.*:*` expressions;    |
+| --mvn-active-profiles  profile1,profile2  | List of active profiles for maven;  |
 
 ### 
 
