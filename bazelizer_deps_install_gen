@@ -1,0 +1,133 @@
+#!/usr/bin/env python
+
+import json
+from string import Template
+
+
+TPL=Template('''load("@bazel_tools//tools/build_defs/repo:jvm.bzl", _jvm_maven_import_external = "jvm_maven_import_external")
+
+_repositories = [
+    "https://repo.maven.apache.org/maven2/",
+    "https://mvnrepository.com/artifact",
+    "https://maven-central.storage.googleapis.com",
+    "http://gitblit.github.io/gitblit-maven",
+]
+
+def dependency(name, sha256, artifact, sha256_src=None):
+    return struct(
+        name = name,
+        artifact = artifact,
+        jar_sha256 = sha256,
+        srcjar_sha256 = sha256_src,
+    )
+
+
+deps = [
+$deps
+]
+
+def import_deps_macros():
+    for dep in deps:
+
+
+
+def dependencies(urls=_repositories):
+    for dep in deps:
+        name = dep.name
+        actual_name = "bazelizer_external__%s" % name
+
+        _jvm_maven_import_external(
+            name = actual_name,
+            artifact = dep.artifact,
+            artifact_sha256 = dep.jar_sha256,
+            srcjar_sha256 = dep.srcjar_sha256,
+            server_urls = urls
+        )
+
+        native.bind(
+            name = "wix_incubator_bazelizer_rules/dependency/%s" % (name),
+            actual = "@%s" % (actual_name)
+        )
+
+''')
+
+
+def a_coords_name(coord_dict):
+    chars = ['.','-']
+    def strn(s):
+        for c in chars:
+            s = s.replace(c,'_')
+        return s
+    return "%s_%s" % ( strn(coord_dict['group']), strn(coord_dict['artifact']) )
+
+def get_coords(dep):
+    return a_coords(dep['coord'])
+
+
+def a_coords(mvn_coord):
+    pieces = mvn_coord.split(":")
+    group = pieces[0]
+    artifact = pieces[1]
+
+    if len(pieces) == 3:
+        version = pieces[2]
+        return {"group": group, "artifact": artifact, "version": version}
+    elif len(pieces) == 4:
+        packaging = pieces[2]
+        version = pieces[3]
+        return {"group": group, "artifact": artifact, "packaging": packaging, "version": version}
+    elif len(pieces) == 5:
+        packaging = pieces[2]
+        classifier = pieces[3]
+        version = pieces[4]
+        return {"group": group, "artifact": artifact, "packaging": packaging, "classifier": classifier, "version": version}
+    else:
+        raise Exception("Could not parse maven coordinate", attr = mvn_coord)
+
+
+def main():
+    with open('bazelizer_deps_install.json', 'r') as f:
+        with open('third_party_deps.bzl', 'w') as fb:
+            _json = json.load(f)
+            deps_lines = []
+
+            jars = [
+                dep for dep in _json['dependency_tree']['dependencies']
+                if get_coords(dep).get('classifier') != 'sources'
+            ]
+
+            for dep in jars:
+                coord = dep['coord']
+                coord_dict = get_coords(dep)
+                name = a_coords_name(coord_dict)
+
+                def is_src_coord(d):
+                    dict = get_coords(d)
+                    return dict.get("classifier") == "sources" and dict["group"] == coord_dict["group"] \
+                        and dict["artifact"] == coord_dict["artifact"] and dict["version"] == coord_dict["version"] \
+                        and 'sha256' in d
+
+                sha256_src_list = [
+                    x for x in _json['dependency_tree']['dependencies']
+                    if is_src_coord(x)
+                ]
+
+                line = "\n".join([
+                    '\tdependency(',
+                    '\t    name="%s",' % (name),
+                    '\t    sha256="%s",' % (dep['sha256']),
+                    '\t    sha256_src="%s",' % (sha256_src_list[0]['sha256']) if len(sha256_src_list) > 0 else "",
+                    '\t    artifact="%s:%s:%s",' % ( coord_dict["group"], coord_dict["artifact"], coord_dict["version"] ),
+                    '\t)'
+                ])
+
+                deps_lines.append(line)
+
+            fb.write(
+                TPL.substitute({
+                    'deps': ",\n".join(deps_lines)
+                })
+            )
+
+if __name__ == "__main__":
+    main()

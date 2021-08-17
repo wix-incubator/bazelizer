@@ -1,76 +1,31 @@
+load(":e2e.bzl", "e2e_has_jar_test")
 
-#
-# tar
-#
+# E2E tests
 
-_buildpack = "@maven_e2e//:pinned_maven_repository"
 
-sh_library(
-    name = "MavenImageDummy",
-    srcs = ["dummy.sh"],
-    data = [_buildpack],
+e2e_has_jar_test(
+    name = "mvn-lib-a__jar-test",
+    dep = "//tests/e2e/mvn-lib",
+    jar = "tests/e2e/mvn-lib/libmvn-lib.jar"
 )
 
-sh_test(
-    name = "MavenImageTest",
-    srcs = ["test_files_exist.sh"],
-    args = ["external/maven_e2e/pinned_maven_repository.manifest.xml"],
-    data = [_buildpack],
-    deps = [":MavenImageDummy"]
+e2e_has_jar_test(
+    name = "mvn-lib-module-a__jar-test",
+    dep = "//tests/e2e/mvn-lib-subparent/mvn-lib-module-a",
+    jar = "tests/e2e/mvn-lib-subparent/mvn-lib-module-a/libmvn-lib-module-a.jar",
+    clazz = "A.class"
 )
 
-#
-# Snap
-#
-
-sh_library(
-    name = "MavenImageDummy2",
-    srcs = ["dummy.sh"],
-    data = ["@maven_e2e//:pinned_maven_repository"],
+e2e_has_jar_test(
+    name = "mvn-lib-module-b__jar-test",
+    dep = "//tests/e2e/mvn-lib-subparent/mvn-lib-module-b",
+    jar = "tests/e2e/mvn-lib-subparent/mvn-lib-module-b/libmvn-lib-module-b.jar",
+    clazz = "B.class"
 )
 
-sh_test(
-    name = "MavenImageTarTest",
-    srcs = ["test_tar_repo.sh"],
-    args = ["external/maven_e2e/pinned_maven_repository.tar"],
-    data = ["@maven_e2e//:pinned_maven_repository"],
-    deps = [":MavenImageDummy2"]
+e2e_has_jar_test(
+    name = "mvn-lib-module-non-compiled__jar-test",
+    dep = "//tests/e2e/mvn-lib-subparent/mvn-lib-module-non-compiled",
+    jar = "tests/e2e/mvn-lib-subparent/mvn-lib-module-non-compiled/libmvn-lib-module-non-compiled.jar",
 )
 
-#
-# running
-#
-
-_run = "//tests/e2e/mvn-build-lib"
-
-sh_library(
-    name = "MavenRunDummy",
-    srcs = ["dummy.sh"],
-    data = [_run],
-)
-
-sh_test(
-    name = "MavenRunTest",
-    srcs = ["test_jar.sh"],
-    args = ["tests/e2e/mvn-build-lib/myapi-1.0.0-SNAPSHOT.jar", "com/mavenizer/examples/jaxbapi/API.class"],
-    data = [_run],
-    deps = [":MavenRunDummy"]
-)
-
-#
-# profiles extra flags
-#
-
-sh_library(
-    name = "mvn-build-lib-with-profile__maven",
-    srcs = ["dummy.sh"],
-    data = ["//tests/e2e/mvn-build-lib-with-profile"],
-)
-
-sh_test(
-    name = "mvn-build-lib-with-profile__HasJarTest",
-    srcs = ["test_jar.sh"],
-    args = ["tests/e2e/mvn-build-lib-with-profile/libmvn-build-lib-with-profile.jar"],
-    data = [":mvn-build-lib-with-profile__maven"],
-    deps = [":mvn-build-lib-with-profile__maven"]
-)

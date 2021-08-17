@@ -1,0 +1,34 @@
+package(default_visibility = ["//visibility:public"])
+
+load("//:macros.bzl", "sources", "test_sources", "third_party_dep", "third_party_deps")
+load("//third_party:maven_binaries.bzl", _maven_bin_name = "MAVEN_BINARY_NAME")
+
+sources()
+
+java_binary(
+    name = "mvn",
+    srcs = [":sources"],
+    data = [
+        "@%s//:%s" % (_maven_bin_name, _maven_bin_name),
+    ],
+    jvm_flags = [
+        "--illegal-access=permit",
+        "-Dtools.jvm.mvn.MavenBin=\"%s\"" % _maven_bin_name,
+    ],
+    licenses = ["notice"],  # Apache 2.0
+    main_class = "com.wix.incubator.mvn.Cli",
+    plugins = [":lombok_plugin"],
+    runtime_deps = [
+    ],
+    deps = [
+        "//private/src/main/resources",
+        "@bazel_tools//tools/java/runfiles",
+    ] + third_party_deps(),
+)
+
+java_plugin(
+    name = "lombok_plugin",
+    generates_api = 1,
+    processor_class = "lombok.launch.AnnotationProcessorHider$AnnotationProcessor",
+    deps = [third_party_dep("org_projectlombok_lombok")],
+)

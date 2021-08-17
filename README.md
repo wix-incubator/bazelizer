@@ -1,8 +1,7 @@
 # bazelizer
-
+![Logo](assets/black.png?raw=true | =250x250)
 [![mavenizer actions Status](https://github.com/wix-incubator/mavenizer/workflows/CI/badge.svg)](https://github.com/wix-incubator/mavenizer/actions)
 
-## !! WORK IN PROGRESS  !!
 
 #### TL;DR
 This is your last chance if you really need some maven plugin inside your Bazel build and you cannot rewrite or adapt it to Bazel.
@@ -26,12 +25,10 @@ Use bazel deps, depends on bazel target and event doing it efficiently.
 ##### Take a look on example project [here](tests/integration/README.md)
 
 
-![Alt text](assets/ci.png?raw=true "Title")
+![Alt text](assets/ci.png?raw=true | width=350)
 
 
-# Usage
-
-Registering the tool
+## Usage
 
 ```
 # in your WORKSPACE
@@ -50,172 +47,141 @@ http_archive(
 
 load("@wix_incubator_bazelizer//third_party:rules_repository.bzl", "install")
 install()
+
+# in your BUILD files
+
+load("@wix_incubator_bazelizer//maven:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
+
+
 ```
 
-## declare_pom
-Declare a maven module that you want to lift into bazel
 
-```
-# in BUILD file at the root of maven module
+## Design
 
-load("@wix_incubator_bazelizer//maven:defs.bzl", "declare_pom")
+This tools assume that pom.xml (e.g. build configurations) will be updated **rarely**. 
+So, tool will fetche all dependencies, not related to bazel targets, once and cached by bazel mechanics as 
+maven repository tar archive. All builds rely on this repository 'image' with ability to inject bazel deps dynamical during build.
 
-declare_pom(
-    name = "declared_pom",
-    pom_file = ":pom.xml",
-    visibility = ["//visibility:public"]
-)
-```
-
-Where:
-
-| attr name  | description                                                        |
-|    ---     | ---                                                                |
-| name       | string; A unique name for this target.                             |
-| pom_file   | File; Reference to an maven pom file.                              |
-| parent     | Label; (optional) Reference to the _declare_pom_ target as maven parent pom. Support supported only via `<parent>...<relativePath>../path/to/parent</relativePath> </parent>` block.     |
-
+## Rules
 
 ### maven_repository_registry
  
-Repository rule, that register all pom modules and doing centralized dependencies fetch for it. 
-This repository generates an executor file that can be used for launching maven builds for particular modules. 
-
- ```
-# in WORKSPACE file
-
-load("@wix_incubator_bazelizer//maven:defs.bzl", "maven_repository_registry")
-
-maven_repository_registry(
-    name = "bazelized_maven",
-    modules = [
-        "//tests/e2e/mvn-parent-pom:declared_pom",
-        "//tests/e2e/mvn-build-lib:declared_pom",
-        "//tests/e2e/mvn-build-lib-one:declared_pom",
-        "//tests/e2e/mvn-build-lib-with-profile:declared_pom",
-    ]
-)
-```
-
-Where:
-
-| attr name  | description                                                                |
-|    ---     | ---                                                                        |
-| name       | string; A unique name for the **repository**                                     |
-| modules    | List labels; Lavels of all maven modules that should be lifted into bazel  |
-
-
-
- 
-This rule generates tarball as a snapshot of m2 repository that resolve everything this project is dependent on (dependencies, plugins, reports) in preparation for going offline. 
-Created tarball + initial pom = a `buildpack`. Image that can be reused for all consequent builds. 
+This is repository rule that generate and register all declared "maven" targets. This allow to fetch all deps from maven world only once and cache them.
                                                            
 
-
-## execute_build
-
-Rule created by `maven_repository_registry` repository rule. Responsible for launching particular maven modules.
-
-
+Usage
 ```
-load("@bazelized_maven//:execute_build.bzl", "execute_build")
+# ./WORKSPACE
 
-
-# Example of fetching everething from maven workspace
-filegroup(
-    name = "sources",
-    srcs = glob(["**/*"], exclude=["target/**/*"]),
-    visibility = ["//visibility:public"]
-)
-
-execute_build(
-    name = "my-maven-lib",
-    pom_def = ":declared_pom", # see: declare_pom rule
-    srcs = [":sources"],
-    visibility = ["//visibility:public"],
-    deps = [
-         # my bazel deps
-         "//tests/e2e/mvn-build-lib-one",
-        "//tests/e2e/lib/src/com/mavenizer/examples/subliby",
+maven_repository_registry_v2(
+    name = "maven_repo",
+    modules = [
+        "//tests/e2e/mvn-lib-a:module",
+        "//tests/e2e/mvn-lib-parent:module",
+        "//tests/e2e/mvn-build-lib-one:module",
+        "//tests/e2e/mvn-lib-b:module",
+        "//tests/e2e/mvn-lib-G:module",
+        "//tests/e2e/mvn-lib-G/mvn-lib-G-a:module",
+        "//tests/e2e/mvn-lib-G/mvn-lib-G-b:module",
     ]
 )
 ```
   
-Where:
-
-| attr name  | description                                                                                                         |
-|    ---     | ---                                                                                                                 |
-| name       | string; A unique name for the target                                                                                |
-| pom_def    | Label; declared maven module definition (see  `declare_pom` rule)                                                   |
-| srcs       | List files; Files that will be lined into bazel sandbox for execution. Have to contains at least `src` dir.         |
-| deps       | List labels; Bazel dependencies with JavaInfo provider.                                                             |
-| outputs    | List string; (optional) Files inside target dedicatory that should be additionally registered as output for target. |
-
-###### Notes:
-1. Tool support only direct dependencies. All transitive dependencies are **excluded**. 
-2. Default rule outputs is the jar file that current maven build produce. So, `outputs` can be usefull some additional result binaries  needed. 
-3. Another maven module can be a dependency for current module. In this case it is the same as module was published into maven repository, and this is **cool**.
+| attr name  | description  |
+|---|---|
+| name  | Name; required. A unique name for this target.  |
+| modules  | list of labels; Labels of declared maven targets via `declare_module`    |
 
 
-## pom.xml 
+**NOTE 1** This rule execute dry run of a build by empty project directory + given pom. 
+This is done to eagerly fetch all plugin's and there dependencies and reuse for any build. In this case pom file have to be ready to be executed with empty workspace directory.
+Any change in pom file will trigger rebuilding a tarball. 
+Also rule fetchs all deps via 
 
-TBD
+**NOTE 2** Rule fetchs all also by `de.qaware.maven:go-offline-maven-plugin:resolve-dependencies` plugin. 
+This allows overcome a problem that some plugin can dynamically fetch additional deps only at runtime. Pls read more about it [here](https://github.com/qaware/go-offline-maven-plugin).
 
-Pom file support special set of XML transformations to be able to use it both in bazel and in maven transparently. By default 
-tool:
-- tries to cleanup all dependencies in `<dependencies>` and append rule deps from bazel 
-(installed into tmp local repository for each execution run)
-- inject sandbox relative path to parent pom, if it provided
+### declare_module
+
+Represent a maven target that represented as pom.xml file and optional reference to parent target. 
+
+Usage
+
+```
+declare_module(
+    name = "module",
+    pom_file = ":pom.xml",
+    parent = "//tests/e2e/mvn-lib-parent:module"
+)
+```
+
+| attr name  | description  |
+|---|---|
+| name  | Name; required. A unique name for this target.  |
+| pom_file  | Actual pom file.     |
+| parent  | Label; Reference to parent module;    |
+
+### 
+
+Usage
+
+```
+load("@maven_repo//:execute_build.bzl", "execute_build")
+
+filegroup(
+    name = "sources",
+    srcs = glob(["src/**/*"])
+)
+
+execute_build(
+    name = "mvn-lib-G-b",
+    pom_def = ":module",
+    deps = [ "@com_sun_xml_bind_jaxb_impl" ],
+    srcs = [":sources"],
+    visibility = ["//visibility:public"]
+)
+```
+
+| attr name  | description  |
+|---|---|
+| name  | Name; required. A unique name for this target.  |
+| pom_def  | Label for module declaration;     |
+| deps  | Deps; Supported any dep with JavaInfo provider; Support **only direct deps**;    |
+| srcs  | Files; Link maven workspace into bazel sandbox;    |
+
+
+###### Important notes
+
+This tool **not support** transitive dependencies. Only direct compile dependencies as [full_compile_jars](https://docs.bazel.build/versions/master/skylark/lib/JavaInfo.html#full_compile_jars) will be used.    
+
+###### pom.xml 
+
+Pom transformed during each build. This is done to support hermetic builds and allows to inject java targets from bazel into it.
+List of transformations:
+1. Drop all dependencies declared in pom, except they are **marked** no to be deleted;
+2. Injected synthetic dependency declaration for each bazel dep; 
+
+For this case `com.sun.xml.bind` will be dropped. This is done to give possibility centralize deps and have onlu one source of truth about dep versions.
+In this example we will inject  `@com_sun_xml_bind_jaxb_impl` instead. 
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    
-
-    <!-- Here we enabling this transformations -->
-
-    <!-- xembly:on -->
-
+<project xmlns:bz="https://github.com/wix-incubator/bazelizer">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>yyy</groupId>
-    <artifactId>xxxx</artifactId>
+    <groupId>groupId</groupId>
+    <artifactId>artifactId</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
     <dependencies>
+        <dependency bz:drop="never">
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
         <dependency>
-            <groupId>javax.xml.bind</groupId>
-            <artifactId>jaxb-api</artifactId>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-impl</artifactId>
         </dependency>
     </dependencies>
 
 </project>
 ```
-
-Supported flags:
-
-| flag      | description |
-| ----      | ---- |
-| xembly:on | Enabling support of transformations. By default all  |
-| xembly:no-drop-deps | Disable cleanup of deps |
-
-
-
-##### Logging
-
-By default tool will not print default maven output to minimaze rules output. If it neede log level can be changed by 
-```
-
-
-
-execute_build(
-    ...
-    log_level="INFO"
-)
-```
-
-Supported levels:
-
-- **INFO** - print maven default output + info messages by a tool;
-- **DEBUG** - print maven default output + debug messages by a tool (for example generate pom);
-- **TRACE** - print maven debug output + debug messages by a tool;
