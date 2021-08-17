@@ -1,6 +1,5 @@
 package com.wix.incubator.mvn;
 
-import lombok.experimental.UtilityClass;
 import org.apache.commons.io.FileUtils;
 import picocli.CommandLine;
 
@@ -12,6 +11,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
+import static com.google.common.collect.Iterables.concat;
 import static com.wix.incubator.mvn.IOSupport.readLines;
 import static java.util.Arrays.asList;
 
@@ -90,29 +90,25 @@ public class Cmd {
                     .map(jsonLine -> Dep.fromJson(jsonLine))
                     .collect(Collectors.toList());
 
-            final Project.Args build = Project.Args.builder()
+            final Project.Args args = Project.Args.builder()
                     .deps(deps)
                     .cmd(asList("clean", "install"))
                     .modelVisitor(executionOptions.visitor())
                     .profiles(executionOptions.mavenActiveProfiles)
                     .build();
 
-            env.executeOffline(
+            final Maven.MvnSavable result = env.executeOffline(
                     project,
-                    build
+                    args
             );
 
-            final List<Project.Output> outputs = this.outputs.entrySet().stream()
-                    .map(e -> new Project.Output(e.getValue(), Paths.get(e.getKey())))
+            final List<Maven.Out> outputs = this.outputs.entrySet().stream()
+                    .map(e -> new Maven.OutFile(e.getValue(), Paths.get(e.getKey())))
                     .collect(Collectors.toList());
+            outputs.add(new Maven.OutJar(jarOutput));
+            outputs.add(new Maven.OutInstalled(archiveOutput));
 
-            project.save(
-                    env,
-                    jarOutput,
-                    archiveOutput,
-                    outputs
-            );
-
+            result.save(outputs);
         }
 
     }

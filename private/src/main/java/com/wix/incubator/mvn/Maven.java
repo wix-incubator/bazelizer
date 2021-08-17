@@ -3,13 +3,14 @@ package com.wix.incubator.mvn;
 import com.github.mustachejava.Mustache;
 import com.google.common.io.CharSource;
 import com.google.devtools.build.runfiles.Runfiles;
+import lombok.AllArgsConstructor;
+import lombok.SneakyThrows;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.apache.maven.shared.invoker.*;
 import org.codehaus.plexus.util.dag.CycleDetectedException;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,6 +18,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.google.common.io.Resources.asCharSource;
 import static com.google.common.io.Resources.getResource;
@@ -118,12 +120,12 @@ public class Maven {
      * @throws IOException              if any
      * @throws MavenInvocationException if any
      */
-    public void executeOffline(Project project, Project.Args args) throws IOException, MavenInvocationException {
+    public MvnSavable executeOffline(Project project, Project.Args args) throws IOException, MavenInvocationException {
         Console.printSeparator();
         logMavenVersion();
         Console.printSeparator();
 
-        executeIntern(project, args, true);
+        return executeIntern(project, args, true);
     }
 
     /**
@@ -150,12 +152,13 @@ public class Maven {
         }
     }
 
-    private void executeIntern(Project project, Project.Args inputArgs, boolean offline) throws IOException, MavenInvocationException {
+    private MvnSavable executeIntern(Project project, Project.Args inputArgs, boolean offline) throws IOException, MavenInvocationException {
         final Project.Args args = inputArgs.merge(project.getArgs());
         for (Dep dep : args.deps) {
             dep.installTo(repository);
         }
-        final File pomFile = project.emitPom(args);
+        final Project.PomFile pom = project.emitPom(args);
+        final File pomFile = pom.file;
 
         maven.setWorkingDirectory(pomFile.getParentFile());
         DefaultInvocationRequest request = newInvocationRequest();
@@ -182,6 +185,8 @@ public class Maven {
         }
 
         Console.info(project, " >>>> Done. Elapsed time: " + duration(x0, x1));
+
+        return new MvnSavable(pom);
     }
 
     private void logMavenVersion() {
@@ -219,4 +224,73 @@ public class Maven {
         }
     }
 
+
+    @AllArgsConstructor
+    public class MvnSavable {
+        private final Project.PomFile pom;
+
+        public void save(Iterable<Out> outs) {
+            for (Out out : outs) {
+                out.save(Maven.this, pom);
+            }
+        }
+    }
+
+    public abstract static class Out {
+        public abstract void save(Maven maven, Project.PomFile pom);
+    }
+
+    @AllArgsConstructor
+    public static class OutJar extends Out  {
+        private final Path jarOutput;
+
+        @SneakyThrows
+        public void save(Maven maven, Project.PomFile pom) {
+            final Path target = pom.target();
+            final Path jar = target.resolve(String.format("%s-%s.jar", pom.model.getArtifactId(), pom.model.getVersion()));
+            Files.copy(jar, jarOutput);
+        }
+    }
+
+
+    @AllArgsConstructor
+    public static class OutInstalled extends Out  {
+        private final Path archive;
+
+        @SneakyThrows
+        public void save(Maven maven, Project.PomFile pom) {
+            final String groupId = pom.model.getGroupId() == null ? pom.model.getParent().getGroupId() : pom.model.getGroupId();
+            final Path installedFolder = Maven.artifactRepositoryLayout(groupId, pom.model.getArtifactId(), pom.model.getVersion());
+            Collection<Path> files = FileUtils.listFiles(
+                    maven.repository.resolve(installedFolder).toFile(),
+                    FileFilterUtils.and(
+                            IOSupport.REPOSITORY_FILES_FILTER,
+                            FileFilterUtils.notFileFilter(FileFilterUtils.suffixFileFilter("pom"))
+                    ),
+                    FileFilterUtils.trueFileFilter()
+            ).stream().map(File::toPath).collect(Collectors.toList());
+
+            try (OutputStream output = Files.newOutputStream(archive)) {
+                IOSupport.tar(files, output, aFile -> {
+                    final Path filePath = aFile.toAbsolutePath();
+                    return filePath.subpath(maven.repository.getNameCount(), filePath.getNameCount());
+                });
+            }
+
+        }
+    }
+
+    @AllArgsConstructor
+    public static class OutFile extends Out  {
+        private final String src;
+        private final Path dest;
+
+        @SneakyThrows
+        @Override
+        public void save(Maven maven, Project.PomFile pom) {
+            Path target = pom.target();
+            final Path srcFile = target.resolve(src);
+            Files.copy(srcFile, dest);
+        }
+    }
 }

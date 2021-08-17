@@ -37,6 +37,22 @@ import java.util.stream.Stream;
  */
 public class Project {
 
+    @AllArgsConstructor
+    public static class Output {
+        final String src;
+        final Path dest;
+    }
+
+    @AllArgsConstructor
+    public static class PomFile {
+        public final File file;
+        public final Model model;
+
+        public Path target() {
+            return file.toPath().getParent().resolve("target");
+        }
+    }
+
     /**
      * New project from pom file
      *
@@ -94,6 +110,7 @@ public class Project {
     private final String parentId;
     private final File pomSrcFile;
     private final File pomParentFile;
+
     @Getter
     private final Args args;
 
@@ -101,7 +118,7 @@ public class Project {
         this(file, Collections.emptyList());
     }
 
-    Project(File file, List<String> flags) {
+    private Project(File file, List<String> flags) {
         try (FileInputStream is = new FileInputStream(file)) {
             MavenXpp3Reader r = new MavenXpp3Reader();
             model = r.read(is);
@@ -119,7 +136,7 @@ public class Project {
         this.id = generateId(file, args);
     }
 
-    private String generateId(File file, Args args) {
+    private static String generateId(File file, Args args) {
         return file.toPath().toAbsolutePath() + ":" + args.toHash();
     }
 
@@ -150,7 +167,7 @@ public class Project {
      * @return file
      * @throws IOException if any
      */
-    public File emitPom(Project.Args args) throws IOException {
+    public PomFile emitPom(Project.Args args) throws IOException {
         final Path newPom = pomSrcFile.getParentFile().toPath().resolve("pom.__bazelizer__.xml");
         final Model newModel = model.clone();
         args.modelVisitor.apply(
@@ -173,44 +190,9 @@ public class Project {
                 writer.write(out, newModel);
             }
         }
-        return newPom.toFile();
+        return new PomFile(newPom.toFile(), newModel);
     }
-
-    @AllArgsConstructor
-    public static class Output {
-        final String src;
-        final Path dest;
-    }
-
-    public void save(Maven maven, Path jarOutput, Path archive, Collection<Output> outputs) throws IOException {
-        final Path target = pomSrcFile.toPath().getParent().resolve("target");
-        final Path jar = target.resolve(String.format("%s-%s.jar", model.getArtifactId(), model.getVersion()));
-        Files.copy(jar, jarOutput);
-
-        String groupId = model.getGroupId() == null ? model.getParent().getGroupId() : model.getGroupId();
-        Path installedFolder = Maven.artifactRepositoryLayout(groupId, model.getArtifactId(), model.getVersion());
-        Collection<Path> files = FileUtils.listFiles(
-                maven.repository.resolve(installedFolder).toFile(),
-                FileFilterUtils.and(
-                        IOSupport.REPOSITORY_FILES_FILTER,
-                        FileFilterUtils.notFileFilter(FileFilterUtils.suffixFileFilter("pom"))
-                ),
-                FileFilterUtils.trueFileFilter()
-        ).stream().map(File::toPath).collect(Collectors.toList());
-
-        try (OutputStream output = Files.newOutputStream(archive)) {
-            IOSupport.tar(files, output, aFile -> {
-                final Path filePath = aFile.toAbsolutePath();
-                return filePath.subpath(maven.repository.getNameCount(), filePath.getNameCount());
-            });
-        }
-
-        for (Output output : outputs) {
-            final Path srcFile = target.resolve(output.src);
-            Files.copy(srcFile, output.dest);
-        }
-    }
-
+    
     @Override
     public String toString() {
         return model.toString() + "/" + args.toString();
