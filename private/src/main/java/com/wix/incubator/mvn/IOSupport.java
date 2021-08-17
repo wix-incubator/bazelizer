@@ -1,5 +1,6 @@
 package com.wix.incubator.mvn;
 
+import com.google.common.hash.Hashing;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -11,13 +12,12 @@ import org.apache.commons.io.filefilter.IOFileFilter;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -36,6 +36,25 @@ public final class IOSupport {
                     FileFilterUtils.prefixFileFilter("_remote.repositories")
             )
     );
+
+    public static File newTempDirectory(String pref) throws IOException {
+        final File directory = newDirectory(pref, new File("."));
+        directory.deleteOnExit();
+        return directory;
+    }
+
+    private static File newDirectory(String pref, File root) throws IOException {
+        final String baseName = UUID.randomUUID().toString();
+        for (int i = 0; i < 9999; i++) {
+            String name = String.format("%s%s-%d", pref != null ? pref : "", baseName, i);
+            final File tmp = new File(root, name);
+            if (tmp.mkdir()) {
+                return tmp;
+            }
+        }
+
+        throw new IllegalStateException("Failed to create directory within 10000 attempts (tried " + baseName + "0 to " + baseName + 9999 + ')');
+    }
 
     public static long tarRepositoryRecursive(Maven env, Path out) throws IOException {
         final Path dir = env.repository;

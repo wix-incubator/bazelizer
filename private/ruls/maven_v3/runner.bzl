@@ -70,13 +70,10 @@ _run_mvn_outputs = {
 _run_mvn_attrs = {
     "repository": attr.label(mandatory=True),
     "deps": attr.label_list(),
-    "override_artifact_id": attr.string(),
     "runtime_deps": attr.label_list(),
     "srcs": attr.label_list(allow_files = True),
     "project": attr.label(mandatory=True),
     "outputs": attr.string_list(),
-    "flags": attr.string_list(),
-    "mvn_flags": attr.string_list(),
     "data": attr.label_list(allow_files = True),
     "log_level": attr.string(default="OFF"),
     "_tool": attr.label(default=CLI_TOOL, allow_files = True, executable = True, cfg = "host")
@@ -125,9 +122,6 @@ def _run_mvn_impl(ctx):
         file = ctx.actions.declare_file(out)
         output_files.append(file)
         args.add("-O{dest}={src}".format(dest=file.path, src=out))
-
-    for flag in ctx.attr.flags:
-        args.add( flag )
 
     ctx.actions.run(
         inputs = depset(input_files, transitive = input_transitive_files),

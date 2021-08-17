@@ -1,5 +1,6 @@
 load("//third_party:maven_binaries.bzl", "MAVEN_BINARY_NAME")
 
+
 _BUILD = """
 load("@wix_incubator_bazelizer//private/ruls/maven_v3:go_offline.bzl", _go_offline = "go_offline")
 
@@ -7,25 +8,9 @@ _go_offline(
     name = "{go_offline_target_name}",
     visibility = ["//visibility:public"],
     modules = [{go_offline_modules}],
-    settings_xml = "{unsafe_global_settings}",
-    data = [ ":{go_offline_target_name}_metadata" ],
+    repos = {repos}
 )
 
-filegroup(
-    name = "{go_offline_target_name}_files",
-    visibility = ["//visibility:public"],
-    srcs = glob([
-        "_m2/repository/**/*"
-    ]),
-)
-
-filegroup(
-    name = "{go_offline_target_name}_metadata",
-    visibility = ["//visibility:public"],
-    srcs = glob([
-        "_m2/settings.xml"
-    ]),
-)
 """
 
 _RUNNER_BZL_FILE = """
@@ -35,7 +20,6 @@ def execute_build(name, **kwargs):
     _run_mvn(
         name = name,
         repository = "{maven_repository_ref}",
-        data = ["{data}"],
         **kwargs
     )
 """
@@ -56,6 +40,10 @@ def _maven_repository_registry_impl(repository_ctx):
     settings_xml_json = repository_ctx.path("settings_xml.json")
 
     repositories = []
+    if repository_ctx.attr.repositories:
+        for id, url in repository_ctx.attr.repositories.items():
+            repositories.append(struct(id = id, url = url))
+
     user_mvn_repo = repository_ctx.path(repository_ctx.os.environ["HOME"] + "/.m2/repository/")
     if user_mvn_repo.exists:
         repository_ctx.report_progress("Using host maven repository: %s" % (user_mvn_repo))
@@ -63,6 +51,7 @@ def _maven_repository_registry_impl(repository_ctx):
         url = "file://%s" % (user_mvn_repo)
         repositories.append(struct(id = profile_id, url = url))
 
+    repos_str = "{ %s }" % ( ",".join(['"%s":"%s"' % (r.id, r.url) for r in repositories]) )
     repository_ctx.file(
         "BUILD",
         (_BUILD).format(
@@ -71,24 +60,16 @@ def _maven_repository_registry_impl(repository_ctx):
                 '"@%s%s"' % (d.workspace_name, d)
                 for d in repository_ctx.attr.modules
             ]),
-            unsafe_global_settings = settings_xml_json,
-            use_global_cache = repository_ctx.attr.use_global_cache
+            repos = repos_str,
         ),
         False,  # not executable
     )
-
-    if repository_ctx.attr.repositories:
-        for id, url in repository_ctx.attr.repositories.items():
-            repositories.append(
-                struct(id = id, url = url),
-            )
 
     repository_ctx.file(
         "execute_build.bzl",
         (_RUNNER_BZL_FILE).format(
             maven_repository_ref = "@%s//:%s" % (repository_name, maven_repository_target_name),
             imports = "",
-            data = "@%s//:%s" % (repository_name, "%s_files" % (maven_repository_target_name)),
         ),
         False,  # not executable
     )
