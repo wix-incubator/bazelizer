@@ -5,8 +5,6 @@ import com.google.common.hash.Hashing;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
@@ -192,7 +190,7 @@ public class Project {
         }
         return new PomFile(newPom.toFile(), newModel);
     }
-    
+
     @Override
     public String toString() {
         return model.toString() + "/" + args.toString();
