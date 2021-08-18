@@ -17,24 +17,6 @@ filegroup(
 )
 """
 
-COURSIER_JAR_BINARY_NAME = "wix_incubator_bazelizer_coursier"
-_COURSIER_CLI_VERSION = "v2.0.16"
-_COURSIER_CLI_HTTP_FILE_NAME = ("coursier_cli_" + _COURSIER_CLI_VERSION).replace(".", "_").replace("-", "_")
-_COURSIER_CLI_GITHUB_ASSET_URL = "https://github.com/coursier/coursier/releases/download/{COURSIER_CLI_VERSION}/coursier.jar".format(COURSIER_CLI_VERSION = _COURSIER_CLI_VERSION)
-_COURSIER_CLI_SHA256 = "076de041cbebc0a1272b84f1e69f6da5df4961847850b95cb3dfa3f776145225"
-
-_COURSIER_BUILD_FILE = """
-filegroup(
-    name = "{id}",
-    visibility = ["//visibility:public"],
-    srcs = glob(["*.jar"]),
-)
-"""
-
-# Run 'bazel run //:mirror_coursier' to upload a copy of the jar to the Bazel mirror.
-#_COURSIER_CLI_BAZEL_MIRROR_URL = "https://mirror.bazel.build/coursier_cli/" + _COURSIER_CLI_HTTP_FILE_NAME + ".jar"
-#_COURSIER_CLI_SHA256 = "076de041cbebc0a1272b84f1e69f6da5df4961847850b95cb3dfa3f776145225"
-
 def register():
     if native.existing_rule(RULES_JVM_NAME) == None:
         http_archive(
@@ -52,11 +34,5 @@ def register():
        ),
        sha256 = _MAVEN_BINARY_SHA256,
        strip_prefix = "apache-maven-" + _MAVEN_BINARY_VERSION
-    )
-
-    http_jar(
-       name = COURSIER_JAR_BINARY_NAME,
-       url = _COURSIER_CLI_GITHUB_ASSET_URL,
-       sha256 = _COURSIER_CLI_SHA256
     )
 
