@@ -3,13 +3,14 @@ package com.wix.incubator.mvn;
 import com.github.mustachejava.Mustache;
 import com.google.common.io.CharSource;
 import com.google.devtools.build.runfiles.Runfiles;
+import lombok.AllArgsConstructor;
+import lombok.SneakyThrows;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.apache.maven.shared.invoker.*;
 import org.codehaus.plexus.util.dag.CycleDetectedException;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,9 +18,12 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.google.common.io.Resources.asCharSource;
 import static com.google.common.io.Resources.getResource;
+import static com.wix.incubator.mvn.Cli.BZL_MVN_TOOL_SYS_PROP;
+import static com.wix.incubator.mvn.IOSupport.REPOSITORY_FILES_FILTER;
 
 @SuppressWarnings("FieldCanBeLocal")
 public class Maven {
@@ -40,6 +44,8 @@ public class Maven {
         }
         return thisGroupIdRepo.resolve(artifactId).resolve(version);
     }
+
+
 
     /**
      * Prepare maven environemtn from archived repository.
@@ -62,13 +68,13 @@ public class Maven {
      */
     @SuppressWarnings({"UnstableApiUsage"})
     public static Maven prepareEnv(List<MvnRepository> repositories) throws IOException {
-        Runfiles runfiles = Runfiles.create();
+        Runfiles runfiles = Cli.RUNFILES;
         final File tool = Optional.ofNullable(System.getProperty(BZL_MVN_TOOL_SYS_PROP))
                 .map((runfilesPath) -> new File(runfiles.rlocation(runfilesPath)))
                 .orElseThrow(() -> new IllegalStateException("no sys prop: " + BZL_MVN_TOOL_SYS_PROP));
 
         Path m2HomeDir = IOSupport.newTempDirectory("M2_HOME@").toPath();
-        Console.info(" M2_HOME=" + m2HomeDir);
+        Console.info(" M2_HOME=" + m2HomeDir.toAbsolutePath());
         Path repository = m2HomeDir.resolve("repository").toAbsolutePath();
         Files.createDirectories(repository);
         Path settingsXmlFile = m2HomeDir.resolve("settings.xml").toAbsolutePath();
@@ -97,8 +103,6 @@ public class Maven {
     public final Path repository;
     private final Invoker maven;
 
-    private static final String PREF = "tools.jvm.mvn.";
-    private static final String BZL_MVN_TOOL_SYS_PROP = PREF + "MavenBin";
 
     /**
      * Ctor.
@@ -118,12 +122,12 @@ public class Maven {
      * @throws IOException              if any
      * @throws MavenInvocationException if any
      */
-    public void executeOffline(Project project, Project.Args args) throws IOException, MavenInvocationException {
+    public void executeOffline(Project project, Project.Args args, Iterable<Out> outs) throws IOException, MavenInvocationException {
         Console.printSeparator();
         logMavenVersion();
         Console.printSeparator();
 
-        executeIntern(project, args, true);
+        executeIntern(project, args, true, outs);
     }
 
     /**
@@ -146,16 +150,17 @@ public class Maven {
         Console.printSeparator();
 
         for (Project project : reactorOrder) {
-            executeIntern(project, args, false);
+            executeIntern(project, args, false, Collections.emptyList());
         }
     }
 
-    private void executeIntern(Project project, Project.Args inputArgs, boolean offline) throws IOException, MavenInvocationException {
+    private void executeIntern(Project project, Project.Args inputArgs, boolean offline, Iterable<Out> outputs) throws IOException, MavenInvocationException {
         final Project.Args args = inputArgs.merge(project.getArgs());
         for (Dep dep : args.deps) {
             dep.installTo(repository);
         }
-        final File pomFile = project.emitPom(args);
+        final Project.PomFile pom = project.emitPom(args);
+        final File pomFile = pom.file;
 
         maven.setWorkingDirectory(pomFile.getParentFile());
         DefaultInvocationRequest request = newInvocationRequest();
@@ -182,6 +187,26 @@ public class Maven {
         }
 
         Console.info(project, " >>>> Done. Elapsed time: " + duration(x0, x1));
+
+        for (Out out : outputs) {
+            out.save(Maven.this, pom);
+        }
+    }
+
+    /**
+     * Tar repository into output
+     * @param out path
+     * @return size of archive
+     * @throws IOException if any error
+     */
+    public long tarRepositoryRecursive(Path out) throws IOException {
+        final Path dir = this.repository;
+        final Collection<Path> files = FileUtils.listFiles(
+                dir.toFile(), REPOSITORY_FILES_FILTER, FileFilterUtils.directoryFileFilter() // recursive
+        ).stream().map(File::toPath).collect(Collectors.toList());
+        try (OutputStream os = Files.newOutputStream(out)) {
+            return IOSupport.tar(files, os, dir::relativize);
+        }
     }
 
     private void logMavenVersion() {

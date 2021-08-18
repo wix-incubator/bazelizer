@@ -5,8 +5,6 @@ import com.google.common.hash.Hashing;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
@@ -36,6 +34,22 @@ import java.util.stream.Stream;
  * Maven project.
  */
 public class Project {
+
+    @AllArgsConstructor
+    public static class Output {
+        final String src;
+        final Path dest;
+    }
+
+    @AllArgsConstructor
+    public static class PomFile {
+        public final File file;
+        public final Model model;
+
+        public Path target() {
+            return file.toPath().getParent().resolve("target").toAbsolutePath();
+        }
+    }
 
     /**
      * New project from pom file
@@ -94,6 +108,7 @@ public class Project {
     private final String parentId;
     private final File pomSrcFile;
     private final File pomParentFile;
+
     @Getter
     private final Args args;
 
@@ -101,10 +116,10 @@ public class Project {
         this(file, Collections.emptyList());
     }
 
-    Project(File file, List<String> flags) {
+    private Project(File file, List<String> flags) {
         try (FileInputStream is = new FileInputStream(file)) {
             MavenXpp3Reader r = new MavenXpp3Reader();
-            model = r.read(is);
+            this.model = r.read(is);
         } catch (XmlPullParserException | IOException e) {
             throw new IllegalStateException(e);
         }
@@ -114,23 +129,23 @@ public class Project {
                 .map(p -> file.toPath().toAbsolutePath().getParent().resolve(p).normalize());
         this.parentId = parentAbsPath.map(Path::toString).orElse(null);
         this.pomParentFile = parentAbsPath.map(Path::toFile).orElse(null);
-        this.args = createArgs(flags);
+        this.args = createArgs(this.model, flags);
         this.pomSrcFile = file;
         this.id = generateId(file, args);
     }
 
-    private String generateId(File file, Args args) {
+    private static String generateId(File file, Args args) {
         return file.toPath().toAbsolutePath() + ":" + args.toHash();
     }
 
-    private Project.Args createArgs(List<String> flags) {
+    private static Project.Args createArgs(Model model, List<String> flags) {
         if (!flags.isEmpty()) {
             final Cmd.ExecutionOpts options = new Cmd.ExecutionOpts();
             final CommandLine.ParseResult result = new CommandLine(options)
                     .parseArgs(flags.toArray(new String[0]));
             if (!result.errors().isEmpty()) {
-                Console.error(this.model, "project flags are invalid:");
-                result.errors().forEach(e -> Console.error(this.model, " -" + e.getMessage()));
+                Console.error(model, "project flags are invalid:");
+                result.errors().forEach(e -> Console.error(model, " -" + e.getMessage()));
                 throw new IllegalArgumentException("invalid flags for project {" + model + "}");
             }
             return Project.Args.builder()
@@ -150,7 +165,7 @@ public class Project {
      * @return file
      * @throws IOException if any
      */
-    public File emitPom(Project.Args args) throws IOException {
+    public PomFile emitPom(Project.Args args) throws IOException {
         final Path newPom = pomSrcFile.getParentFile().toPath().resolve("pom.__bazelizer__.xml");
         final Model newModel = model.clone();
         args.modelVisitor.apply(
@@ -173,47 +188,14 @@ public class Project {
                 writer.write(out, newModel);
             }
         }
-        return newPom.toFile();
-    }
-
-    @AllArgsConstructor
-    public static class Output {
-        final String src;
-        final Path dest;
-    }
-
-    public void save(Maven maven, Path jarOutput, Path archive, Collection<Output> outputs) throws IOException {
-        final Path target = pomSrcFile.toPath().getParent().resolve("target");
-        final Path jar = target.resolve(String.format("%s-%s.jar", model.getArtifactId(), model.getVersion()));
-        Files.copy(jar, jarOutput);
-
-        String groupId = model.getGroupId() == null ? model.getParent().getGroupId() : model.getGroupId();
-        Path installedFolder = Maven.artifactRepositoryLayout(groupId, model.getArtifactId(), model.getVersion());
-        Collection<Path> files = FileUtils.listFiles(
-                maven.repository.resolve(installedFolder).toFile(),
-                FileFilterUtils.and(
-                        IOSupport.REPOSITORY_FILES_FILTER,
-                        FileFilterUtils.notFileFilter(FileFilterUtils.suffixFileFilter("pom"))
-                ),
-                FileFilterUtils.trueFileFilter()
-        ).stream().map(File::toPath).collect(Collectors.toList());
-
-        try (OutputStream output = Files.newOutputStream(archive)) {
-            IOSupport.tar(files, output, aFile -> {
-                final Path filePath = aFile.toAbsolutePath();
-                return filePath.subpath(maven.repository.getNameCount(), filePath.getNameCount());
-            });
-        }
-
-        for (Output output : outputs) {
-            final Path srcFile = target.resolve(output.src);
-            Files.copy(srcFile, output.dest);
-        }
+        return new PomFile(newPom.toFile(), newModel);
     }
 
     @Override
     public String toString() {
-        return model.toString() + "/" + args.toString();
+        String suf = args.toHash();
+        if (!suf.isEmpty()) suf = "/" + suf;
+        return model.toString() + suf;
     }
 
 
@@ -259,6 +241,8 @@ public class Project {
 
 
     public interface ModelVisitor {
+        ModelVisitor NOP = d -> {};
+
         void apply(Model model);
 
         default ModelVisitor andThen(ModelVisitor after) {
@@ -287,38 +271,48 @@ public class Project {
         public void apply(Model model) {
             model.getDependencies().removeIf(d -> excludeFilter == null || !excludeFilter.test(d));
         }
+
+        /**
+         * Rule accept only by maven coordinates pattern
+         *
+         * @param coords pattern
+         */
+        private static Predicate<Dependency> matchCoordsExpr(String coords) {
+            final int split = coords.indexOf(":");
+            if (split == -1) throw new IllegalArgumentException(
+                    "illegal expression be in format of'<artifactId|*>:<groupId|*>' ");
+            String groupIdPtn = coords.substring(0, split);
+            String artifactIdPtn = coords.substring(split + 1);
+            final Predicate<Dependency> groupIdFilter = matchExpression(groupIdPtn, Dependency::getGroupId);
+            final Predicate<Dependency> artifactIdFilter = matchExpression(artifactIdPtn, Dependency::getArtifactId);
+            return groupIdFilter.and(artifactIdFilter);
+        }
+
+        private static Predicate<Dependency> matchExpression(String coords, Function<Dependency, String> fn) {
+            if (coords.equals("*"))
+                return d -> true;
+            if (coords.startsWith("*")) {
+                final int split = coords.indexOf("*");
+                String suf = coords.substring(split + 1);
+                return d -> fn.apply(d).endsWith(suf);
+            }
+            if (coords.endsWith("*")) {
+                final int split = coords.indexOf("*");
+                String pref = coords.substring(0, split);
+                return d -> fn.apply(d).startsWith(pref);
+            }
+            return d -> fn.apply(d).equals(coords);
+        }
     }
 
-    /**
-     * Rule accept only by maven coordinates pattern
-     *
-     * @param coords pattern
-     */
-    private static Predicate<Dependency> matchCoordsExpr(String coords) {
-        final int split = coords.indexOf(":");
-        if (split == -1) throw new IllegalArgumentException(
-                "illegal expression be in format of'<artifactId|*>:<groupId|*>' ");
-        String groupIdPtn = coords.substring(0, split);
-        String artifactIdPtn = coords.substring(split + 1);
-        final Predicate<Dependency> groupIdFilter = matchExpression(groupIdPtn, Dependency::getGroupId);
-        final Predicate<Dependency> artifactIdFilter = matchExpression(artifactIdPtn, Dependency::getArtifactId);
-        return groupIdFilter.and(artifactIdFilter);
-    }
+    @AllArgsConstructor
+    public static class ChangeArtifactId implements ModelVisitor {
+        private final String id;
 
-    private static Predicate<Dependency> matchExpression(String coords, Function<Dependency, String> fn) {
-        if (coords.equals("*"))
-            return d -> true;
-        if (coords.startsWith("*")) {
-            final int split = coords.indexOf("*");
-            String suf = coords.substring(split + 1);
-            return d -> fn.apply(d).endsWith(suf);
+        @Override
+        public void apply(Model model) {
+            model.setArtifactId(id);
         }
-        if (coords.endsWith("*")) {
-            final int split = coords.indexOf("*");
-            String pref = coords.substring(0, split);
-            return d -> fn.apply(d).startsWith(pref);
-        }
-        return d -> fn.apply(d).equals(coords);
     }
 
 }

@@ -124,7 +124,7 @@ deps = [
 	    sha256="f13db210efa2092a58bb7befce58ffa502e5fefc5e1099f45007074008756bc0",
 	    sha256_src="48922643ca1f975dd315176461fcabf7b2f440891e4cebbfd123aa0bb8d50129",
 	    artifact="org.projectlombok:lombok:1.18.2",
-	)
+	),
 ]
 
 def dependencies(urls=_repositories):

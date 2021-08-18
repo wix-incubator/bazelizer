@@ -29,3 +29,9 @@ e2e_has_jar_test(
     jar = "tests/e2e/mvn-lib-subparent/mvn-lib-module-non-compiled/libmvn-lib-module-non-compiled.jar",
 )
 
+
+e2e_has_jar_test(
+    name = "mvn-lib-codegen__jar-test",
+    dep = "//tests/e2e/mvn-lib-codegen",
+    jar = "tests/e2e/mvn-lib-codegen/libmvn-lib-codegen.jar",
+)

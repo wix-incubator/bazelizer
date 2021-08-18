@@ -1,8 +1,6 @@
 <project>
     <modelVersion>4.0.0</modelVersion>
-    <!--suppress MavenRedundantGroupId -->
-    <groupId>com.mavenizer.examples.api</groupId>
-    <artifactId>a</artifactId>
+    <artifactId>mvn-lib-codegen</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
     <properties>
@@ -18,17 +16,15 @@
     </parent>
 
     <dependencies>
-
         <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.1</version>
         </dependency>
-
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.1</version>
-            <scope>test</scope>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-impl</artifactId>
+            <version>3.0.0</version>
         </dependency>
     </dependencies>
 
@@ -38,6 +34,10 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>jaxb2-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>

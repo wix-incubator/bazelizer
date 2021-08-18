@@ -193,3 +193,18 @@ In this example we will inject  `@com_sun_xml_bind_jaxb_impl` instead.
 
 </project>
 ```
+
+
+## Flags
+
+```
+ --deps-drop-all                          Delete all dependencies that declared in pom file
+                                          before tool execution;
+ --deps-drop-exclude=<coors>              Dependencies that satisfy an expression won't be
+                                          deleted. Expected a pattern in format '<groupId>:<artifactId>'. 
+                                          Also accept wildcard expressions. Examples: 
+                                             'com.google.*:*', '*:guava', 'com.google.guava:failureaccess';
+ --mvn-active-profiles=<p>                Maven active profiles
+ --mvn-extra-args=<p>                     Maven extra commands
+ --mvn-override-artifact-id=<artifactId>  Change artifact id for maven project
+```

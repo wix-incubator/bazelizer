@@ -1,51 +1,75 @@
 package com.wix.incubator.mvn;
 
-import lombok.experimental.UtilityClass;
+import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
 import picocli.CommandLine;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
+import static com.google.common.collect.Lists.newArrayList;
 import static com.wix.incubator.mvn.IOSupport.readLines;
 import static java.util.Arrays.asList;
 
 @CommandLine.Command(subcommands = {
         Cmd.CmdRepository.class,
-        Cmd.CmdBuild.class
+        Cmd.CmdBuild.class,
+        Cmd.Info.class,
 })
 public class Cmd {
 
-    public static class ExecutionOpts {
+    public static class GlobalOpts {
+        @CommandLine.Option(names = {"--mvn-active-profiles"}, paramLabel = "<p>",
+                description = "maven active profiles")
+        public List<String> mavenActiveProfiles = Collections.emptyList();
+
+        @CommandLine.Option(names = {"--mvn-extra-args"}, paramLabel = "<p>",
+                description = "Maven extra commands")
+        public List<String> mavenArgs = Collections.emptyList();
+    }
+
+
+    public static class ExecutionOpts extends GlobalOpts {
 
         @CommandLine.Option(names = {"--deps-drop-all"},
                 description = "Delete all dependencies that declared in pom file before tool execution")
         public boolean dropAllDepsFromPom;
 
         @CommandLine.Option(names = {"--deps-drop-exclude"}, paramLabel = "<coors>",
-                description = "Rules for deps drop exclusion, " +
-                "rxpected format is '<groupId>:<artifactId>'. Examples: 'com.google.*:*', '*:guava', ect. ")
+                description = "Dependencies that satisfy an expression won't be deleted. " +
+                "Expected a pattern in format '<groupId>:<artifactId>'. Also accept wildcard expressions. " +
+                        "Examples: 'com.google.*:*', '*:guava', 'com.google.guava:failureaccess' ")
         public List<String> dropDepsExcludes = Collections.emptyList();
 
-        @CommandLine.Option(names = {"--mvn-active-profiles"}, paramLabel = "<p>",
-                description = "maven active profiles")
-        public List<String> mavenActiveProfiles = Collections.emptyList();
-
-        @CommandLine.Option(names = {"--mvn-extra-args"}, paramLabel = "<p>",
-                description = "maven arguments")
-        public List<String> mavenArgs = Collections.emptyList();
+        @CommandLine.Option(names = {"--mvn-override-artifact-id"},
+                paramLabel = "<artifactId>",
+                description = "Change artifact id for maven project")
+        public String overrideArtifactId;
 
         public Project.ModelVisitor visitor() {
+            validate();
+            Project.ModelVisitor visitor = Project.ModelVisitor.NOP;
             if (dropAllDepsFromPom) {
-                return new Project.DropAllDepsModelVisitor().addIgnores(dropDepsExcludes);
+                visitor = visitor.andThen(new Project.DropAllDepsModelVisitor()
+                        .addIgnores(dropDepsExcludes));
             }
-            return d -> {
-            };
+            if (overrideArtifactId != null) {
+                visitor = visitor.andThen(new Project.ChangeArtifactId(overrideArtifactId));
+            }
+            return visitor;
+        }
+
+        public void validate() {
+            if (!dropDepsExcludes.isEmpty())
+                Preconditions.checkArgument(dropAllDepsFromPom,
+                        "--deps-drop-exclude param must be specified " +
+                                "only with enabled --deps-drop-all flag");
         }
     }
 
@@ -90,35 +114,37 @@ public class Cmd {
                     .map(jsonLine -> Dep.fromJson(jsonLine))
                     .collect(Collectors.toList());
 
-            final Project.Args build = Project.Args.builder()
+            final Project.Args args = Project.Args.builder()
                     .deps(deps)
                     .cmd(asList("clean", "install"))
                     .modelVisitor(executionOptions.visitor())
                     .profiles(executionOptions.mavenActiveProfiles)
                     .build();
 
+            final List<Out> outputs = registeredOutputs();
+            outputs.add(new Out.Jar(jarOutput));
+            outputs.add(new Out.Installed(archiveOutput));
+
             env.executeOffline(
                     project,
-                    build
-            );
-
-            final List<Project.Output> outputs = this.outputs.entrySet().stream()
-                    .map(e -> new Project.Output(e.getValue(), Paths.get(e.getKey())))
-                    .collect(Collectors.toList());
-
-            project.save(
-                    env,
-                    jarOutput,
-                    archiveOutput,
+                    args,
                     outputs
             );
+        }
 
+        private List<Out> registeredOutputs() {
+            return this.outputs.entrySet().stream()
+                    .map(e -> new Out.TargetFile(e.getValue(), Paths.get(e.getKey())))
+                    .collect(Collectors.toList());
         }
 
     }
 
     @CommandLine.Command(name = "build-repository")
     public static class CmdRepository extends Executable {
+
+        @CommandLine.Mixin
+        public GlobalOpts executionOptions;
 
         @CommandLine.Option(names = {"--settingsXml"}, paramLabel = "PATH")
         public Path settingsXml;
@@ -137,23 +163,37 @@ public class Cmd {
                     .map(Project::createProject)
                     .collect(Collectors.toList());
 
-            final Project.Args build = Project.Args.builder()
-                    .cmd(asList("clean", "dependency:go-offline", "install"))
+            final ArrayList<String> cmd = newArrayList(
+                    "clean",
+                    "dependency:go-offline",
+                    "dependency:resolve-plugins",
+                    "dependency:resolve"
+            );
+
+            cmd.addAll(executionOptions.mavenArgs);
+            final Project.Args args = Project.Args.builder()
+                    .cmd(cmd)
+                    .profiles(executionOptions.mavenActiveProfiles)
                     .build();
 
             env.executeInOrder(
                     projects,
-                    build
+                    args
             );
 
-            long size = IOSupport.tarRepositoryRecursive(
-                    env,
+            long size = env.tarRepositoryRecursive(
                     output
             );
 
             Console.printSeparator();
             Console.info("Build finished. Archived repository " + FileUtils.byteCountToDisplaySize(size));
         }
+    }
+
+    @CommandLine.Command(name = "info")
+    public static class Info {
+        @CommandLine.Mixin
+        public ExecutionOpts ots;
     }
 
     private static abstract class Executable implements Callable<Void> {
