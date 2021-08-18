@@ -1,5 +1,6 @@
 package com.wix.incubator.mvn;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;
 import picocli.CommandLine;
 
@@ -11,13 +12,13 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
-import static com.google.common.collect.Iterables.concat;
 import static com.wix.incubator.mvn.IOSupport.readLines;
 import static java.util.Arrays.asList;
 
 @CommandLine.Command(subcommands = {
         Cmd.CmdRepository.class,
-        Cmd.CmdBuild.class
+        Cmd.CmdBuild.class,
+        Cmd.Info.class,
 })
 public class Cmd {
 
@@ -28,8 +29,9 @@ public class Cmd {
         public boolean dropAllDepsFromPom;
 
         @CommandLine.Option(names = {"--deps-drop-exclude"}, paramLabel = "<coors>",
-                description = "Rules for deps drop exclusion, " +
-                "rxpected format is '<groupId>:<artifactId>'. Examples: 'com.google.*:*', '*:guava', ect. ")
+                description = "Dependencies that satisfy an expression won't be deleted. " +
+                "Expected a pattern in format '<groupId>:<artifactId>'. Also accept wildcard expressions. " +
+                        "Examples: 'com.google.*:*', '*:guava', 'com.google.guava:failureaccess' ")
         public List<String> dropDepsExcludes = Collections.emptyList();
 
         @CommandLine.Option(names = {"--mvn-active-profiles"}, paramLabel = "<p>",
@@ -37,14 +39,16 @@ public class Cmd {
         public List<String> mavenActiveProfiles = Collections.emptyList();
 
         @CommandLine.Option(names = {"--mvn-extra-args"}, paramLabel = "<p>",
-                description = "maven arguments")
+                description = "Maven extra commands")
         public List<String> mavenArgs = Collections.emptyList();
 
         @CommandLine.Option(names = {"--mvn-override-artifact-id"},
-                description = "modify artifact id for current build")
+                paramLabel = "<artifactId>",
+                description = "Change artifact id for maven project")
         public String overrideArtifactId;
 
         public Project.ModelVisitor visitor() {
+            validate();
             Project.ModelVisitor visitor = Project.ModelVisitor.NOP;
             if (dropAllDepsFromPom) {
                 visitor = visitor.andThen(new Project.DropAllDepsModelVisitor()
@@ -54,6 +58,12 @@ public class Cmd {
                 visitor = visitor.andThen(new Project.ChangeArtifactId(overrideArtifactId));
             }
             return visitor;
+        }
+
+        public void validate() {
+            Preconditions.checkArgument(!dropDepsExcludes.isEmpty() && !dropAllDepsFromPom,
+                    "--deps-drop-exclude param must be specified " +
+                            "only with enabled --deps-drop-all flag");
         }
     }
 
@@ -105,9 +115,9 @@ public class Cmd {
                     .profiles(executionOptions.mavenActiveProfiles)
                     .build();
 
-            final List<Maven.Out> outputs = registeredOutputs();
-            outputs.add(new Maven.OutJar(jarOutput));
-            outputs.add(new Maven.OutInstalled(archiveOutput));
+            final List<Out> outputs = registeredOutputs();
+            outputs.add(new Out.Jar(jarOutput));
+            outputs.add(new Out.Installed(archiveOutput));
 
             env.executeOffline(
                     project,
@@ -116,9 +126,9 @@ public class Cmd {
             );
         }
 
-        private List<Maven.Out> registeredOutputs() {
+        private List<Out> registeredOutputs() {
             return this.outputs.entrySet().stream()
-                    .map(e -> new Maven.OutFile(e.getValue(), Paths.get(e.getKey())))
+                    .map(e -> new Out.TargetFile(e.getValue(), Paths.get(e.getKey())))
                     .collect(Collectors.toList());
         }
 
@@ -160,6 +170,12 @@ public class Cmd {
             Console.printSeparator();
             Console.info("Build finished. Archived repository " + FileUtils.byteCountToDisplaySize(size));
         }
+    }
+
+    @CommandLine.Command(name = "info")
+    public static class Info {
+        @CommandLine.Mixin
+        public ExecutionOpts ots;
     }
 
     private static abstract class Executable implements Callable<Void> {
