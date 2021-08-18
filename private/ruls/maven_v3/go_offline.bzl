@@ -49,6 +49,10 @@ def _go_offline_impl(ctx):
     args.add('--config', reposiotry_projects_file.path)
     args.add('--settingsXml', settings_conf_file.path)
     args.add('--output', snapshot_tar.path)
+
+    if ctx.attr.global_flags:
+        for f in ctx.attr.global_flags:
+            args.add(f)
     print('MavenRepositoryMaker: logging file %s' % logfile.path)
     outputs = [
         snapshot_tar,
@@ -81,6 +85,7 @@ go_offline = rule(
     attrs = {
         "modules": attr.label_list(),
         "repos": attr.string_dict(),
+        "global_flags": attr.string_list(),
         "data": attr.label_list(allow_files = True),
         "_tool": attr.label(default=CLI_TOOL, allow_files = True, executable = True, cfg = "host")
     }

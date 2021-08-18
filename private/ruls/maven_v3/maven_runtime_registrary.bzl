@@ -8,7 +8,8 @@ _go_offline(
     name = "{go_offline_target_name}",
     visibility = ["//visibility:public"],
     modules = [{go_offline_modules}],
-    repos = {repos}
+    repos = {repos},
+    global_flags = [ {flags} ]
 )
 
 """
@@ -29,7 +30,7 @@ def repository(name, url, snapshot=False):
 
 _maven_repository_registry_attrs = {
     "modules": attr.label_list(),
-    "use_global_cache": attr.bool(default = True),
+    "global_falgs": attr.string_list(),
     "repositories": attr.string_dict(),
     "_dummy": attr.label(default = Label("//maven:defs.bzl")),
 }
@@ -51,7 +52,12 @@ def _maven_repository_registry_impl(repository_ctx):
         url = "file://%s" % (user_mvn_repo)
         repositories.append(struct(id = profile_id, url = url))
 
+    flags = [ ]
+    if repository_ctx.attr.global_falgs:
+        flags = repository_ctx.attr.global_falgs
+
     repos_str = "{ %s }" % ( ",".join(['"%s":"%s"' % (r.id, r.url) for r in repositories]) )
+    flags_str = ",".join(['"%s"' % r for r in flags])
     repository_ctx.file(
         "BUILD",
         (_BUILD).format(
@@ -60,6 +66,7 @@ def _maven_repository_registry_impl(repository_ctx):
                 '"@%s%s"' % (d.workspace_name, d)
                 for d in repository_ctx.attr.modules
             ]),
+            flags = flags_str,
             repos = repos_str,
         ),
         False,  # not executable

@@ -34,6 +34,9 @@ load("//maven:defs.bzl", "maven_repository_registry")
 
 maven_repository_registry(
     name = "maven_e2e_v3",
+    global_falgs = [
+        "--mvn-extra-args", "de.qaware.maven:go-offline-maven-plugin:1.2.8:resolve-dependencies"
+    ],
     modules = [
         "//tests/e2e/mvn-lib-subparent:maven",
         "//tests/e2e/mvn-lib-subparent/mvn-lib-module-a:maven",

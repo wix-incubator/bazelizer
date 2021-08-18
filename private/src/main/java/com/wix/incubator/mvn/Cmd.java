@@ -6,12 +6,14 @@ import picocli.CommandLine;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
+import static com.google.common.collect.Lists.newArrayList;
 import static com.wix.incubator.mvn.IOSupport.readLines;
 import static java.util.Arrays.asList;
 
@@ -22,7 +24,18 @@ import static java.util.Arrays.asList;
 })
 public class Cmd {
 
-    public static class ExecutionOpts {
+    public static class GlobalOpts {
+        @CommandLine.Option(names = {"--mvn-active-profiles"}, paramLabel = "<p>",
+                description = "maven active profiles")
+        public List<String> mavenActiveProfiles = Collections.emptyList();
+
+        @CommandLine.Option(names = {"--mvn-extra-args"}, paramLabel = "<p>",
+                description = "Maven extra commands")
+        public List<String> mavenArgs = Collections.emptyList();
+    }
+
+
+    public static class ExecutionOpts extends GlobalOpts {
 
         @CommandLine.Option(names = {"--deps-drop-all"},
                 description = "Delete all dependencies that declared in pom file before tool execution")
@@ -33,14 +46,6 @@ public class Cmd {
                 "Expected a pattern in format '<groupId>:<artifactId>'. Also accept wildcard expressions. " +
                         "Examples: 'com.google.*:*', '*:guava', 'com.google.guava:failureaccess' ")
         public List<String> dropDepsExcludes = Collections.emptyList();
-
-        @CommandLine.Option(names = {"--mvn-active-profiles"}, paramLabel = "<p>",
-                description = "maven active profiles")
-        public List<String> mavenActiveProfiles = Collections.emptyList();
-
-        @CommandLine.Option(names = {"--mvn-extra-args"}, paramLabel = "<p>",
-                description = "Maven extra commands")
-        public List<String> mavenArgs = Collections.emptyList();
 
         @CommandLine.Option(names = {"--mvn-override-artifact-id"},
                 paramLabel = "<artifactId>",
@@ -138,6 +143,9 @@ public class Cmd {
     @CommandLine.Command(name = "build-repository")
     public static class CmdRepository extends Executable {
 
+        @CommandLine.Mixin
+        public GlobalOpts executionOptions;
+
         @CommandLine.Option(names = {"--settingsXml"}, paramLabel = "PATH")
         public Path settingsXml;
 
@@ -155,13 +163,22 @@ public class Cmd {
                     .map(Project::createProject)
                     .collect(Collectors.toList());
 
-            final Project.Args build = Project.Args.builder()
-                    .cmd(asList("clean", "dependency:go-offline", "dependency:resolve-plugins", "dependency:resolve"))
+            final ArrayList<String> cmd = newArrayList(
+                    "clean",
+                    "dependency:go-offline",
+                    "dependency:resolve-plugins",
+                    "dependency:resolve"
+            );
+
+            cmd.addAll(executionOptions.mavenArgs);
+            final Project.Args args = Project.Args.builder()
+                    .cmd(cmd)
+                    .profiles(executionOptions.mavenActiveProfiles)
                     .build();
 
             env.executeInOrder(
                     projects,
-                    build
+                    args
             );
 
             long size = env.tarRepositoryRecursive(
