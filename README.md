@@ -120,18 +120,13 @@ maven_project(
 | name  | Name; required. A unique name for this target.  |
 | pom_file  | Actual pom file.     |
 | parent  | Label; Reference to parent module;    |
+| flags  | List of special flags;    |
 
-Special flags are supported:
 
-| attr name  | description  |
-|---                             | ---                                    |
-| --deps-drop-all                | Delete all dependencies in pom.xml before execution. This can be useful if same dependencies will come from a bazel target;  |
-| --deps-drop-exclude  <groupId:artifactId> | Exlude some dependency to be deleted by wildcard like `com.google.*:*` expressions;    |
-| --mvn-active-profiles  profile1,profile2  | List of active profiles for maven;  |
+*NOTE*: For supported flags please find section below
 
-### 
 
-Usage
+#### Usage
 
 ```
 load("@maven_repo//:execute_build.bzl", "execute_build")
@@ -162,40 +157,8 @@ execute_build(
 
 This tool **not support** transitive dependencies. Only direct compile dependencies as [full_compile_jars](https://docs.bazel.build/versions/master/skylark/lib/JavaInfo.html#full_compile_jars) will be used.    
 
-###### pom.xml 
 
-Pom transformed during each build. This is done to support hermetic builds and allows to inject java targets from bazel into it.
-List of transformations:
-1. Drop all dependencies declared in pom, except they are **marked** no to be deleted;
-2. Injected synthetic dependency declaration for each bazel dep; 
-
-For this case `com.sun.xml.bind` will be dropped. This is done to give possibility centralize deps and have onlu one source of truth about dep versions.
-In this example we will inject  `@com_sun_xml_bind_jaxb_impl` instead. 
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns:bz="https://github.com/wix-incubator/bazelizer">
-    <modelVersion>4.0.0</modelVersion>
-    <groupId>groupId</groupId>
-    <artifactId>artifactId</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
-
-    <dependencies>
-        <dependency bz:drop="never">
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.sun.xml.bind</groupId>
-            <artifactId>jaxb-impl</artifactId>
-        </dependency>
-    </dependencies>
-
-</project>
-```
-
-
-## Flags
+## Special flags
 
 ```
  --deps-drop-all                          Delete all dependencies that declared in pom file
