@@ -112,6 +112,7 @@ public class Cmd {
 
             final List<Dep> deps = readLines(depsConfig).stream()
                     .map(jsonLine -> Dep.fromJson(jsonLine))
+                    .distinct()
                     .collect(Collectors.toList());
 
             final Project.Args args = Project.Args.builder()

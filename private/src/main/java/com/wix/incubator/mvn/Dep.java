@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.Arrays.asList;
@@ -77,6 +78,28 @@ public abstract class Dep {
      */
     public abstract void installTo(Path repo) throws IOException;
 
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(groupId, artifactId, version, scope());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Dep dep = (Dep) o;
+        return Objects.equals(groupId, dep.groupId) &&
+                Objects.equals(artifactId, dep.artifactId) &&
+                Objects.equals(version, dep.version) &&
+                Objects.equals(scope(), dep.scope());
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s:%s:%s:%s",
+                groupId, artifactId, scope(), version);
+    }
 
     @SuppressWarnings("UnstableApiUsage")
     private static class Bazel extends Dep {
