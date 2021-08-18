@@ -61,9 +61,10 @@ public class Cmd {
         }
 
         public void validate() {
-            Preconditions.checkArgument(!dropDepsExcludes.isEmpty() && !dropAllDepsFromPom,
-                    "--deps-drop-exclude param must be specified " +
-                            "only with enabled --deps-drop-all flag");
+            if (!dropDepsExcludes.isEmpty())
+                Preconditions.checkArgument(dropAllDepsFromPom,
+                        "--deps-drop-exclude param must be specified " +
+                                "only with enabled --deps-drop-all flag");
         }
     }
 
