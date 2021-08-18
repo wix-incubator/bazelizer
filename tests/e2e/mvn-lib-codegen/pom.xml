@@ -38,18 +38,6 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>jaxb2-maven-plugin</artifactId>
-                <version>2.5.0</version>
-                <executions>
-                    <execution>
-                        <id>xsd-to-java</id>
-                        <goals>
-                            <goal>xjc</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <packageName>io.codejournal.maven.xsd2java</packageName>
-                </configuration>
             </plugin>
         </plugins>
     </build>

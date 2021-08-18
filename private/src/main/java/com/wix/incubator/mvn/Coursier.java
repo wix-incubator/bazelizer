@@ -48,6 +48,7 @@ public class Coursier {
                 "resolve"
         );
         args.addAll(coords);
+
         Console.info("Executing: " + String.join(" ", args));
         final Process proc = new ProcessBuilder()
                 .directory(new File("."))

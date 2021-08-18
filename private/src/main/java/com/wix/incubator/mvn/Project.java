@@ -193,7 +193,9 @@ public class Project {
 
     @Override
     public String toString() {
-        return model.toString() + "/" + args.toString();
+        String suf = args.toHash();
+        if (!suf.isEmpty()) suf = "/" + suf;
+        return model.toString() + suf;
     }
 
 
@@ -269,8 +271,39 @@ public class Project {
         public void apply(Model model) {
             model.getDependencies().removeIf(d -> excludeFilter == null || !excludeFilter.test(d));
         }
-    }
 
+        /**
+         * Rule accept only by maven coordinates pattern
+         *
+         * @param coords pattern
+         */
+        private static Predicate<Dependency> matchCoordsExpr(String coords) {
+            final int split = coords.indexOf(":");
+            if (split == -1) throw new IllegalArgumentException(
+                    "illegal expression be in format of'<artifactId|*>:<groupId|*>' ");
+            String groupIdPtn = coords.substring(0, split);
+            String artifactIdPtn = coords.substring(split + 1);
+            final Predicate<Dependency> groupIdFilter = matchExpression(groupIdPtn, Dependency::getGroupId);
+            final Predicate<Dependency> artifactIdFilter = matchExpression(artifactIdPtn, Dependency::getArtifactId);
+            return groupIdFilter.and(artifactIdFilter);
+        }
+
+        private static Predicate<Dependency> matchExpression(String coords, Function<Dependency, String> fn) {
+            if (coords.equals("*"))
+                return d -> true;
+            if (coords.startsWith("*")) {
+                final int split = coords.indexOf("*");
+                String suf = coords.substring(split + 1);
+                return d -> fn.apply(d).endsWith(suf);
+            }
+            if (coords.endsWith("*")) {
+                final int split = coords.indexOf("*");
+                String pref = coords.substring(0, split);
+                return d -> fn.apply(d).startsWith(pref);
+            }
+            return d -> fn.apply(d).equals(coords);
+        }
+    }
 
     @AllArgsConstructor
     public static class ChangeArtifactId implements ModelVisitor {
@@ -280,38 +313,6 @@ public class Project {
         public void apply(Model model) {
             model.setArtifactId(id);
         }
-    }
-
-    /**
-     * Rule accept only by maven coordinates pattern
-     *
-     * @param coords pattern
-     */
-    private static Predicate<Dependency> matchCoordsExpr(String coords) {
-        final int split = coords.indexOf(":");
-        if (split == -1) throw new IllegalArgumentException(
-                "illegal expression be in format of'<artifactId|*>:<groupId|*>' ");
-        String groupIdPtn = coords.substring(0, split);
-        String artifactIdPtn = coords.substring(split + 1);
-        final Predicate<Dependency> groupIdFilter = matchExpression(groupIdPtn, Dependency::getGroupId);
-        final Predicate<Dependency> artifactIdFilter = matchExpression(artifactIdPtn, Dependency::getArtifactId);
-        return groupIdFilter.and(artifactIdFilter);
-    }
-
-    private static Predicate<Dependency> matchExpression(String coords, Function<Dependency, String> fn) {
-        if (coords.equals("*"))
-            return d -> true;
-        if (coords.startsWith("*")) {
-            final int split = coords.indexOf("*");
-            String suf = coords.substring(split + 1);
-            return d -> fn.apply(d).endsWith(suf);
-        }
-        if (coords.endsWith("*")) {
-            final int split = coords.indexOf("*");
-            String pref = coords.substring(0, split);
-            return d -> fn.apply(d).startsWith(pref);
-        }
-        return d -> fn.apply(d).equals(coords);
     }
 
 }

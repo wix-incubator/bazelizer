@@ -9,5 +9,8 @@ filegroup(
 maven_project(
     name = "maven",
     pom_file = ":pom.xml",
+    flags = [
+        "--mvn-extra-args", "install"
+    ],
     visibility = ["//visibility:public"]
 )
