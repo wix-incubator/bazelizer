@@ -47,7 +47,7 @@ public class Project {
         public final Model model;
 
         public Path target() {
-            return file.toPath().getParent().resolve("target");
+            return file.toPath().getParent().resolve("target").toAbsolutePath();
         }
     }
 
@@ -119,7 +119,7 @@ public class Project {
     private Project(File file, List<String> flags) {
         try (FileInputStream is = new FileInputStream(file)) {
             MavenXpp3Reader r = new MavenXpp3Reader();
-            model = r.read(is);
+            this.model = r.read(is);
         } catch (XmlPullParserException | IOException e) {
             throw new IllegalStateException(e);
         }
@@ -129,7 +129,7 @@ public class Project {
                 .map(p -> file.toPath().toAbsolutePath().getParent().resolve(p).normalize());
         this.parentId = parentAbsPath.map(Path::toString).orElse(null);
         this.pomParentFile = parentAbsPath.map(Path::toFile).orElse(null);
-        this.args = createArgs(flags);
+        this.args = createArgs(this.model, flags);
         this.pomSrcFile = file;
         this.id = generateId(file, args);
     }
@@ -138,14 +138,14 @@ public class Project {
         return file.toPath().toAbsolutePath() + ":" + args.toHash();
     }
 
-    private Project.Args createArgs(List<String> flags) {
+    private static Project.Args createArgs(Model model, List<String> flags) {
         if (!flags.isEmpty()) {
             final Cmd.ExecutionOpts options = new Cmd.ExecutionOpts();
             final CommandLine.ParseResult result = new CommandLine(options)
                     .parseArgs(flags.toArray(new String[0]));
             if (!result.errors().isEmpty()) {
-                Console.error(this.model, "project flags are invalid:");
-                result.errors().forEach(e -> Console.error(this.model, " -" + e.getMessage()));
+                Console.error(model, "project flags are invalid:");
+                result.errors().forEach(e -> Console.error(model, " -" + e.getMessage()));
                 throw new IllegalArgumentException("invalid flags for project {" + model + "}");
             }
             return Project.Args.builder()
@@ -209,7 +209,6 @@ public class Project {
         public final ModelVisitor modelVisitor = d -> {};
         @Builder.Default
         public final List<String> profiles = Collections.emptyList();
-        public String artifactId;
 
         public Args merge(Args other) {
             return Args.builder()

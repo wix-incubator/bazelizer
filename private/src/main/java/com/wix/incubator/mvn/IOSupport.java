@@ -43,7 +43,7 @@ public final class IOSupport {
         return directory;
     }
 
-    private static File newDirectory(String pref, File root) throws IOException {
+    private static File newDirectory(String pref, File root) {
         final String baseName = UUID.randomUUID().toString();
         for (int i = 0; i < 9999; i++) {
             String name = String.format("%s%s-%d", pref != null ? pref : "", baseName, i);
@@ -56,16 +56,6 @@ public final class IOSupport {
         throw new IllegalStateException("Failed to create directory within 10000 attempts (tried " + baseName + "0 to " + baseName + 9999 + ')');
     }
 
-    public static long tarRepositoryRecursive(Maven env, Path out) throws IOException {
-        final Path dir = env.repository;
-        final Collection<Path> files = FileUtils.listFiles(
-                dir.toFile(), REPOSITORY_FILES_FILTER, FileFilterUtils.directoryFileFilter() // recursive
-        ).stream().map(File::toPath).collect(Collectors.toList());
-        try (OutputStream os = Files.newOutputStream(out)) {
-            return IOSupport.tar(files, os, dir::relativize);
-        }
-    }
-
     public static long tar(Collection<Path> files, OutputStream out, Function<Path, Path> tarPath) throws IOException {
         long bytes = 0;
         try (TarArchiveOutputStream aos = new TarArchiveOutputStream(out)) {
@@ -75,7 +65,6 @@ public final class IOSupport {
                 aos.putArchiveEntry(entry);
                 bytes += Files.copy(file, aos);
                 aos.closeArchiveEntry();
-                ;
             }
             aos.finish();
         }

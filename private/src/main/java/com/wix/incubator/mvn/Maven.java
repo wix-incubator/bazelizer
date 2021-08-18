@@ -22,9 +22,18 @@ import java.util.stream.Collectors;
 
 import static com.google.common.io.Resources.asCharSource;
 import static com.google.common.io.Resources.getResource;
+import static com.wix.incubator.mvn.IOSupport.REPOSITORY_FILES_FILTER;
 
 @SuppressWarnings("FieldCanBeLocal")
 public class Maven {
+
+
+    /**
+     * Maven output.
+     */
+    public interface MvnResult {
+        void save(Iterable<Out> outs);
+    }
 
     /**
      * Get layout of folder according to maven coordinates.
@@ -42,6 +51,8 @@ public class Maven {
         }
         return thisGroupIdRepo.resolve(artifactId).resolve(version);
     }
+
+
 
     /**
      * Prepare maven environemtn from archived repository.
@@ -120,12 +131,12 @@ public class Maven {
      * @throws IOException              if any
      * @throws MavenInvocationException if any
      */
-    public MvnSavable executeOffline(Project project, Project.Args args) throws IOException, MavenInvocationException {
+    public void executeOffline(Project project, Project.Args args, Iterable<Out> outs) throws IOException, MavenInvocationException {
         Console.printSeparator();
         logMavenVersion();
         Console.printSeparator();
 
-        return executeIntern(project, args, true);
+        executeIntern(project, args, true, outs);
     }
 
     /**
@@ -148,11 +159,11 @@ public class Maven {
         Console.printSeparator();
 
         for (Project project : reactorOrder) {
-            executeIntern(project, args, false);
+            executeIntern(project, args, false, Collections.emptyList());
         }
     }
 
-    private MvnSavable executeIntern(Project project, Project.Args inputArgs, boolean offline) throws IOException, MavenInvocationException {
+    private void executeIntern(Project project, Project.Args inputArgs, boolean offline, Iterable<Out> outputs) throws IOException, MavenInvocationException {
         final Project.Args args = inputArgs.merge(project.getArgs());
         for (Dep dep : args.deps) {
             dep.installTo(repository);
@@ -186,7 +197,25 @@ public class Maven {
 
         Console.info(project, " >>>> Done. Elapsed time: " + duration(x0, x1));
 
-        return new MvnSavable(pom);
+        for (Out out : outputs) {
+            out.save(Maven.this, pom);
+        }
+    }
+
+    /**
+     * Tar repository into output
+     * @param out path
+     * @return size of archive
+     * @throws IOException if any error
+     */
+    public long tarRepositoryRecursive(Path out) throws IOException {
+        final Path dir = this.repository;
+        final Collection<Path> files = FileUtils.listFiles(
+                dir.toFile(), REPOSITORY_FILES_FILTER, FileFilterUtils.directoryFileFilter() // recursive
+        ).stream().map(File::toPath).collect(Collectors.toList());
+        try (OutputStream os = Files.newOutputStream(out)) {
+            return IOSupport.tar(files, os, dir::relativize);
+        }
     }
 
     private void logMavenVersion() {
@@ -224,73 +253,4 @@ public class Maven {
         }
     }
 
-
-    @AllArgsConstructor
-    public class MvnSavable {
-        private final Project.PomFile pom;
-
-        public void save(Iterable<Out> outs) {
-            for (Out out : outs) {
-                out.save(Maven.this, pom);
-            }
-        }
-    }
-
-    public abstract static class Out {
-        public abstract void save(Maven maven, Project.PomFile pom);
-    }
-
-    @AllArgsConstructor
-    public static class OutJar extends Out  {
-        private final Path jarOutput;
-
-        @SneakyThrows
-        public void save(Maven maven, Project.PomFile pom) {
-            final Path target = pom.target();
-            final Path jar = target.resolve(String.format("%s-%s.jar", pom.model.getArtifactId(), pom.model.getVersion()));
-            Files.copy(jar, jarOutput);
-        }
-    }
-
-
-    @AllArgsConstructor
-    public static class OutInstalled extends Out  {
-        private final Path archive;
-
-        @SneakyThrows
-        public void save(Maven maven, Project.PomFile pom) {
-            final String groupId = pom.model.getGroupId() == null ? pom.model.getParent().getGroupId() : pom.model.getGroupId();
-            final Path installedFolder = Maven.artifactRepositoryLayout(groupId, pom.model.getArtifactId(), pom.model.getVersion());
-            Collection<Path> files = FileUtils.listFiles(
-                    maven.repository.resolve(installedFolder).toFile(),
-                    FileFilterUtils.and(
-                            IOSupport.REPOSITORY_FILES_FILTER,
-                            FileFilterUtils.notFileFilter(FileFilterUtils.suffixFileFilter("pom"))
-                    ),
-                    FileFilterUtils.trueFileFilter()
-            ).stream().map(File::toPath).collect(Collectors.toList());
-
-            try (OutputStream output = Files.newOutputStream(archive)) {
-                IOSupport.tar(files, output, aFile -> {
-                    final Path filePath = aFile.toAbsolutePath();
-                    return filePath.subpath(maven.repository.getNameCount(), filePath.getNameCount());
-                });
-            }
-
-        }
-    }
-
-    @AllArgsConstructor
-    public static class OutFile extends Out  {
-        private final String src;
-        private final Path dest;
-
-        @SneakyThrows
-        @Override
-        public void save(Maven maven, Project.PomFile pom) {
-            Path target = pom.target();
-            final Path srcFile = target.resolve(src);
-            Files.copy(srcFile, dest);
-        }
-    }
 }

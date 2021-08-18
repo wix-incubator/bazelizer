@@ -105,18 +105,21 @@ public class Cmd {
                     .profiles(executionOptions.mavenActiveProfiles)
                     .build();
 
-            final Maven.MvnSavable result = env.executeOffline(
-                    project,
-                    args
-            );
-
-            final List<Maven.Out> outputs = this.outputs.entrySet().stream()
-                    .map(e -> new Maven.OutFile(e.getValue(), Paths.get(e.getKey())))
-                    .collect(Collectors.toList());
+            final List<Maven.Out> outputs = registeredOutputs();
             outputs.add(new Maven.OutJar(jarOutput));
             outputs.add(new Maven.OutInstalled(archiveOutput));
 
-            result.save(outputs);
+            env.executeOffline(
+                    project,
+                    args,
+                    outputs
+            );
+        }
+
+        private List<Maven.Out> registeredOutputs() {
+            return this.outputs.entrySet().stream()
+                    .map(e -> new Maven.OutFile(e.getValue(), Paths.get(e.getKey())))
+                    .collect(Collectors.toList());
         }
 
     }
@@ -150,8 +153,7 @@ public class Cmd {
                     build
             );
 
-            long size = IOSupport.tarRepositoryRecursive(
-                    env,
+            long size = env.tarRepositoryRecursive(
                     output
             );
 
