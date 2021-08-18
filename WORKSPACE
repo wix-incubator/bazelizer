@@ -23,7 +23,9 @@ dependencies()
 #        repositories = [
 #            "https://repo1.maven.org/maven2",
 #        ],
+#        # maven_install_json = "//:maven_install.json",
 #)
+
 
 #
 # E2E tests
@@ -37,7 +39,7 @@ maven_repository_registry(
         "//tests/e2e/mvn-lib-subparent/mvn-lib-module-a:maven",
         "//tests/e2e/mvn-lib-subparent/mvn-lib-module-b:maven",
         "//tests/e2e/mvn-lib-subparent/mvn-lib-module-non-compiled:maven",
-        "//tests/e2e/mvn-lib-codegen:maven",
+#        "//tests/e2e/mvn-lib-codegen:maven",
         "//tests/e2e/mvn-lib:maven",
         "//tests/e2e/mvn-lib-parent:maven",
     ],

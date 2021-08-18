@@ -8,9 +8,9 @@ maven_project(
     visibility = ["//visibility:public"]
 )
 
-execute_build(
-    name = "xsd",
-    project = ":maven",
-    srcs = glob(["src/main/xsd/*"]),
-    visibility = ["//visibility:public"],
-)
+#execute_build(
+#    name = "xsd",
+#    project = ":maven",
+#    srcs = glob(["src/main/xsd/*"]),
+#    visibility = ["//visibility:public"],
+#)

@@ -2,12 +2,14 @@ package com.wix.incubator.mvn;
 
 import com.github.mustachejava.DefaultMustacheFactory;
 import com.github.mustachejava.MustacheFactory;
+import com.google.devtools.build.runfiles.Runfiles;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
 import org.apache.commons.io.FileUtils;
 import picocli.CommandLine;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -19,6 +21,10 @@ import static java.util.Arrays.asList;
 
 
 public class Cli {
+    private static final String PREF = "tools.jvm.mvn.";
+    public static final String BZL_MVN_TOOL_SYS_PROP = PREF + "MavenBin";
+    public static final String BZL_COURSIER_JAR_SYS_PROP = PREF + "CoursierJar";
+
     static {
         System.setProperty("org.slf4j.simpleLogger.showShortLogName", "true");
     }
@@ -26,6 +32,16 @@ public class Cli {
     public static void main(String[] args) {
         int exitCode = new CommandLine(new Cmd()).execute(args);
         System.exit(exitCode);
+    }
+
+    public static final Runfiles RUNFILES;
+
+    static {
+        try {
+            RUNFILES = Runfiles.create();
+        } catch (IOException e) {
+            throw new IllegalStateException("initialize Runfiles", e);
+        }
     }
 
     public static final Gson GSON = new GsonBuilder()

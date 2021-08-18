@@ -16,7 +16,11 @@ import static com.wix.incubator.mvn.IOSupport.REPOSITORY_FILES_FILTER;
 
 public abstract class Out {
 
-
+    /**
+     * Save data.
+     * @param maven curent env
+     * @param pom current build
+     */
     public abstract void save(Maven maven, Project.PomFile pom);
 
     @AllArgsConstructor

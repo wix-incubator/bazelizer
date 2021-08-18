@@ -22,18 +22,11 @@ import java.util.stream.Collectors;
 
 import static com.google.common.io.Resources.asCharSource;
 import static com.google.common.io.Resources.getResource;
+import static com.wix.incubator.mvn.Cli.BZL_MVN_TOOL_SYS_PROP;
 import static com.wix.incubator.mvn.IOSupport.REPOSITORY_FILES_FILTER;
 
 @SuppressWarnings("FieldCanBeLocal")
 public class Maven {
-
-
-    /**
-     * Maven output.
-     */
-    public interface MvnResult {
-        void save(Iterable<Out> outs);
-    }
 
     /**
      * Get layout of folder according to maven coordinates.
@@ -75,13 +68,13 @@ public class Maven {
      */
     @SuppressWarnings({"UnstableApiUsage"})
     public static Maven prepareEnv(List<MvnRepository> repositories) throws IOException {
-        Runfiles runfiles = Runfiles.create();
+        Runfiles runfiles = Cli.RUNFILES;
         final File tool = Optional.ofNullable(System.getProperty(BZL_MVN_TOOL_SYS_PROP))
                 .map((runfilesPath) -> new File(runfiles.rlocation(runfilesPath)))
                 .orElseThrow(() -> new IllegalStateException("no sys prop: " + BZL_MVN_TOOL_SYS_PROP));
 
         Path m2HomeDir = IOSupport.newTempDirectory("M2_HOME@").toPath();
-        Console.info(" M2_HOME=" + m2HomeDir);
+        Console.info(" M2_HOME=" + m2HomeDir.toAbsolutePath());
         Path repository = m2HomeDir.resolve("repository").toAbsolutePath();
         Files.createDirectories(repository);
         Path settingsXmlFile = m2HomeDir.resolve("settings.xml").toAbsolutePath();
@@ -110,8 +103,6 @@ public class Maven {
     public final Path repository;
     private final Invoker maven;
 
-    private static final String PREF = "tools.jvm.mvn.";
-    private static final String BZL_MVN_TOOL_SYS_PROP = PREF + "MavenBin";
 
     /**
      * Ctor.

@@ -1,7 +1,7 @@
 package(default_visibility = ["//visibility:public"])
 
 load("//:macros.bzl", "sources", "test_sources", "third_party_dep", "third_party_deps")
-load("//third_party:maven_binaries.bzl", _maven_bin_name = "MAVEN_BINARY_NAME")
+load("//third_party:maven_binaries.bzl", "MAVEN_BINARY_NAME", "COURSIER_JAR_BINARY_NAME")
 
 sources()
 
@@ -9,11 +9,13 @@ java_binary(
     name = "mvn",
     srcs = [":sources"],
     data = [
-        "@%s//:%s" % (_maven_bin_name, _maven_bin_name),
+        "@%s//:%s" % (MAVEN_BINARY_NAME, MAVEN_BINARY_NAME),
+        "@%s//jar" % (COURSIER_JAR_BINARY_NAME),
     ],
     jvm_flags = [
         "--illegal-access=permit",
-        "-Dtools.jvm.mvn.MavenBin=\"%s\"" % _maven_bin_name,
+        "-Dtools.jvm.mvn.MavenBin=\"%s\"" % MAVEN_BINARY_NAME,
+        "-Dtools.jvm.mvn.CoursierJar=\"%s\"" % COURSIER_JAR_BINARY_NAME,
     ],
     licenses = ["notice"],  # Apache 2.0
     main_class = "com.wix.incubator.mvn.Cli",

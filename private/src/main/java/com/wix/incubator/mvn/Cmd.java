@@ -18,6 +18,7 @@ import static java.util.Arrays.asList;
 @CommandLine.Command(subcommands = {
         Cmd.CmdRepository.class,
         Cmd.CmdBuild.class,
+        Cmd.GetDeps.class,
         Cmd.Info.class,
 })
 public class Cmd {
@@ -172,6 +173,20 @@ public class Cmd {
             Console.info("Build finished. Archived repository " + FileUtils.byteCountToDisplaySize(size));
         }
     }
+
+    @CommandLine.Command(name = "get-deps")
+    public static class GetDeps extends Executable {
+
+        @CommandLine.Parameters(paramLabel = "<coords>")
+        public List<String> coords;
+
+        @Override
+        public void invoke() throws Exception {
+            final Coursier deps = Coursier.create();
+             deps.resolve(coords);
+        }
+    }
+
 
     @CommandLine.Command(name = "info")
     public static class Info {

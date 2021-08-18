@@ -2,16 +2,12 @@
 
 import json
 from string import Template
+import sys
 
 
-TPL=Template('''load("@bazel_tools//tools/build_defs/repo:jvm.bzl", _jvm_maven_import_external = "jvm_maven_import_external")
+TPL=Template('''
 
-_repositories = [
-    "https://repo.maven.apache.org/maven2/",
-    "https://mvnrepository.com/artifact",
-    "https://maven-central.storage.googleapis.com",
-    "http://gitblit.github.io/gitblit-maven",
-]
+load("@bazel_tools//tools/build_defs/repo:jvm.bzl", _jvm_maven_import_external = "jvm_maven_import_external")
 
 def dependency(name, sha256, artifact, sha256_src=None):
     return struct(
@@ -25,29 +21,6 @@ def dependency(name, sha256, artifact, sha256_src=None):
 deps = [
 $deps
 ]
-
-def import_deps_macros():
-    for dep in deps:
-
-
-
-def dependencies(urls=_repositories):
-    for dep in deps:
-        name = dep.name
-        actual_name = "bazelizer_external__%s" % name
-
-        _jvm_maven_import_external(
-            name = actual_name,
-            artifact = dep.artifact,
-            artifact_sha256 = dep.jar_sha256,
-            srcjar_sha256 = dep.srcjar_sha256,
-            server_urls = urls
-        )
-
-        native.bind(
-            name = "wix_incubator_bazelizer_rules/dependency/%s" % (name),
-            actual = "@%s" % (actual_name)
-        )
 
 ''')
 
@@ -86,7 +59,7 @@ def a_coords(mvn_coord):
 
 
 def main():
-    with open('bazelizer_deps_install.json', 'r') as f:
+    with open( sys.argv[1] , 'r') as f:
         with open('third_party_deps.bzl', 'w') as fb:
             _json = json.load(f)
             deps_lines = []
