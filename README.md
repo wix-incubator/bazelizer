@@ -31,6 +31,7 @@ Use bazel deps, depends on bazel target and event doing it efficiently.
 ## Usage
 
 ```
+#
 # in your WORKSPACE
 
 RULES_TAG = "0.2.3"
@@ -45,13 +46,38 @@ http_archive(
     sha256 = RULES_TAG_SHA,
 )
 
-load("@wix_incubator_bazelizer//third_party:rules_repository.bzl", "install")
-install()
+load("@wix_incubator_bazelizer//:bazelizer.bzl", "bazelizer")
 
+bazelizer()
+
+load("@wix_incubator_bazelizer//maven:defs.bzl", "maven_repository_registry")
+
+maven_repository_registry(
+    name = "bazelizer",
+    modules = [
+        "//my/module-parent:maven",
+        "//my/another_module:maven",
+    ],
+)
+
+#
 # in your BUILD files
 
-load("@wix_incubator_bazelizer//maven:defs.bzl", "create_mvn_buildpack", "run_mvn_buildpack")
+load("@wix_incubator_bazelizer//maven:defs.bzl", "maven_project")
 
+maven_project(
+    name = "maven",
+    pom_file = ":pom.xml",
+)
+
+load("@bazelizer//:execute_build.bzl","execute_build")
+
+execute_build(
+    name = "maven_build",
+    srcs = [":source"],
+    project = ":maven",
+    ....
+)
 
 ```
 
