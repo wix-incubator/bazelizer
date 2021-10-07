@@ -28,7 +28,7 @@ def register():
 
     http_archive(
        name = MAVEN_BINARY_NAME,
-       url = "https://www2.apache.paket.ua/maven/maven-3/" + _MAVEN_BINARY_VERSION + "/binaries/apache-maven-" + _MAVEN_BINARY_VERSION + "-bin.tar.gz",
+       url = "https://archive.apache.org/dist/maven/maven-3/" + _MAVEN_BINARY_VERSION + "/binaries/apache-maven-" + _MAVEN_BINARY_VERSION + "-bin.tar.gz",
        build_file_content = _MAVEN_BUILD_FILE.format(
                mvn_files_target=MAVEN_BINARY_NAME
        ),
