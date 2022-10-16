@@ -1,6 +1,3 @@
-
-
-
 def e2e_has_jar_test(name, dep, jar, clazz=None):
     """
     sh_library(

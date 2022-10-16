@@ -1,6 +1,5 @@
 load("//third_party:maven_binaries.bzl", "MAVEN_BINARY_NAME")
 
-
 _BUILD = """
 load("@wix_incubator_bazelizer//private/ruls/maven_v3:go_offline.bzl", _go_offline = "go_offline")
 

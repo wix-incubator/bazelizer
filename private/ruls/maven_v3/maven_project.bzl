@@ -1,4 +1,3 @@
-
 CLI_TOOL = "//private/src/main/java/com/wix/incubator/mvn"
 
 PomProjectInfo = provider(fields = {
@@ -22,7 +21,6 @@ def _maven_project_impl(ctx):
             flags = ctx.attr.flags or []
         )
     ]
-
 
 maven_project = rule(
     implementation = _maven_project_impl,

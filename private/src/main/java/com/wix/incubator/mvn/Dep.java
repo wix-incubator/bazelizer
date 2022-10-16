@@ -18,7 +18,6 @@ import static java.util.Arrays.asList;
  * Dependency from bazel
  */
 public abstract class Dep {
-
     private static class DepDTO {
         public Path file;
         public Map<String, String> tags;
@@ -77,7 +76,6 @@ public abstract class Dep {
      * @throws IOException if any
      */
     public abstract void installTo(Path repo) throws IOException;
-
 
     @Override
     public int hashCode() {
@@ -140,7 +138,6 @@ public abstract class Dep {
             return new String[]{groupId, artifactId, version};
         }
     }
-
 
     private static class Tar extends Dep {
         private final Path tar;

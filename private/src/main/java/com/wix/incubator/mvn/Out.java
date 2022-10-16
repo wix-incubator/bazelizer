@@ -35,7 +35,6 @@ public abstract class Out {
         }
     }
 
-
     @AllArgsConstructor
     public static class Installed extends Out {
         private final Path archive;

@@ -111,7 +111,6 @@ public final class IOSupport {
         return tarFiles;
     }
 
-
     public static List<String> readLines(Path text) throws IOException {
         try (Stream<String> s = Files.lines(text)) {
             return s.map(p -> {

@@ -13,7 +13,6 @@ Represent archived maven artifact content as is from the local repository.
 def _foramt_flags_as_escape_str(flags_list):
         return "'{}'".format(" ".join(flags_list))
 
-
 def _create_manifest_file(name, ctx, dep_info_items):
     manifest = ctx.actions.declare_file(name + ".manifest")
     args = ctx.actions.args()
@@ -22,10 +21,8 @@ def _create_manifest_file(name, ctx, dep_info_items):
     ctx.actions.write(manifest, args)
     return manifest
 
-
 def _dep_info(file, **kwargs):
     return struct(file=file, tags=dict(kwargs))
-
 
 def _collect_deps(dep_targets, ctx_scope, **kwargs):
     _dep_infos = ctx_scope.manifests
@@ -48,7 +45,6 @@ def _collect_deps(dep_targets, ctx_scope, **kwargs):
                 _dep_infos.append(_dep_info(d.path, **kwargs))
                 _direct_deps_files.append(d)
 
-
 def _collect_jars(ctx):
     """
     Collect only direct dependencies for each supported attrs
@@ -59,8 +55,6 @@ def _collect_jars(ctx):
     _collect_deps(ctx.attr.deps, deps_ctx)
     _collect_deps(ctx.attr.runtime_deps, deps_ctx, scope='provided')
     return deps_ctx
-
-
 
 _run_mvn_outputs = {
     "jar": "lib%{name}.jar",
@@ -142,7 +136,6 @@ def _run_mvn_impl(ctx):
         DefaultInfo(files = depset(output_files)),
         JavaInfo(output_jar = def_output_jar_file, compile_jar = def_output_jar_file)
     ]
-
 
 run_mvn = rule(
     implementation = _run_mvn_impl,

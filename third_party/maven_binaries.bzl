@@ -1,6 +1,5 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file", "http_jar")
 
-
 RULES_JVM_EXTERNAL_TAG = "3.1"
 RULES_JVM_EXTERNAL_SHA = "e246373de2353f3d34d35814947aa8b7d0dd1a58c2f7a6c41cfeaff3007c2d14"
 RULES_JVM_NAME = "rules_jvm_external"
@@ -35,4 +34,3 @@ def register():
        sha256 = _MAVEN_BINARY_SHA256,
        strip_prefix = "apache-maven-" + _MAVEN_BINARY_VERSION
     )
-

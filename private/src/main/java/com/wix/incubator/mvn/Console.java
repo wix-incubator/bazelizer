@@ -2,7 +2,6 @@ package com.wix.incubator.mvn;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.sun.org.apache.xml.internal.serializer.OutputPropertiesFactory;
 import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.io.output.TeeOutputStream;
 import org.apache.maven.shared.invoker.InvocationOutputHandler;
@@ -26,7 +25,6 @@ import java.util.stream.IntStream;
 
 @SuppressWarnings("Guava")
 public class Console {
-
     private static final Supplier<PrintStream> output = Suppliers.memoize(() -> {
         String logFile = System.getProperty("tools.jvm.mvn.LogFile");
         PrintStream output;
@@ -42,7 +40,6 @@ public class Console {
         }
         return output;
     });
-
 
     public static void printSeparator() {
         Console.info(" " + IntStream.range(0, 48).mapToObj(i -> "=").collect(Collectors.joining()));
@@ -76,7 +73,7 @@ public class Console {
             final Transformer trans = transformerFactory.newTransformer();
             trans.setOutputProperty(OutputKeys.INDENT, "yes");
             trans.setOutputProperty(OutputKeys.VERSION, "1.0");
-            trans.setOutputProperty(OutputPropertiesFactory.S_KEY_INDENT_AMOUNT, "2");
+            trans.setOutputProperty("{http://xml.apache.org/xalan}indent-amount", "2");
             trans.transform(new DOMSource(doc), new StreamResult(writer));
         } catch (TransformerException | SAXException | ParserConfigurationException | IOException ex) {
             throw new IllegalStateException(ex);
@@ -104,7 +101,6 @@ public class Console {
             output.get().println("\t" + line);
         }
     }
-
 
     @SuppressWarnings({"NullableProblems", "unused"})
     private static class TeePrintStream extends PrintStream {

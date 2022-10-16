@@ -198,8 +198,6 @@ public class Project {
         return model.toString() + suf;
     }
 
-
-
     @AllArgsConstructor
     @Builder
     public static class Args {
@@ -235,10 +233,8 @@ public class Project {
             return Iterables.isEmpty(str) ? ""
                     : Hashing.murmur3_32()
                     .hashString(String.join(" ", str), StandardCharsets.UTF_8).toString();
-
         }
     }
-
 
     public interface ModelVisitor {
         ModelVisitor NOP = d -> {};
@@ -314,5 +310,4 @@ public class Project {
             model.setArtifactId(id);
         }
     }
-
 }

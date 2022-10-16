@@ -2,7 +2,6 @@ load("//maven:defs.bzl", "maven_project")
 
 load("@maven_e2e_v3//:execute_build.bzl", "execute_build")
 
-
 maven_project(
     name = "maven",
     pom_file = ":pom.xml",
