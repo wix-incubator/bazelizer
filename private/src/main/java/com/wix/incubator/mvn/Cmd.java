@@ -22,8 +22,8 @@ import static java.util.Arrays.asList;
         Cmd.CmdBuild.class,
         Cmd.Info.class,
 })
-public class Cmd {
 
+public class Cmd {
     public static class GlobalOpts {
         @CommandLine.Option(names = {"--mvn-active-profiles"}, paramLabel = "<p>",
                 description = "maven active profiles")
@@ -34,9 +34,7 @@ public class Cmd {
         public List<String> mavenArgs = Collections.emptyList();
     }
 
-
     public static class ExecutionOpts extends GlobalOpts {
-
         @CommandLine.Option(names = {"--deps-drop-all"},
                 description = "Delete all dependencies that declared in pom file before tool execution")
         public boolean dropAllDepsFromPom;
@@ -73,10 +71,8 @@ public class Cmd {
         }
     }
 
-
     @CommandLine.Command(name = "build")
     public static class CmdBuild extends Executable {
-
         @CommandLine.Mixin
         public ExecutionOpts executionOptions;
 
@@ -99,7 +95,6 @@ public class Cmd {
         @CommandLine.Option(names = {"--jarOutput"}, paramLabel = "P",
                 description = "write default jar")
         public Path jarOutput;
-
 
         @SuppressWarnings("Convert2MethodRef")
         public void invoke() throws Exception {
@@ -138,12 +133,10 @@ public class Cmd {
                     .map(e -> new Out.TargetFile(e.getValue(), Paths.get(e.getKey())))
                     .collect(Collectors.toList());
         }
-
     }
 
     @CommandLine.Command(name = "build-repository")
     public static class CmdRepository extends Executable {
-
         @CommandLine.Mixin
         public GlobalOpts executionOptions;
 
@@ -206,5 +199,4 @@ public class Cmd {
 
         public abstract void invoke() throws Exception;
     }
-
 }

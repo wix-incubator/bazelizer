@@ -6,7 +6,6 @@ GoOfflineMavenInfo = provider(fields={
     "tar": "Snapshot of m2 repo"
 })
 
-
 def _mk_json_args_file(ctx, name, list_strucs):
     file = ctx.actions.declare_file(name)
     args = ctx.actions.args()
@@ -23,9 +22,9 @@ def _mk_json_args_file(ctx, name, list_strucs):
 def _go_offline_impl(ctx):
     pom_providers = [ dep[PomProjectInfo] for dep in ctx.attr.modules ]
 
-    reposiotry_projects_file = _mk_json_args_file(
+    repository_projects_file = _mk_json_args_file(
         ctx,
-        'reposiotry_projects.json',
+        'repository_projects.json',
         [  struct(file = pom.file.path, flags = pom.flags) for pom in pom_providers ]
     )
 
@@ -39,14 +38,14 @@ def _go_offline_impl(ctx):
     snapshot_tar = ctx.outputs.snapshot
     logfile = ctx.outputs.log
 
-    # jfm flags
+    # jvm flags
     args.add("--jvm_flag=-Dtools.jvm.mvn.LogFile=%s" % (logfile.path))
-#     args.add("--jvm_flag=-Dtools.jvm.mvn.LogFile=%s" % (logfile))
+    # args.add("--jvm_flag=-Dtools.jvm.mvn.LogFile=%s" % (logfile))
     # args.add("--jvm_flag=-Dtools.jvm.mvn.Ws=%s" % (ctx.workspace_name))
 
     # cli options
     args.add('build-repository')
-    args.add('--config', reposiotry_projects_file.path)
+    args.add('--config', repository_projects_file.path)
     args.add('--settingsXml', settings_conf_file.path)
     args.add('--output', snapshot_tar.path)
 
@@ -60,7 +59,7 @@ def _go_offline_impl(ctx):
     ]
 
     ctx.actions.run(
-        inputs = depset([reposiotry_projects_file, settings_conf_file] + [d.file for d in pom_providers]),
+        inputs = depset([repository_projects_file, settings_conf_file] + [d.file for d in pom_providers]),
         outputs = outputs,
         arguments = [args],
         executable = ctx.executable._tool,

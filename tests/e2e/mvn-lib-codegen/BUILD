@@ -14,7 +14,6 @@ maven_project(
 #
 # Go wild!
 #
-
 execute_build(
     name = "xsd",
     project = ":maven",
@@ -24,7 +23,6 @@ execute_build(
         '--mvn-override-artifact-id', 'xxxx'
     ],
 )
-
 
 execute_build(
     name = "mvn-lib-codegen",

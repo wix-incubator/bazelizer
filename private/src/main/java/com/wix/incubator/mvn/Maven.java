@@ -45,8 +45,6 @@ public class Maven {
         return thisGroupIdRepo.resolve(artifactId).resolve(version);
     }
 
-
-
     /**
      * Prepare maven environemtn from archived repository.
      *
@@ -102,7 +100,6 @@ public class Maven {
     private final Path settingsXmlFile;
     public final Path repository;
     private final Invoker maven;
-
 
     /**
      * Ctor.
@@ -243,5 +240,4 @@ public class Maven {
             super(message);
         }
     }
-
 }

@@ -1,5 +1,3 @@
-
-
 java_library(
     name = "bazelizer",
     srcs = glob(["*.java"]),

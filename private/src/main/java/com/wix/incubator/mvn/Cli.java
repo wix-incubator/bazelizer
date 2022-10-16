@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 import static com.wix.incubator.mvn.IOSupport.readLines;
 import static java.util.Arrays.asList;
 
-
 public class Cli {
     private static final String PREF = "tools.jvm.mvn.";
     public static final String BZL_MVN_TOOL_SYS_PROP = PREF + "MavenBin";

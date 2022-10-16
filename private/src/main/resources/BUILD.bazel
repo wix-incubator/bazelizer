@@ -1,3 +1,2 @@
-
 load("//:macros.bzl", "resources")
 resources()

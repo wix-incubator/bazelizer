@@ -1,8 +1,6 @@
 load(":e2e.bzl", "e2e_has_jar_test")
 
 # E2E tests
-
-
 e2e_has_jar_test(
     name = "mvn-lib-a__jar-test",
     dep = "//tests/e2e/mvn-lib",
@@ -28,7 +26,6 @@ e2e_has_jar_test(
     dep = "//tests/e2e/mvn-lib-subparent/mvn-lib-module-non-compiled",
     jar = "tests/e2e/mvn-lib-subparent/mvn-lib-module-non-compiled/libmvn-lib-module-non-compiled.jar",
 )
-
 
 e2e_has_jar_test(
     name = "mvn-lib-codegen__jar-test",
