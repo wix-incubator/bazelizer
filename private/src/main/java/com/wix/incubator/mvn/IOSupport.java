@@ -83,6 +83,11 @@ public final class IOSupport {
                     if (!destPath.getParentFile().exists()) {
                         destPath.getParentFile().mkdirs();
                     }
+
+                    if (destPath.exists()) {
+                        destPath.delete();
+                    }
+
                     destPath.createNewFile();
                     Files.copy(ais, destPath.toPath(), StandardCopyOption.REPLACE_EXISTING);
                 }
@@ -91,7 +96,7 @@ public final class IOSupport {
     }
 
     public static List<String> listTar(Path p) throws IOException {
-        try (TarArchiveInputStream is = new TarArchiveInputStream(Files.newInputStream(p, StandardOpenOption.READ))) {
+        try (TarArchiveInputStream is = new TarArchiveInputStream(Files.newInputStream(p))) {
             final ArrayList<String> nn = new ArrayList<>();
             for (TarArchiveEntry tarEntry; (tarEntry = is.getNextTarEntry()) != null; ) {
                 nn.add(tarEntry.getName());
@@ -100,8 +105,7 @@ public final class IOSupport {
         }
     }
 
-
-    public static List<String> lisTartUnchacked(Path p)  {
+    public static List<String> listTarUnchecked(Path p)  {
         final List<String> tarFiles;
         try {
             tarFiles = listTar(p);

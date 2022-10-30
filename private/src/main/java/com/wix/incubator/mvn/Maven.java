@@ -46,7 +46,7 @@ public class Maven {
     }
 
     /**
-     * Prepare maven environemtn from archived repository.
+     * Prepare maven environment from archived repository.
      *
      * @param repositoryArchive archived tar
      * @return a maven
@@ -84,7 +84,8 @@ public class Maven {
         scope.put("profiles", repositories);
 
         try (Reader r = tmpl.openStream()) {
-            try (Writer out = Files.newBufferedWriter(settingsXmlFile, StandardOpenOption.CREATE)) {
+            try (Writer out = Files.newBufferedWriter(settingsXmlFile,
+                    StandardOpenOption.CREATE_NEW, StandardOpenOption.TRUNCATE_EXISTING)) {
                 final Mustache mustache = Cli.MUSTACHE.compile(r, "s");
                 mustache.execute(out, scope);
             }
@@ -201,20 +202,21 @@ public class Maven {
         final Collection<Path> files = FileUtils.listFiles(
                 dir.toFile(), REPOSITORY_FILES_FILTER, FileFilterUtils.directoryFileFilter() // recursive
         ).stream().map(File::toPath).collect(Collectors.toList());
-        try (OutputStream os = Files.newOutputStream(out)) {
+        try (OutputStream os = Files.newOutputStream(out,
+                StandardOpenOption.CREATE_NEW, StandardOpenOption.TRUNCATE_EXISTING)) {
             return IOSupport.tar(files, os, dir::relativize);
         }
     }
 
     private void logMavenVersion() {
         try {
-            maven.execute(newInvocationRequest("OFF"));
+            maven.execute(newInvocationRequest("INFO"));
         } catch (MavenInvocationException ignored) {
         }
     }
 
     private DefaultInvocationRequest newInvocationRequest() {
-        return newInvocationRequest("WARN");
+        return newInvocationRequest("INFO");
     }
 
     private DefaultInvocationRequest newInvocationRequest(String logLvl) {
