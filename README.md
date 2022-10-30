@@ -1,10 +1,10 @@
 # bazelizer
-[![mavenizer actions Status](https://github.com/wix-incubator/mavenizer/workflows/CI/badge.svg)](https://github.com/wix-incubator/mavenizer/actions)
+[![bazelizer actions Status](https://github.com/wix-incubator/bazelizer/workflows/CI/badge.svg)](https://github.com/wix-incubator/bazelizer/actions)
 
 <img src="assets/black.png" width="250">
 
 #### TL;DR
-This is your last chance if you really need some maven plugin inside your Bazel build and you cannot rewrite or adapt it to Bazel.
+This is your last chance if you really need some maven plugin inside your Bazel build, and you cannot rewrite or adapt it to Bazel.
  
 #### Long Version
  
@@ -17,12 +17,12 @@ Then, you need *bazelizer*.
 Someone can call it a **dirty hack**, but we know the truths ;)
 
 This tool represents overall maven project as one Bazel's target.
-In this whey you can isolate all your maven stuff as one unit (_if desired, put everything that is not specific to the maven into Bazel_) and integrate it into  Bazel environment.
+In this way you can isolate all your maven stuff as one unit (_if desired, put everything that is not specific to the maven into Bazel_) and integrate it into  Bazel environment.
 Use bazel deps, depends on bazel target and event doing it efficiently. 
 
 ***
 
-##### Take a look on example project [here](tests/integration/README.md)
+##### Take a look on example project [here](tests/e2e/mvn-lib/BUILD)
 
 
 ![Alt text](assets/ci.png?raw=true | width=350)
@@ -85,14 +85,14 @@ execute_build(
 ## Design
 
 This tools assume that pom.xml (e.g. build configurations) will be updated **rarely**. 
-So, tool will fetche all dependencies, not related to bazel targets, once and cached by bazel mechanics as 
+So, tool will fetch all dependencies, not related to bazel targets, once and cached by bazel mechanics as 
 maven repository tar archive. All builds rely on this repository 'image' with ability to inject bazel deps dynamical during build.
 
 ## Rules
 
 ### maven_repository_registry
  
-This is repository rule that generate and register all declared "maven" targets. This allow to fetch all deps from maven world only once and cache them.
+This is repository rule that generate and register all declared "maven" targets. This allows to fetch all deps from maven world only once and cache them.
                                                            
 
 Usage
@@ -113,19 +113,19 @@ maven_repository_registry_v2(
 )
 ```
   
-| attr name  | description  |
-|---|---|
-| name  | Name; required. A unique name for this target.  |
-| modules  | list of labels; Labels of declared maven targets via `declare_module`    |
+| attr name | description                                                           |
+|-----------|-----------------------------------------------------------------------|
+| name      | Name; required. A unique name for this target.                        |
+| modules   | list of labels; Labels of declared maven targets via `declare_module` |
 
 
 **NOTE 1** This rule execute dry run of a build by empty project directory + given pom. 
 This is done to eagerly fetch all plugin's and there dependencies and reuse for any build. In this case pom file have to be ready to be executed with empty workspace directory.
 Any change in pom file will trigger rebuilding a tarball. 
-Also rule fetchs all deps via 
+Also rule fetches all deps via 
 
-**NOTE 2** Rule fetchs all also by `de.qaware.maven:go-offline-maven-plugin:resolve-dependencies` plugin. 
-This allows overcome a problem that some plugin can dynamically fetch additional deps only at runtime. Pls read more about it [here](https://github.com/qaware/go-offline-maven-plugin).
+**NOTE 2** Rule fetches all also by `de.qaware.maven:go-offline-maven-plugin:resolve-dependencies` plugin. 
+This allows to overcome a problem that some plugin can dynamically fetch additional deps only at runtime. Please, read more about it [here](https://github.com/qaware/go-offline-maven-plugin).
 
 ### maven_project
 
@@ -141,12 +141,12 @@ maven_project(
 )
 ```
 
-| attr name  | description  |
-|---|---|
-| name  | Name; required. A unique name for this target.  |
-| pom_file  | Actual pom file.     |
-| parent  | Label; Reference to parent module;    |
-| flags  | List of special flags;    |
+| attr name | description                                    |
+|-----------|------------------------------------------------|
+| name      | Name; required. A unique name for this target. |
+| pom_file  | Actual pom file.                               |
+| parent    | Label; Reference to parent module;             |
+| flags     | List of special flags;                         |
 
 
 *NOTE*: For supported flags please find section below
@@ -171,12 +171,12 @@ execute_build(
 )
 ```
 
-| attr name  | description  |
-|---|---|
-| name  | Name; required. A unique name for this target.  |
-| pom_def  | Label for module declaration;     |
-| deps  | Deps; Supported any dep with JavaInfo provider; Support **only direct deps**;    |
-| srcs  | Files; Link maven workspace into bazel sandbox;    |
+| attr name | description                                                                   |
+|-----------|-------------------------------------------------------------------------------|
+| name      | Name; required. A unique name for this target.                                |
+| pom_def   | Label for module declaration;                                                 |
+| deps      | Deps; Supported any dep with JavaInfo provider; Support **only direct deps**; |
+| srcs      | Files; Link maven workspace into bazel sandbox;                               |
 
 
 ###### Important notes

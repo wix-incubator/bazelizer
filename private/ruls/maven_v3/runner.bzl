@@ -58,7 +58,7 @@ def _collect_jars(ctx):
 
 _run_mvn_outputs = {
     "jar": "lib%{name}.jar",
-    "img": "img%{name}.tar",
+    "img": "lib%{name}_pkg.tar",
 }
 
 _run_mvn_attrs = {

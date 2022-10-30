@@ -85,7 +85,7 @@ public class Cmd {
         @CommandLine.Option(names = {"--pom"}, paramLabel = "PATH")
         public Path pomFile;
 
-        @CommandLine.Option(names = {"-O"}, description = "declared bazel output -> relatvce file path /target")
+        @CommandLine.Option(names = {"-O"}, description = "declared bazel output -> relative file path /target")
         public Map<String, String> outputs = Collections.emptyMap();
 
         @CommandLine.Option(names = {"--archiveOutput"}, paramLabel = "P",

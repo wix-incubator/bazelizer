@@ -155,7 +155,7 @@ public abstract class Dep {
         }
 
         private static String[] readCoords(Path source) {
-            return IOSupport.lisTartUnchacked(source).stream()
+            return IOSupport.listTarUnchecked(source).stream()
                     .filter(name -> name.endsWith(".jar"))
                     .findFirst()
                     .map(pathWithinTar -> {
@@ -165,7 +165,7 @@ public abstract class Dep {
                         final String gid = Joiner.on(".").join(parts.subList(0, parts.size() - 3));
                         return new String[]{gid, art, version};
                     }).orElseThrow(() -> new IllegalStateException("tar has not resolvable content in "
-                            + source + ": " + IOSupport.lisTartUnchacked(source)));
+                            + source + ": " + IOSupport.listTarUnchecked(source)));
         }
     }
 
@@ -180,7 +180,6 @@ public abstract class Dep {
 
         Files.write(folder.resolve((dep.artifactId + "-" + dep.version) + ".pom"),
                 pomXml.getBytes(StandardCharsets.UTF_8),
-                StandardOpenOption.CREATE,
-                StandardOpenOption.TRUNCATE_EXISTING);
+                StandardOpenOption.CREATE_NEW, StandardOpenOption.TRUNCATE_EXISTING);
     }
 }
