@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 
 import static com.google.common.io.Resources.asCharSource;
 import static com.google.common.io.Resources.getResource;
+import static com.google.common.collect.Lists.newArrayList;
 import static com.wix.incubator.mvn.Cli.BZL_MVN_TOOL_SYS_PROP;
 import static com.wix.incubator.mvn.IOSupport.REPOSITORY_FILES_FILTER;
 
@@ -210,7 +211,10 @@ public class Maven {
 
     private void logMavenVersion() {
         try {
-            maven.execute(newInvocationRequest("INFO"));
+            DefaultInvocationRequest request = newInvocationRequest("INFO");
+            request.setShowErrors(false);
+            request.setGoals(newArrayList("-v"));
+            maven.execute(request);
         } catch (MavenInvocationException ignored) {
         }
     }
