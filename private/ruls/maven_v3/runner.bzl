@@ -131,10 +131,12 @@ def _run_mvn_impl(ctx):
         progress_message = "running maven build... %s" % (ctx.label),
     )
 
+    runfiles = ctx.runfiles(files = output_files).merge(ctx.attr.project[DefaultInfo].default_runfiles)
+
     return [
         MvnArtifactInfo(pkg = def_output_artifact_file),
-        DefaultInfo(files = depset(output_files)),
-        JavaInfo(output_jar = def_output_jar_file, compile_jar = def_output_jar_file)
+        DefaultInfo(files = depset(output_files), runfiles = runfiles),
+        JavaInfo(output_jar = def_output_jar_file, compile_jar = def_output_jar_file),
     ]
 
 run_mvn = rule(
