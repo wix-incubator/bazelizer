@@ -12,7 +12,6 @@ java_binary(
         "@%s//:%s" % (MAVEN_BINARY_NAME, MAVEN_BINARY_NAME),
     ],
     jvm_flags = [
-        "--illegal-access=permit",
         "-Dtools.jvm.mvn.MavenBin=\"%s\"" % MAVEN_BINARY_NAME,
     ],
     licenses = ["notice"],  # Apache 2.0
