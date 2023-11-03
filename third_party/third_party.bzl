@@ -121,9 +121,9 @@ deps = [
 	),
 	dependency(
 	    name="org_projectlombok_lombok",
-	    sha256="f13db210efa2092a58bb7befce58ffa502e5fefc5e1099f45007074008756bc0",
-	    sha256_src="48922643ca1f975dd315176461fcabf7b2f440891e4cebbfd123aa0bb8d50129",
-	    artifact="org.projectlombok:lombok:1.18.2",
+	    sha256="ce947be6c2fbe759fbbe8ef3b42b6825f814c98c8853f1013f2d9630cedf74b0",
+	    sha256_src="c35890b314156f4a0c15dbe2c73c16f7ddc50d97db53c90aa8278d0de708e46e",
+	    artifact="org.projectlombok:lombok:1.18.20",
 	),
 ]
 
