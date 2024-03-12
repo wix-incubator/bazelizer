@@ -25,7 +25,7 @@ Use bazel deps, depends on bazel target and event doing it efficiently.
 ##### Take a look on example project [here](tests/e2e/mvn-lib/BUILD)
 
 
-![Alt text](assets/ci.png?raw=true | width=350)
+![Alt text](assets/ci.png?raw=true|width=350)
 
 
 ## Usage
